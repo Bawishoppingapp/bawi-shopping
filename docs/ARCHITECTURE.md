@@ -13,13 +13,13 @@ Five deployables, one repo:
 
 | App | Responsibility | Notes |
 |---|---|---|
-| **Customer storefront** (`apps/storefront`) | Browsing, search, cart, checkout, order tracking, reviews | Next.js, public-facing, SEO-relevant (SSR/ISR for product/category pages) |
-| **Seller portal** (`apps/seller-portal`) | Seller onboarding, catalog/inventory/pricing management, order fulfillment, shipping, returns handling, payouts, reporting | Next.js, authenticated, seller-actor session |
-| **Admin portal** (`apps/admin`) | Seller approval, moderation, commission configuration, platform reporting, audit log review | Next.js, authenticated, admin-actor session, can also embed/extend Medusa's own admin UI where it fits |
-| **Commerce backend** (`apps/backend`) | Medusa instance: all modules, workflows, REST/Store/Admin APIs, webhook receivers | Node/TypeScript, the only app with direct DB access |
-| **Background jobs** (`apps/workers`) | Scheduled jobs and queue consumers: payouts, search index sync, notification delivery, webhook retry, reporting rollups | Separate Node process from the API, shares the module layer as a library, scales independently |
+| **Customer storefront** (`apps/storefront`) | Browsing, search, cart, checkout, order tracking, reviews | Next.js, public-facing, SEO-relevant (SSR/ISR for product/category pages). **Built:** customer registration. |
+| **Seller portal** (`apps/seller-portal`) | Public seller-application intake, account activation, seller onboarding, catalog/inventory/pricing management, order fulfillment, shipping, returns handling, payouts, reporting | Next.js, mixed public (`/apply`, `/apply/:id`, `/activate`) and authenticated (seller-actor session) pages. **Built:** seller login, seller-application submission/status, account activation. |
+| **Admin portal** (`apps/admin`) | Seller application review/approval/rejection, moderation, commission configuration, platform reporting, audit log review | Next.js, authenticated, admin-actor session (Medusa's native `user` actor type). Built as a full Next.js app on the same shared design system, not a Medusa Admin Extension — see [`DECISIONS.md`](DECISIONS.md) for why. **Built:** login, seller-application list/detail/approve/reject. |
+| **Commerce backend** (`apps/backend`) | Medusa instance: all modules, workflows, REST/Store/Admin APIs, webhook receivers | Node/TypeScript, the only app with direct DB access. **Built:** `seller`, `seller-application`, `audit-log` custom modules. |
+| **Background jobs** (`apps/workers`) | Scheduled jobs and queue consumers: payouts, search index sync, notification delivery, webhook retry, reporting rollups | Separate Node process from the API, shares the module layer as a library, scales independently. **Not yet built.** |
 
-Each frontend calls the commerce backend only through its published API surface (Store API for storefront, a seller-scoped API namespace for the seller portal, Admin API for the admin portal). No frontend talks to PostgreSQL directly.
+Each frontend calls the commerce backend only through its published API surface (Store API for storefront, a seller-scoped/public API namespace for the seller portal, Admin API for the admin portal). No frontend talks to PostgreSQL directly.
 
 ## 3. System diagram
 
@@ -78,7 +78,7 @@ Medusa v2 ships a set of native commerce modules; the marketplace-specific conce
 | Authentication | Native Medusa `auth` module | Extended with three actor types: `customer` (native), `seller_user` (custom — see below), `user` (native, admin) |
 | Customers | Native Medusa `customer` module | Unmodified |
 | Sellers | **Custom module: `seller`** (implemented) | Root of vendor scoping; owns `vendor_id`. Currently: `Seller` + `SellerUser` models only (name, slug, status, role) — onboarding/Stripe fields land with the seller-onboarding slice. |
-| Seller onboarding | **Custom module: `seller-onboarding`** | Application review + Stripe Connect Express account linking |
+| Seller onboarding | **Custom module: `seller-application`** (implemented, application intake/review/approval + activation) **+ future Stripe Connect linking** | Split in two: `seller-application` owns `SellerApplication` (draft/submitted/under_review/approved/rejected/withdrawn) and is separate from `seller`'s approved records by design (see [`DECISIONS.md`](DECISIONS.md)); approval creates the `Seller`/`SellerUser` and an activation token. Stripe Connect account linking (originally planned as part of this domain) is still a future slice, layered on after activation. |
 | Catalog | Native Medusa `product` module (as catalog container) | — |
 | Categories | Native Medusa `product-category` module | Platform-owned taxonomy |
 | Products | Native Medusa `product` module | Extended with a module-link to `seller` (`vendor_id`) |
@@ -100,7 +100,7 @@ Medusa v2 ships a set of native commerce modules; the marketplace-specific conce
 | Moderation | **Custom module: `moderation`** | Polymorphic queue over products/reviews |
 | Notifications | Native Medusa `notification` module | Email provider + templates, dedup log |
 | Reporting | **Custom module: `reporting`** | Read-side aggregation over existing modules, no owned source-of-truth data |
-| Audit logs | **Custom module: `audit-log`** | Cross-cutting event subscriber, append-only |
+| Audit logs | **Custom module: `audit-log`** (implemented) | Append-by-convention today (no application code path issues UPDATE/DELETE against it); a single `record()` method on the module service, called directly by mutating routes rather than via an event subscriber for now — see [`SECURITY.md`](SECURITY.md) §6 |
 
 Custom modules communicate with native modules exclusively through Medusa's module-link and workflow/event-subscriber mechanisms — never direct cross-module table joins — preserving the modular-monolith boundary so any module could theoretically be extracted into its own service later without a rewrite.
 
@@ -113,7 +113,11 @@ Medusa v2's `auth` module is actor-type-agnostic: `/auth/:actor_type/:auth_provi
 3. Medusa's own JWT issuance then sets the token's `actor_id` claim to that same id — so an authenticated request's `req.auth_context.actor_id` *is* the `SellerUser.id`, resolved entirely server-side.
 4. Routes under `/seller/*` are protected by `authenticate("seller_user", ["bearer", "session"])` in `apps/backend/src/api/middlewares.ts`. `GET /seller/me` (`apps/backend/src/api/seller/me/route.ts`) is the only place a session is turned into a `vendor_id` — see `docs/DECISIONS.md` for the full reasoning and `docs/SECURITY.md` §2 for the isolation guarantee this gives.
 
-Sellers aren't self-registering yet (that arrives with the seller-onboarding slice, where step 1–2 above happen on application approval instead of a script). For now, `apps/backend/src/scripts/seed-seller.ts` (a `medusa exec` script) provisions a seller for local development and is what the integration/E2E tests use.
+Sellers don't self-register directly anymore — step 1–2 above now happen for real when an admin approves a `SellerApplication` (`apps/backend/src/api/admin/seller-applications/[id]/approve/route.ts`), which creates the `Seller` + `SellerUser` (with a one-time `activation_token`, no `auth_identity_id` yet) and returns an activation link. The seller completes step 1–2 themselves by visiting `apps/seller-portal`'s `/activate` page, which calls `POST /seller-activation/complete` (public, gated entirely on possessing a valid unexpired token). `apps/backend/src/scripts/seed-seller.ts` (a `medusa exec` script) still exists purely for local dev/test convenience, to skip the application/approval/activation sequence when you just need a working seller login.
+
+### 4.2 The `user` (admin) actor type (implemented)
+
+Medusa's native `user` module and auth flows are used as-is for admins — no custom module needed, unlike `seller_user`. `apps/admin` logs in via `POST /auth/user/emailpass` and resolves the current admin via Medusa's native `GET /admin/users/me`. Admin users are provisioned with Medusa's own `npx medusa user -e ... -p ...` CLI command (see `README.md`) — there is no self-registration or invite flow for admins in this release. Custom `/admin/*` routes (e.g. `/admin/seller-applications/*`) are **not** automatically authenticated just by living under `/admin` — Medusa's own native admin routes each wire `authenticate("user", ...)` themselves, so every custom admin route must do the same explicitly in `apps/backend/src/api/middlewares.ts`.
 
 ## 5. Data flow boundary rules
 

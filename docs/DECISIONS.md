@@ -103,3 +103,87 @@ A running log of decisions that aren't obvious from reading the code, in the ord
 **Why:** Discovered via a failing E2E test, not by inspection: a file marked `"use server"` may only export async functions — every other export type breaks Next.js's client-reference generation for that module, and the failure mode is a confusing runtime error ("The module has no exports at all") rather than a build-time type error. This is a Next.js/React Server Functions constraint, not specific to this codebase.
 
 **How to apply:** Any new Server Action file should export *only* async functions. Initial/default state objects, cookie name constants, and shared types belong in a sibling `constants.ts` (or similar) that both the action file and the calling Client Component import from directly.
+
+---
+
+## `seller-application` is its own module, separate from `seller`
+
+**Date:** seller-application vertical slice.
+
+**Decision:** `SellerApplication` records live in a new custom module (`apps/backend/src/modules/seller-application`), not inside the existing `seller` module. The two are linked only by a plain `seller_id` column set on the application once approved - not a hard foreign key, not a Medusa module-link.
+
+**Why:** Explicitly required (a pending or rejected application must never be confused with, or accidentally grant access to, a real vendor record) and it also matches how Medusa itself models "intent" vs "real entity" elsewhere (e.g., `cart` vs `order`). Keeping approval as an explicit state transition between two separate tables makes "this application does not yet have vendor access" a structural fact, not just an application-logic convention.
+
+**How to apply:** Don't add columns to `seller_application` that duplicate `seller` fields "for convenience," and don't add a real FK constraint from `seller_application.seller_id` to `seller.id` - the relationship is deliberately loose (nullable, set once, read-only after) rather than a first-class relation, because the two entities have different lifecycles and different audiences (an application's private review fields like `rejection_reason` must never leak through any relation that a seller-facing or public query might traverse).
+
+---
+
+## Seller account activation uses a custom token, not Medusa's password-reset flow
+
+**Date:** seller-application vertical slice.
+
+**Decision:** Approving a `SellerApplication` creates a `Seller` + `SellerUser` with `auth_identity_id: null` and a custom `activation_token` (32 random bytes, hex-encoded) + expiry. The seller later calls `POST /seller-activation/complete` with that token + a chosen password, which creates the `auth_identity` at that point (via `authModuleService.register("emailpass", ...)`, the same call used everywhere else in this codebase for creating a password identity) and links it to the pre-existing `SellerUser`.
+
+**Why:** Medusa's auth module has a built-in password-reset-token mechanism (`createPasswordResetToken`/`consumePasswordResetToken`), which looked like a natural fit at first glance. It was deliberately not used: those methods are designed for a user who **already has** a password to reset, and their exact semantics for an identity that doesn't exist yet were unverified and added risk for no real benefit. The custom token reuses the exact `authModuleService.register(...)` + `app_metadata` linking pattern already proven for customer registration and seller seeding (see the `seller_user` actor-type decision above), so it only relies on Medusa APIs this codebase had already exercised successfully.
+
+**How to apply:** If a future "resend invitation" or "reset an existing seller's password" feature is built, that's the point where Medusa's real password-reset-token flow becomes appropriate (it's designed for exactly that case - an existing identity, not a not-yet-created one). Don't conflate the two flows.
+
+---
+
+## No notification/email service yet: the activation link is shown directly in the admin UI
+
+**Date:** seller-application vertical slice.
+
+**Decision:** `POST /admin/seller-applications/:id/approve` returns the seller's activation link (`{seller-portal}/activate?token=...`) directly in the JSON response, and the admin UI displays it in a highlighted box after approving, labeled explicitly as a stand-in.
+
+**Why:** The Notifications module (email delivery) is still in `docs/PRD.md` §8's future-phase list - building it now to send exactly one email would be scope creep for this slice. Surfacing the link in the UI keeps the flow fully usable today (an admin can copy/paste or forward it manually) without inventing a fake email integration.
+
+**How to apply:** When the Notifications module ships, this is one of the first templates to wire up - replace the UI display with an actual email send, keep the link generation logic (`apps/backend/src/api/admin/seller-applications/[id]/approve/route.ts`) exactly as-is, since only the delivery mechanism changes, not the token/link generation.
+
+---
+
+## Admin portal is a full Next.js app (`apps/admin`), not a Medusa Admin Extension
+
+**Date:** seller-application vertical slice.
+
+**Decision:** `apps/admin` is a fourth Next.js app on the same `packages/ui` design system as the storefront and seller portal - not built using Medusa's own bundled admin dashboard framework (`@medusajs/dashboard`, its own React/Vite/react-router stack, reachable at `/app` on the backend).
+
+**Why:** `docs/CLAUDE.md` rule #9 ("one shared design system powers the storefront, seller portal, and admin portal — no divergent component libraries") and `docs/ARCHITECTURE.md`'s original 5-app plan both already called for this. Medusa's own admin dashboard is a legitimate, faster option for pure Medusa-entity CRUD (products, orders, etc.) and remains available at `/app` for anything this project doesn't build custom UI for, but seller-application review has marketplace-specific concepts (application statuses, rejection reasons, activation links) that don't fit its native admin extension points as naturally as a purpose-built page does, and using it here would have meant the admin experience diverging from the other two apps' look and feel.
+
+**How to apply:** Keep using `apps/admin` + `packages/ui` for anything admin-facing that's specific to this marketplace's own domain (seller applications, moderation, commissions, reporting). Medusa's native `/app` dashboard is still fine to use as-is (not to be rebuilt) for pure catalog/order/customer administration once those areas exist, since re-implementing all of Medusa's own admin CRUD screens from scratch would be wasted effort - the two can coexist.
+
+---
+
+## Custom `/admin/*` routes are not automatically authenticated
+
+**Date:** seller-application vertical slice.
+
+**Decision:** `apps/backend/src/api/admin/seller-applications/*` routes are explicitly protected via `authenticate("user", ["bearer", "session"])` in `apps/backend/src/api/middlewares.ts` - the same pattern already used for `/seller/*`.
+
+**Why:** It's tempting to assume everything under `/admin` is automatically gated by Medusa just because of the path prefix. Checked directly in `node_modules/@medusajs/medusa/dist/api/middlewares.js`: Medusa's own blanket `/admin*` matcher only applies `setSecretApiKeyContext` - every native admin route (customers, products, etc.) wires its own `authenticate("user", ...)` individually. A custom route under `/admin` that skips this is unauthenticated by default, not secure by default.
+
+**How to apply:** Any new custom route under `/admin/*` must add its own `authenticate("user", ...)` entry in `middlewares.ts` - never assume the path prefix alone provides protection. This was verified with an integration test (unauthenticated request to `/admin/seller-applications` returns 401) and an E2E test (visiting `/applications` in `apps/admin` without a session redirects to `/login`).
+
+---
+
+## `model.json()` columns need a type assertion for array data
+
+**Date:** seller-application vertical slice.
+
+**Decision:** `SellerApplication.product_categories` (a `string[]` in practice) is typed by Medusa's model builder as `Record<string, unknown>` (the generic shape for `model.json()`), so the create call casts it: `product_categories as unknown as Record<string, unknown>`.
+
+**Why:** The underlying Postgres column is a plain `jsonb` that happily stores an array; Medusa's TypeScript types for `model.json()` just don't model "this specific JSON column holds an array" - there's no narrower type available and adding a whole custom column type for one array field wasn't worth it for this slice.
+
+**How to apply:** Any future `model.json()` column that stores an array (not a plain object) will need the same cast at the point of creation. This is a known, narrow gap in Medusa's typings, not a sign of a modeling mistake.
+
+---
+
+## v1 stays light-mode only, everywhere - `prefers-color-scheme: dark` removed from all three apps
+
+**Date:** seller-application vertical slice (found during manual browser verification, not by inspection).
+
+**Decision:** Removed the `@media (prefers-color-scheme: dark)` block from `globals.css` in `apps/storefront`, `apps/seller-portal`, and `apps/admin`. All three now render in light mode regardless of OS/browser preference.
+
+**Why:** `docs/DESIGN-SYSTEM.md` §2 already said dark mode is deferred past v1 - but the Next.js scaffold's default `globals.css` includes a dark-mode media query that flips the page *background* to near-black while `packages/ui` components (`Input`, `Button`, etc.) use fixed `text-neutral-900`-on-white-ish classes that don't adapt. The combination produced a real, hard-to-read screen (dark background, near-black text) in any browser/OS set to dark mode - only caught by taking an actual screenshot during manual testing, not by lint/typecheck/tests. Since dark mode support isn't in scope, the fix is to stop flipping the background, not to make every component dark-mode-aware.
+
+**How to apply:** If dark mode is ever built for real (a deliberate future decision, not this one), it needs to update `packages/ui`'s components to use theme-aware color tokens, not just restore this CSS block. Don't re-add a bare `prefers-color-scheme` override without that work happening at the same time.

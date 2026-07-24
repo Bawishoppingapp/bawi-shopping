@@ -59,8 +59,8 @@ erDiagram
 |---|---|---|
 | `authentication` | `auth_identity`, `provider_identity` | No — global identities |
 | `customer` | `customer`, `customer_address` | No |
-| `seller` | `seller`, `seller_user`, `seller_user_role` | `seller.id` is the vendor key itself |
-| `seller-onboarding` | `seller_application` | Links to `seller` once approved |
+| `seller` (implemented) | `seller`, `seller_user` | `seller.id` is the vendor key itself. `role` is a plain enum column on `seller_user`, not a separate table (simpler than originally sketched — no need for a join table at this scale). |
+| `seller-application` (implemented) | `seller_application` | No (platform-owned; references `seller.id` via a plain `seller_id` column once approved — not a formal Medusa module-link, see [`DECISIONS.md`](DECISIONS.md)) |
 | `product` (catalog/products/variants) | `product`, `product_variant`, `product_option`, `product_image` | **Yes** |
 | `product-category` | `category`, `product_category` | No (platform-owned taxonomy) |
 | `inventory` | `inventory_item`, `inventory_level`, `reservation` | **Yes** (via owning stock location) |
@@ -78,7 +78,7 @@ erDiagram
 | `moderation` | `moderation_item`, `moderation_flag` | No (platform-owned, references seller-owned content) |
 | `notification` | `notification_template`, `notification_log` | Nullable — set when the notification concerns a specific seller |
 | `reporting` | (no owned tables — aggregation views/queries only) | n/a |
-| `audit-log` | `audit_log` | Nullable — set when the logged action is seller-scoped |
+| `audit-log` (implemented) | `audit_log` | Nullable — set when the logged action is seller-scoped |
 
 ## 4. Key tables (illustrative columns, not final DDL)
 
@@ -88,7 +88,12 @@ erDiagram
 Still to come with the seller-onboarding slice: `description`, `logo_url`, `support_email`, `stripe_account_id`, `stripe_charges_enabled`, `stripe_payouts_enabled`, `commission_rate_override`. Not added yet — this migration only covers what registration/login/vendor-association needed (see `docs/DECISIONS.md`).
 
 **`seller_user`** *(migrated — same module)*
-`id, auth_identity_id (text, links to Medusa's auth_identity via app_metadata.seller_user_id — see ARCHITECTURE.md §4.1), role (owner|catalog_manager|order_fulfiller|analyst, default 'owner'), seller_id (FK → seller.id, NOT NULL, indexed), created_at, updated_at, deleted_at`
+`id, email (text, NOT NULL - the login identity, set at creation time independent of activation), auth_identity_id (text, nullable - links to Medusa's auth_identity via app_metadata.seller_user_id once activated, see ARCHITECTURE.md §4.1), role (owner|catalog_manager|order_fulfiller|analyst, default 'owner'), activation_token (text, nullable, unique), activation_token_expires_at (timestamptz, nullable), seller_id (FK → seller.id, NOT NULL, indexed), created_at, updated_at, deleted_at`
+
+**`seller_application`** *(migrated — `apps/backend/src/modules/seller-application/migrations`)*
+`id, legal_business_name, store_name, business_type (sole_proprietorship|llc|corporation|partnership|other), business_description, estimated_product_count (integer), product_categories (jsonb array), address (jsonb: line1/line2/city/state/postal_code/country), contact_first_name, contact_last_name, business_email, phone_number, website_url (nullable), agreed_to_terms (boolean), submitted_at (timestamptz), status (draft|submitted|under_review|approved|rejected|withdrawn, default 'submitted'), rejection_reason (text, nullable, PRIVATE - never returned from a public endpoint), reviewed_by (text, nullable - Medusa `user.id`, always server-derived from the session, never client input), reviewed_at (timestamptz, nullable), seller_id (text, nullable - set on approval), created_at, updated_at, deleted_at`
+
+No bank account, card, tax ID, SSN, or identity-document fields are collected at this stage — those belong to the future Stripe Connect onboarding slice (see `docs/PAYMENTS.md`).
 
 **`product`**
 `id, vendor_id (FK → seller.id, NOT NULL), title, description, status (draft|published|archived), created_at, updated_at, deleted_at`
@@ -117,8 +122,8 @@ Still to come with the seller-onboarding slice: `description`, `logo_url`, `supp
 **`return_request`**
 `id, vendor_order_item_id (FK, NOT NULL), vendor_id (FK, NOT NULL, denormalized), customer_id (FK, NOT NULL), status (requested|approved|denied|refunded), reason, created_at, updated_at`
 
-**`audit_log`**
-`id, actor_type (customer|seller_user|admin_user|system), actor_id, action, entity_type, entity_id, vendor_id (nullable), before_state (jsonb, nullable), after_state (jsonb, nullable), ip_address, created_at` — append-only; no `updated_at`, no application-level UPDATE/DELETE grant.
+**`audit_log`** *(migrated — `apps/backend/src/modules/audit-log/migrations`)*
+`id, actor_type (customer|seller_user|user|system), actor_id (nullable), action, entity_type, entity_id, vendor_id (nullable), before_state (jsonb, nullable), after_state (jsonb, nullable), ip_address (nullable), created_at, updated_at, deleted_at` — append-only *by convention* today: no application code path issues UPDATE/DELETE against it, but the DB role's grants aren't yet restricted to enforce this at the database level (still a documented future hardening step, see `docs/SECURITY.md` §6). Note the actor_type value is `user` (matching Medusa's actual native admin actor type name), not `admin_user` as originally sketched.
 
 Full, authoritative DDL is written as migrations during implementation, not hand-maintained in this document — this table list defines the contract each migration must satisfy.
 

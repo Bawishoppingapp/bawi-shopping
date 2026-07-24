@@ -57,48 +57,70 @@ sequenceDiagram
 
 ## 2. Seller onboarding flow
 
+**Implemented so far:** application submission → admin review → approval/rejection → seller account activation → seller login. **Not yet built:** Stripe Connect account linking (§2.2) — an approved, activated seller can log in and (once catalog exists) build a draft catalog, but cannot yet be marked fully "live" for real transactions until that slice ships.
+
+### 2.1 Application, review, and activation (implemented)
+
 ```mermaid
 sequenceDiagram
     participant S as Prospective seller
-    participant SP as Seller portal
+    participant SP as Seller portal (public pages)
     participant API as Backend API
-    participant ONB as Seller-onboarding module
-    participant SEL as Seller module
-    participant STRIPE as Stripe Connect
+    participant APPL as seller-application module
+    participant SEL as seller module
+    participant AUDIT as audit-log module
     participant A as Admin
     participant AP as Admin portal
 
-    S->>SP: Submit application (brand info, business details)
-    SP->>API: Create SellerApplication
-    API->>ONB: Store application (status: submitted)
-    A->>AP: Review application queue
-    AP->>API: Approve or reject (with reason)
-    alt Rejected
-        API->>ONB: status = rejected, reason recorded
-        API-->>S: Notification: rejected + reason, may re-apply
-    else Approved
-        API->>SEL: Create Seller (status: approved, not yet live)
-        API->>ONB: status = approved
-        API-->>S: Notification: approved, complete Stripe onboarding
-        S->>SP: Start Stripe onboarding
-        SP->>API: Request Stripe account link
-        API->>STRIPE: Create Express connected account + account link
-        STRIPE-->>API: Onboarding URL (single-use, short-lived)
-        API-->>SP: Redirect seller to Stripe-hosted onboarding
-        S->>STRIPE: Complete KYC / bank details (Stripe-hosted, never touches platform)
-        STRIPE-->>API: Webhook: account.updated (charges_enabled, payouts_enabled)
-        API->>SEL: Update onboarding status from webhook (source of truth)
-        SEL-->>SP: "Go live" unlocked once charges_enabled AND payouts_enabled
-        S->>SP: Publish first product
+    S->>SP: Fill out /apply (business + contact info, categories, terms)
+    SP->>API: POST /seller-applications
+    API->>APPL: Validate (Zod), reject if a pending application already exists for this email
+    APPL-->>API: Created (status: submitted, submitted_at set)
+    API-->>SP: Application id + status
+    SP-->>S: Confirmation page (/apply/:id) with status wording
+
+    A->>AP: Log in (Medusa native `user` actor type), open /applications
+    AP->>API: GET /admin/seller-applications?status=submitted
+    A->>AP: Open one application, click Approve or Reject
+
+    alt Reject
+        AP->>API: POST /admin/seller-applications/:id/reject { reason }
+        API->>APPL: status = rejected, rejection_reason stored (private)
+        API->>AUDIT: record("seller_application.rejected", actor = real admin id)
+        API-->>AP: Updated application (reason NOT exposed via any public endpoint)
+    else Approve
+        AP->>API: POST /admin/seller-applications/:id/approve
+        API->>APPL: Idempotency check - already approved? return existing seller, no-op
+        API->>SEL: Create Seller (status: approved) + SellerUser (email set, auth_identity_id null, activation_token issued)
+        API->>APPL: status = approved, seller_id set, reviewed_by = real admin id
+        API->>AUDIT: record("seller_application.approved", actor = real admin id, vendor_id = seller.id)
+        API-->>AP: Seller + activation link (shown to admin - see note below)
     end
+
+    S->>SP: Open /activate?token=... , set a password
+    SP->>API: POST /seller-activation/complete { token, password }
+    API->>SEL: Validate token (exists, unexpired, unused) - creates auth_identity, links app_metadata.seller_user_id, clears token
+    API-->>SP: Success
+    S->>SP: Log in at /login with business email + new password
+    SP->>API: POST /auth/seller_user/emailpass
+    API-->>SP: Session token -> HTTP-only cookie
+    SP-->>S: Seller dashboard (own vendor name, resolved server-side via GET /seller/me)
 ```
 
-### Edge cases
+**Note on the activation link:** there is no notification/email service yet (see `docs/PRD.md` §8 deferred features), so the approve action returns the activation link directly in the admin UI response for the admin to relay manually. This is a deliberate, documented stand-in — see `docs/DECISIONS.md` — not the intended production delivery mechanism (which will be an email once the Notifications module ships).
 
-- **Seller closes the Stripe onboarding tab mid-flow:** they can resume; a new account link is generated (the old one is single-use/expired), and the platform never infers completion from client-side navigation — only from the `account.updated` webhook.
-- **Stripe reports additional requirements later** (e.g., after a threshold is hit): the seller's "go live" status can flip back to blocked; this is handled the same way as initial onboarding — webhook-driven, not client-asserted.
-- **Application resubmission after rejection:** allowed; a new `SellerApplication` links to the same prospective seller contact, previous rejection reason stays visible to admin reviewers.
-- **Admin approves before Stripe details exist:** normal path — approval and Stripe onboarding are sequential, not simultaneous; a seller is `approved` (can access the portal, build a catalog in draft) before being `live` (can actually transact).
+### Edge cases (implemented flow)
+
+- **Duplicate submission:** a new application is rejected (409) if the same `business_email` already has a `submitted` or `under_review` application; resubmission after `rejected`/`withdrawn` is allowed (those are terminal, so no conflict).
+- **Repeated approval (double-click, retry):** idempotent — the second call detects `seller_id` is already set and returns the existing seller/seller_user without creating duplicates or writing a second audit entry.
+- **Invalid status transition:** approving a `rejected`/`withdrawn`/`draft` application (or rejecting an already-rejected one past the idempotent no-op case) is rejected with a 422, per the state machine in `apps/backend/src/modules/seller-application/state-machine.ts`.
+- **Rejected or still-pending applicant tries to log into the seller portal:** fails with a generic "Invalid email or password" — there is no `seller_user`/`auth_identity` at all until an application is actually approved, so there's nothing to authenticate against (verified by an integration test and an E2E test).
+- **Activation token reuse:** a second `POST /seller-activation/complete` with an already-consumed token is rejected (the token is cleared on first successful use).
+- **Concurrent approval requests (residual risk):** the idempotency check has a narrow TOCTOU window under true concurrent requests (not just sequential retries) — see `docs/IMPLEMENTATION-PLAN.md` risks.
+
+### 2.2 Stripe Connect account linking (not yet built)
+
+Deferred to a later slice. Once built, it layers on **after** activation: an activated seller can log in and manage a draft catalog, but isn't "live" for real transactions until Stripe onboarding completes. The originally-planned flow (Stripe Express account + account link, `account.updated` webhook as the onboarding-status source of truth, never inferred from client navigation) is unchanged from the original design — see `docs/PAYMENTS.md`.
 
 ## 3. Multi-vendor payment and order-splitting flow
 

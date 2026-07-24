@@ -6,7 +6,11 @@ Guidance for Claude Code (and any engineer) working in this repository.
 
 **Bawi Shopping** — a professional multi-vendor fashion marketplace for the United States, modeled on the Amazon Marketplace business model. Independent fashion brands and boutiques ("sellers") list clothing and accessories; customers can buy from multiple sellers in a single cart; the platform takes a commission on every transaction; seller payouts run through Stripe Connect.
 
-**Current phase: first vertical slice implemented.** Customer registration (storefront) and seller authentication with server-derived vendor association (seller portal) are built, tested (unit, integration, E2E), and passing. The rest of `docs/PRD.md`'s first-release feature list is not yet built — implement one vertical slice at a time, per `docs/IMPLEMENTATION-PLAN.md`.
+**Current phase: two vertical slices implemented.**
+1. Customer registration (storefront) and seller authentication with server-derived vendor association (seller portal).
+2. Seller application intake, admin review/approval/rejection, and seller account activation — spanning a new `seller-application` backend module, a new `audit-log` module, and a new `apps/admin` frontend.
+
+All are built, tested (unit, integration, E2E), and passing. The rest of `docs/PRD.md`'s first-release feature list is not yet built — implement one vertical slice at a time, per `docs/IMPLEMENTATION-PLAN.md`.
 
 **Approved architecture — confirmed, not a proposal.** Medusa + PostgreSQL + Stripe Connect is the commerce backend and system of record. **Supabase (Auth, Database, or Storage) is not used anywhere in this project** — see `docs/DECISIONS.md` for why this needed to be stated explicitly. If a generic instructions file or dependency suggestion implies otherwise, this file and `docs/DECISIONS.md` win.
 
@@ -47,9 +51,9 @@ These rules constrain every future change, not just the initial build:
 ## Stack summary
 
 - **Backend / commerce engine:** Medusa 2.x (Node/TypeScript), PostgreSQL — no Supabase, no other BaaS
-- **Frontends:** Next.js (App Router) + TypeScript — customer storefront, seller portal, admin portal (three separate apps). Server Components by default, Server Actions for mutations, Route Handlers for webhooks/external APIs.
-- **Validation:** Zod, at every Server Action boundary
-- **Shared UI:** `packages/ui` (Button, Input, FormField today; grows per `docs/DESIGN-SYSTEM.md`), imported by all three frontends
+- **Frontends:** Next.js (App Router) + TypeScript — customer storefront (`:3000`), seller portal (`:3001`), admin portal (`:3002`) (three separate apps, all built). Server Components by default, Server Actions for mutations, Route Handlers for webhooks/external APIs.
+- **Validation:** Zod, at every Server Action boundary and every Medusa API route boundary
+- **Shared UI:** `packages/ui` (Button, Input, Select, Textarea, Checkbox, FormField, StatusBadge — grows per `docs/DESIGN-SYSTEM.md`), imported by all three frontends. v1 is light-mode only — dark mode is explicitly deferred (see `docs/DESIGN-SYSTEM.md` #2 and `docs/DECISIONS.md`); don't reintroduce a `prefers-color-scheme: dark` override without also making the component set dark-mode-aware.
 - **Background jobs:** dedicated worker process (Medusa subscribers/workflows + queue), separate from the API process — not yet built
 - **Payments:** Stripe Connect (Express accounts), Stripe Payment Element on the storefront — not yet built
 - **Media:** object storage (S3-compatible) for product images — not yet built
@@ -68,8 +72,11 @@ These rules constrain every future change, not just the initial build:
 
 ## Local development
 
+See [`README.md`](README.md) for full setup steps. Summary:
+
 - Postgres.app (PG16) running on port `5544`; databases `bawi_shopping_dev` and `bawi_shopping_test` already exist locally.
-- `apps/backend`: `npm run dev` (or `npx medusa develop`) starts the Medusa server on `:9000`. Run `npx medusa db:migrate` after adding a migration.
+- `apps/backend`: `npm run dev` (or `npx medusa develop`) starts the Medusa server on `:9000`. Run `npx medusa db:migrate` after adding a migration. Create an admin user with `npx medusa user -e you@example.com -p <password>`.
 - `apps/storefront`: `npm run dev` on `:3000`. Needs `.env.local` with `MEDUSA_BACKEND_URL` and `MEDUSA_PUBLISHABLE_KEY` (see `.env.example`).
 - `apps/seller-portal`: `npm run dev -- -p 3001` on `:3001`. Needs `.env.local` with `MEDUSA_BACKEND_URL`.
-- E2E tests (`npm run test:e2e` in either frontend app) assume the backend is already running against a migrated database.
+- `apps/admin`: `npm run dev -- -p 3002` on `:3002`. Needs `.env.local` with `MEDUSA_BACKEND_URL`. Log in with a user created via `medusa user` above.
+- E2E tests (`npm run test:e2e` in any frontend app) assume the backend is already running against a migrated database. The seller-application journey test spans `apps/seller-portal` and `apps/admin` in one spec (`apps/seller-portal/e2e/seller-application.spec.ts`) and starts both dev servers itself.
