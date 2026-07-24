@@ -1,0 +1,295 @@
+import { execFileSync } from "node:child_process"
+import path from "node:path"
+import { Client } from "pg"
+import { startTestServer, stopTestServer, PORT } from "./test-server"
+
+jest.setTimeout(120 * 1000)
+
+const BASE_URL = `http://localhost:${PORT}`
+const BACKEND_ROOT = path.resolve(__dirname, "../..")
+const TEST_DATABASE_URL =
+  "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
+
+async function post(path: string, body?: unknown, token?: string) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  return { status: response.status, data: await response.json() }
+}
+
+async function get(path: string, token?: string) {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  return { status: response.status, data: await response.json() }
+}
+
+function createAdmin(email: string, password: string) {
+  execFileSync("npx", ["medusa", "user", "-e", email, "-p", password], {
+    cwd: BACKEND_ROOT,
+    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
+    stdio: "pipe",
+  })
+}
+
+function validApplicationPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    legal_business_name: "Acme Denim LLC",
+    store_name: `Acme Denim ${Date.now()}-${Math.random()}`,
+    business_type: "llc",
+    contact_first_name: "Jane",
+    contact_last_name: "Doe",
+    business_email: `jane-${Date.now()}-${Math.random()}@acmedenim.test`,
+    phone_number: "555-123-4567",
+    address: {
+      line1: "123 Main St",
+      city: "Austin",
+      state: "TX",
+      postal_code: "78701",
+      country: "US",
+    },
+    product_categories: ["Denim"],
+    business_description: "We make quality denim.",
+    estimated_product_count: 50,
+    agreed_to_terms: true,
+    ...overrides,
+  }
+}
+
+describe("Seller application, admin review, and approval", () => {
+  let serverProcess: Awaited<ReturnType<typeof startTestServer>>
+  let dbClient: Client
+  let adminToken: string
+  let customerToken: string
+  let activatedSellerToken: string
+
+  const suffix = Date.now()
+  const adminEmail = `admin-${suffix}@example.test`
+  const adminPassword = "correct-horse-battery-admin"
+
+  beforeAll(async () => {
+    createAdmin(adminEmail, adminPassword)
+    serverProcess = await startTestServer()
+
+    dbClient = new Client({ connectionString: TEST_DATABASE_URL })
+    await dbClient.connect()
+
+    const adminLogin = await post("/auth/user/emailpass", {
+      email: adminEmail,
+      password: adminPassword,
+    })
+    adminToken = adminLogin.data.token
+
+    const customerReg = await post("/auth/customer/emailpass/register", {
+      email: `customer-${suffix}@example.test`,
+      password: "correct-horse-battery-c",
+    })
+    customerToken = customerReg.data.token
+
+    // An already-activated seller, to prove a seller session (as opposed to
+    // an admin session) can't approve applications either.
+    const provision = await post("/seller-test-support/provision", {
+      name: `Existing Seller ${suffix}`,
+      slug: `existing-seller-${suffix}`,
+      email: `existing-seller-${suffix}@example.test`,
+      password: "correct-horse-battery-s",
+    })
+    expect(provision.status).toBe(200)
+    const sellerLogin = await post("/auth/seller_user/emailpass", {
+      email: `existing-seller-${suffix}@example.test`,
+      password: "correct-horse-battery-s",
+    })
+    activatedSellerToken = sellerLogin.data.token
+  })
+
+  afterAll(async () => {
+    await dbClient?.end()
+    await stopTestServer(serverProcess)
+  })
+
+  test("a member of the public can submit an application", async () => {
+    const response = await post("/seller-applications", validApplicationPayload())
+
+    expect(response.status).toBe(201)
+    expect(response.data.application.status).toBe("submitted")
+    expect(response.data.application.id).toBeTruthy()
+
+    const statusCheck = await get(`/seller-applications/${response.data.application.id}`)
+    expect(statusCheck.status).toBe(200)
+    expect(statusCheck.data.application.status).toBe("submitted")
+    // Public status check must never leak private review fields.
+    expect(statusCheck.data.application.rejection_reason).toBeUndefined()
+    expect(statusCheck.data.application.reviewed_by).toBeUndefined()
+  })
+
+  test("submitting invalid data is rejected with field errors", async () => {
+    const response = await post("/seller-applications", { legal_business_name: "" })
+    expect(response.status).toBe(400)
+    expect(response.data.errors).toBeTruthy()
+  })
+
+  test("duplicate submission behavior is handled safely", async () => {
+    const email = `dup-${suffix}@example.test`
+    const first = await post(
+      "/seller-applications",
+      validApplicationPayload({ business_email: email })
+    )
+    expect(first.status).toBe(201)
+
+    const second = await post(
+      "/seller-applications",
+      validApplicationPayload({ business_email: email, store_name: "A Different Name" })
+    )
+    expect(second.status).toBe(409)
+
+    // Confirm exactly one row exists for this email, not two.
+    const { rows } = await dbClient.query(
+      "SELECT count(*)::int AS count FROM seller_application WHERE business_email = $1",
+      [email]
+    )
+    expect(rows[0].count).toBe(1)
+  })
+
+  test("customer cannot approve an application", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const response = await post(
+      `/admin/seller-applications/${submitted.data.application.id}/approve`,
+      undefined,
+      customerToken
+    )
+    expect(response.status).toBe(401)
+  })
+
+  test("seller cannot approve an application", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const response = await post(
+      `/admin/seller-applications/${submitted.data.application.id}/approve`,
+      undefined,
+      activatedSellerToken
+    )
+    expect(response.status).toBe(401)
+  })
+
+  test("unauthenticated caller cannot approve an application", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const response = await post(
+      `/admin/seller-applications/${submitted.data.application.id}/approve`
+    )
+    expect(response.status).toBe(401)
+  })
+
+  test("admin can approve an application, and repeated approval does not create duplicate vendors or seller users", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const applicationId = submitted.data.application.id
+
+    const firstApproval = await post(
+      `/admin/seller-applications/${applicationId}/approve`,
+      undefined,
+      adminToken
+    )
+    expect(firstApproval.status).toBe(200)
+    expect(firstApproval.data.seller.id).toBeTruthy()
+    expect(firstApproval.data.activation_link).toContain("/activate?token=")
+
+    const sellerId = firstApproval.data.seller.id
+
+    const secondApproval = await post(
+      `/admin/seller-applications/${applicationId}/approve`,
+      undefined,
+      adminToken
+    )
+    expect(secondApproval.status).toBe(200)
+    expect(secondApproval.data.already_approved).toBe(true)
+    expect(secondApproval.data.seller.id).toBe(sellerId)
+
+    const { rows: sellerRows } = await dbClient.query(
+      "SELECT count(*)::int AS count FROM seller WHERE id = $1",
+      [sellerId]
+    )
+    expect(sellerRows[0].count).toBe(1)
+
+    const { rows: sellerUserRows } = await dbClient.query(
+      "SELECT count(*)::int AS count FROM seller_user WHERE seller_id = $1",
+      [sellerId]
+    )
+    expect(sellerUserRows[0].count).toBe(1)
+  })
+
+  test("approving an application creates an audit-log entry attributed to the real admin, never a client-supplied identity", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const applicationId = submitted.data.application.id
+
+    // Attempt to spoof a different admin identity via the body - the route
+    // doesn't even read a body for approve, but this proves it can't matter.
+    const approval = await fetch(`${BASE_URL}/admin/seller-applications/${applicationId}/approve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ actor_id: "user_some_other_admin_totally_fake" }),
+    })
+    expect(approval.status).toBe(200)
+
+    const { rows } = await dbClient.query(
+      "SELECT actor_type, actor_id, action, entity_id FROM audit_log WHERE entity_id = $1 AND action = 'seller_application.approved'",
+      [applicationId]
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0].actor_type).toBe("user")
+    expect(rows[0].actor_id).not.toBe("user_some_other_admin_totally_fake")
+    expect(rows[0].actor_id).toMatch(/^user_/)
+  })
+
+  test("admin can reject an application with a private reason, and a rejected applicant cannot access seller features", async () => {
+    const email = `rejected-${suffix}@example.test`
+    const submitted = await post(
+      "/seller-applications",
+      validApplicationPayload({ business_email: email })
+    )
+    const applicationId = submitted.data.application.id
+
+    const rejection = await post(
+      `/admin/seller-applications/${applicationId}/reject`,
+      { reason: "Insufficient business information provided." },
+      adminToken
+    )
+    expect(rejection.status).toBe(200)
+    expect(rejection.data.application.status).toBe("rejected")
+
+    const statusCheck = await get(`/seller-applications/${applicationId}`)
+    expect(statusCheck.data.application.status).toBe("rejected")
+    expect(statusCheck.data.application.rejection_reason).toBeUndefined()
+
+    // No seller_user was ever created for a rejected application, so there
+    // is nothing for the applicant to log into.
+    const loginAttempt = await post("/auth/seller_user/emailpass", {
+      email,
+      password: "anything",
+    })
+    expect(loginAttempt.status).toBe(401)
+
+    // Approving after rejection is an invalid transition.
+    const approveAfterReject = await post(
+      `/admin/seller-applications/${applicationId}/approve`,
+      undefined,
+      adminToken
+    )
+    expect(approveAfterReject.status).toBe(422)
+  })
+
+  test("rejecting without a reason is rejected", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const response = await post(
+      `/admin/seller-applications/${submitted.data.application.id}/reject`,
+      {},
+      adminToken
+    )
+    expect(response.status).toBe(400)
+  })
+})

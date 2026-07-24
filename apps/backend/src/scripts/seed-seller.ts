@@ -48,6 +48,7 @@ export default async function seedSeller({ container, args }: ExecArgs) {
 
   const sellerUser = await sellerModuleService.createSellerUsers({
     seller_id: seller.id,
+    email,
     auth_identity_id: authIdentity.id,
     role: "owner",
   })

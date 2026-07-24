@@ -17,5 +17,11 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/seller",
     },
+    {
+      resolve: "./src/modules/seller-application",
+    },
+    {
+      resolve: "./src/modules/audit-log",
+    },
   ],
 })
