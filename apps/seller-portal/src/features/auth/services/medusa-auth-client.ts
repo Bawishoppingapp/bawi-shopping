@@ -43,6 +43,23 @@ export async function loginSellerUser(
   return data.token as string
 }
 
+export async function completeSellerActivation(
+  token: string,
+  password: string
+): Promise<void> {
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/seller-activation/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  })
+
+  const data = await parseJson(response)
+
+  if (!response.ok) {
+    throw new MedusaAuthError(data.message || "Could not activate account")
+  }
+}
+
 export interface SellerMe {
   seller_user: { id: string; role: string }
   seller: { id: string; name: string; slug: string; status: string }
