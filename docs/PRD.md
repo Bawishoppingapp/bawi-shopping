@@ -1,0 +1,498 @@
+# Bawi Shopping — Product Requirements Document
+
+## 1. Vision
+
+Bawi Shopping is a multi-vendor fashion marketplace where independent clothing brands and boutiques reach customers through one clean, modern storefront, and the platform earns a commission on every sale it facilitates. The product experience should feel like a curated fashion destination, not a listings dump — closer to a well-edited fashion retailer than a generic classifieds site, while the underlying mechanics (seller onboarding, multi-vendor cart, split payments, fulfillment, returns) work like Amazon Marketplace.
+
+## 2. Goals
+
+- Let an unlimited number of approved sellers list and sell physical clothing/accessories independently.
+- Let a customer buy from several sellers in a single checkout and a single payment.
+- Collect a commission automatically on every order, with transparent seller payouts via Stripe Connect.
+- Give sellers full control of their own catalog, inventory, and fulfillment without ever exposing another seller's data.
+- Ship a first release that is small, correct, and secure rather than broad and shallow.
+
+## 3. Non-goals (for this document)
+
+- No international launch (US only for v1).
+- No marketplaces for services, digital goods, or non-fashion categories.
+- No custom payment rails — Stripe Connect only.
+- No microservices — see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+## 4. Personas
+
+Full definitions live in [`USER-ROLES.md`](USER-ROLES.md). Summary:
+
+- **Guest** — anonymous shopper browsing the storefront.
+- **Customer** — registered shopper who can check out, track orders, request returns, leave reviews.
+- **Seller Owner** — the accountable owner of a seller account (brand/boutique); completes Stripe Connect onboarding.
+- **Seller Staff** — additional users under a seller account with scoped permissions (e.g., catalog editor, order fulfiller).
+- **Admin (platform staff)** — approves sellers, moderates content, handles escalations, views platform-wide reporting.
+- **Super Admin** — admin with the ability to manage other admins and platform-level configuration.
+
+## 5. Business model
+
+- Sellers list products for free; the platform takes a **commission percentage** (configurable per seller or per category, with a platform default) on the item total of every completed order.
+- Shipping is charged to the customer and passed through to the seller (commission may or may not apply to shipping — configurable, default: commission on item subtotal only).
+- Refunds reverse the commission proportionally to the refunded amount.
+- Full commission and payout mechanics are in [`PAYMENTS.md`](PAYMENTS.md).
+
+## 6. Scope assumptions carried into this design
+
+- Launch market: United States only (USD, US tax/shipping rules).
+- Sellers: independent fashion brands and boutiques, approved before they can sell.
+- Products: physical clothing and fashion accessories only (no services, no digital goods).
+- Sellers own their own inventory and fulfillment — the platform does not hold stock.
+- One cart can span multiple sellers; checkout produces one payment and multiple per-vendor orders.
+- Platform commission on every transaction.
+- Stripe Connect for seller onboarding and payouts.
+- Medusa + PostgreSQL backend; Next.js + TypeScript storefront, seller portal, admin portal; monorepo.
+- Object storage for product images.
+- Search starts on Postgres, must be swappable to Algolia later without a rewrite.
+
+## 7. First-release feature list
+
+In scope for v1 (detailed specs in §9):
+
+- Email/password authentication for customers, sellers, and admins; role-based access control.
+- Customer registration, profile, addresses, order history.
+- Seller application, review/approval, Stripe Connect onboarding.
+- Catalog: categories, products, variants (size/color), images, inventory counts, pricing.
+- Postgres-backed keyword search with filters (category, price, size, color).
+- Multi-vendor cart and single-payment checkout.
+- Stripe Connect payments with automatic commission split and per-vendor payout ledger.
+- Order creation with automatic vendor-order splitting; per-vendor order management for sellers.
+- Shipping: seller-entered shipping options/rates, tracking number capture, shipment status.
+- Customer-initiated returns and refunds, seller/admin approval, refund-triggered commission reversal.
+- Verified-purchase product reviews with basic moderation.
+- Content moderation queue for products and reviews (admin).
+- Transactional notifications (order, shipment, return, payout events) via email.
+- Basic seller and platform reporting (sales, orders, payouts, commission).
+- Audit logs for all sensitive actions.
+
+## 8. Deferred features (explicitly out of scope for v1)
+
+- International sellers, currencies, or shipping.
+- Algolia integration itself (only the abstraction/interface ships now — see [`ARCHITECTURE.md`](ARCHITECTURE.md)).
+- Seller subscription tiers / paid placement / advertising.
+- Multi-currency or multi-language storefront.
+- SMS or push notifications (email only for v1).
+- Live chat / messaging between customer and seller.
+- Seller-to-seller marketplace features (bundles across sellers, cross-seller promotions).
+- Gift cards, store credit, loyalty points.
+- Marketplace financing / seller cash advances.
+- Advanced fraud detection beyond Stripe Radar defaults.
+- Mobile native apps (responsive web only).
+- Wishlists, saved-for-later, size-recommendation/AI styling features.
+- Custom RLS-based database isolation (documented as a future hardening option in [`SECURITY.md`](SECURITY.md), not required for v1).
+
+## 9. Feature specifications
+
+Each feature below maps to one or more of the required domain modules. For every feature: user story, acceptance criteria, data ownership, authorization rules, validation requirements, failure states, security risks, and the three test levels required before it ships. Full authorization details are cross-referenced to [`USER-ROLES.md`](USER-ROLES.md); full payment mechanics to [`PAYMENTS.md`](PAYMENTS.md); full schema to [`DATABASE.md`](DATABASE.md).
+
+---
+
+### 9.1 Authentication
+
+**Domain module:** `authentication`
+
+- **User story:** As a customer, seller, or admin, I want to register and log in securely so that only I can access my account and role-appropriate features.
+- **Acceptance criteria:**
+  - Email/password registration and login for all three actor types (customer, seller user, admin user), each with its own actor namespace.
+  - Passwords hashed with a modern algorithm (argon2/bcrypt via Medusa's auth module); never stored or logged in plaintext.
+  - Session via HTTP-only, secure, same-site cookies (or short-lived JWT + refresh token) per app.
+  - Password reset via emailed, single-use, time-limited token.
+  - Account lockout / backoff after repeated failed login attempts.
+- **Data ownership:** `auth_identity`, `provider_identity` tables (Medusa auth module). No `vendor_id` — authentication identities are global, but each identity links to exactly one actor record (customer, seller user, or admin user).
+- **Authorization rules:** Unauthenticated users may register/login only. No cross-actor-type login (a seller user cannot use their credentials on the admin portal login).
+- **Validation requirements:** Email format and uniqueness per actor type; password minimum strength; reset tokens single-use and expiring (≤1 hour).
+- **Failure states:** Invalid credentials → generic error (no user enumeration); expired/used reset token → explicit re-request prompt; lockout → clear retry-after messaging.
+- **Security risks:** Credential stuffing, user enumeration via distinct error messages, session fixation, reset-token leakage via referrer/logs.
+- **Tests:**
+  - Unit: password hashing/verification, token generation/expiry, lockout counter logic.
+  - Integration: registration → login → protected route round-trip per actor type; reset-token single-use enforcement.
+  - E2E: customer registers and logs into storefront; seller logs into seller portal; admin logs into admin portal; wrong-portal login is rejected.
+
+---
+
+### 9.2 Customers
+
+**Domain module:** `customers`
+
+- **User story:** As a customer, I want to manage my profile, addresses, and view my order history so I can shop efficiently and track my purchases.
+- **Acceptance criteria:** Create/edit profile and shipping/billing addresses; view past and current orders across all sellers; view order status per vendor sub-order.
+- **Data ownership:** `customer`, `customer_address` (Medusa customer module). Owned by the customer; not seller-scoped.
+- **Authorization rules:** A customer may only read/write their own profile, addresses, and orders. Admins may read (not silently write) customer data for support purposes, logged via audit log.
+- **Validation requirements:** Valid US address format (state, ZIP); required fields for checkout eligibility.
+- **Failure states:** Duplicate address save is idempotent (update, not duplicate row); malformed address blocks checkout with field-level errors.
+- **Security risks:** PII exposure (addresses, order history) if authorization checks are missed; admin over-access without audit trail.
+- **Tests:**
+  - Unit: address validation rules.
+  - Integration: customer cannot fetch another customer's profile/orders via API (authz test).
+  - E2E: customer edits profile and address, sees updated data reflected at next checkout.
+
+---
+
+### 9.3 Sellers
+
+**Domain module:** `sellers`
+
+- **User story:** As an approved seller, I want a seller account that represents my brand so I can manage products, orders, and payouts independently of other sellers.
+- **Acceptance criteria:** Seller entity holds brand name, slug, description, logo, support contact, status (`pending`, `approved`, `suspended`, `rejected`); seller has one or more seller-user accounts with roles.
+- **Data ownership:** `seller`, `seller_user`, `seller_user_role` tables. This is the root `vendor_id` referenced by every other seller-scoped table.
+- **Authorization rules:** Only the seller's own users (per role) can read/write that seller's record; admins can read all sellers and change status; only Super Admin can hard-delete a seller.
+- **Validation requirements:** Unique brand slug; required legal business name for Stripe Connect; status transitions follow an explicit state machine (see [`MARKETPLACE-FLOWS.md`](MARKETPLACE-FLOWS.md)).
+- **Failure states:** Suspended seller's products are automatically de-listed from storefront search/browse but existing orders remain manageable for fulfillment/returns.
+- **Security risks:** Privilege escalation between seller-user roles; a suspended seller retaining API access; slug collision/spoofing of another brand's identity.
+- **Tests:**
+  - Unit: status state-machine transition validation.
+  - Integration: suspending a seller hides its products from storefront queries but not from existing order detail views.
+  - E2E: admin suspends a seller; seller's storefront listings disappear; seller portal shows a suspended banner and blocks new listings.
+
+---
+
+### 9.4 Seller Onboarding
+
+**Domain module:** `seller-onboarding`
+
+- **User story:** As a prospective seller, I want to apply, get approved, and connect my payout account so I can start selling.
+- **Acceptance criteria:** Application form → admin review queue → approve/reject with reason → on approval, seller completes Stripe Connect Express onboarding → seller cannot list products or receive payouts until Stripe onboarding reports `charges_enabled` and `payouts_enabled`.
+- **Data ownership:** `seller_application`, and the Stripe account reference fields on `seller` (`stripe_account_id`, onboarding status). Full flow in [`MARKETPLACE-FLOWS.md`](MARKETPLACE-FLOWS.md) and [`PAYMENTS.md`](PAYMENTS.md).
+- **Authorization rules:** Only Admin/Super Admin can approve/reject applications; only the seller owner can initiate/resume Stripe onboarding for their own seller.
+- **Validation requirements:** Required business fields before submission; Stripe account requirements enforced by Stripe's hosted onboarding (not re-implemented by the platform).
+- **Failure states:** Rejected application stores a reason and allows re-application; incomplete Stripe onboarding blocks the "go live" toggle with a clear checklist of remaining requirements.
+- **Security risks:** Approving a seller without adequate vetting; trusting client-reported Stripe onboarding status instead of verifying via webhook/API; onboarding link leakage (Stripe account-linking URLs are single-use and short-lived — must not be logged or cached).
+- **Tests:**
+  - Unit: application → approval state machine; onboarding-status derivation from Stripe account object.
+  - Integration: webhook-driven update of `charges_enabled`/`payouts_enabled` correctly flips seller "go live" eligibility.
+  - E2E: full apply → approve → Stripe onboarding (test mode) → first product listing unlocked.
+
+---
+
+### 9.5 Catalog & Categories
+
+**Domain modules:** `catalog`, `categories`
+
+- **User story:** As a seller, I want to organize my products into categories that fit the platform's taxonomy so customers can browse and filter effectively.
+- **Acceptance criteria:** Platform-owned category tree (not seller-editable, to keep taxonomy consistent); products assigned to one or more categories; category pages list active products from all sellers.
+- **Data ownership:** `category`, `product_category` link table. Categories are platform-owned (no `vendor_id`); the link table associates a seller's product with a category.
+- **Authorization rules:** Only Admin manages the category tree; sellers may only assign their own products to existing categories.
+- **Validation requirements:** Category slugs unique; a product must have at least one category to be published.
+- **Failure states:** Deleting a category that still has products attached is blocked (or products are moved to an "uncategorized" holding category, not silently orphaned).
+- **Security risks:** Sellers attempting to create/modify categories directly via API (must be blocked by authz, not just hidden in UI).
+- **Tests:**
+  - Unit: category tree validation (no cycles, unique slugs).
+  - Integration: seller cannot create/edit a category via API.
+  - E2E: admin creates a category; seller assigns a product to it; category page shows the product.
+
+---
+
+### 9.6 Products & Product Variants
+
+**Domain modules:** `products`, `product-variants`
+
+- **User story:** As a seller, I want to list products with variants (size, color) so customers can pick the exact item they want.
+- **Acceptance criteria:** Product has title, description, images, brand (= seller), category, status (`draft`, `published`, `archived`); each product has ≥1 variant with SKU, size/color options, price, and inventory link.
+- **Data ownership:** `product`, `product_variant`, `product_option`, `product_image` — all carry `vendor_id` (the owning seller). Owned exclusively by the seller that created them.
+- **Authorization rules:** A seller can only create/edit/delete their own products and variants; admins can read all products and can unpublish/moderate any product; no seller can read another seller's draft products.
+- **Validation requirements:** Required title, ≥1 image, ≥1 published variant with price and SKU before a product can move to `published`; SKU unique per seller (not necessarily platform-wide).
+- **Failure states:** Publishing without a complete variant set is blocked with field-level errors; deleting a product referenced by past orders is disallowed (archive instead, to preserve order history integrity).
+- **Security risks:** Cross-seller data leakage via a missing `vendor_id` filter on a list/detail query; image upload used to smuggle non-image files (must validate MIME/type and size server-side, not just by extension).
+- **Tests:**
+  - Unit: product publish-readiness validation; variant SKU uniqueness scoped to seller.
+  - Integration: seller A's authenticated API call cannot fetch, edit, or delete seller B's product/variant (explicit negative authz test).
+  - E2E: seller creates a product with two variants, publishes it, and it appears correctly on the storefront product page with variant selectors.
+
+---
+
+### 9.7 Inventory
+
+**Domain module:** `inventory`
+
+- **User story:** As a seller, I want accurate stock counts per variant so I never oversell an item.
+- **Acceptance criteria:** Each variant has an inventory quantity per seller-managed stock location; quantity decrements on order placement (reserved) and confirms on payment capture; restores on cancellation/return.
+- **Data ownership:** `inventory_item`, `inventory_level`, `reservation` (Medusa inventory module) — scoped to the owning seller's stock location(s).
+- **Authorization rules:** Only the owning seller can adjust their inventory; the checkout/order workflow adjusts inventory programmatically, not via direct seller action.
+- **Validation requirements:** Quantity cannot go negative; reservation must be released if payment fails or cart is abandoned past a timeout.
+- **Failure states:** Two customers checking out the last unit concurrently → one succeeds, one gets a clear "no longer available" failure before payment capture (never after).
+- **Security risks:** Race conditions causing oversell; a seller manipulating inventory of a product mid-checkout to bypass a reservation.
+- **Tests:**
+  - Unit: reservation/decrement/restore arithmetic; negative-quantity guard.
+  - Integration: concurrent checkout attempts on last-unit stock resolve to exactly one success (DB-level locking test).
+  - E2E: customer adds last unit to cart, a second customer's concurrent checkout is rejected before payment.
+
+---
+
+### 9.8 Pricing
+
+**Domain module:** `pricing`
+
+- **User story:** As a seller, I want to set and update prices for my variants so I control my own margins.
+- **Acceptance criteria:** Price per variant in USD; supports sale/compare-at price; price changes take effect immediately for new carts, but an already-placed order retains its original price.
+- **Data ownership:** `price`, `price_set` (Medusa pricing module) linked to the seller's variant.
+- **Authorization rules:** Only the owning seller edits their prices; commission calculation (platform-owned) reads price but is not seller-editable.
+- **Validation requirements:** Price ≥ $0.01; compare-at price, if set, must be ≥ current price.
+- **Failure states:** Price update mid-checkout does not retroactively change an in-flight cart's checkout total inconsistently — cart re-validates price at payment time and surfaces a "price changed" prompt if it moved.
+- **Security risks:** Client-supplied price tampering (server must always price from the database at checkout, never trust a client-sent amount).
+- **Tests:**
+  - Unit: price validation rules; compare-at consistency.
+  - Integration: checkout re-prices from server-side data even if client cache is stale.
+  - E2E: seller changes a price; new visitors see new price; a cart opened before the change is prompted on price change at checkout.
+
+---
+
+### 9.9 Search
+
+**Domain module:** `search`
+
+- **User story:** As a customer, I want to search and filter products so I can find what I'm looking for across all sellers.
+- **Acceptance criteria:** Keyword search across title/description/brand/category; filter by category, price range, size, color; only `published` products from `approved`/active sellers are searchable.
+- **Data ownership:** Search reads a denormalized index (Postgres `tsvector` + GIN index for v1) built from `catalog`/`products`/`sellers`; no independent source of truth — it is a projection.
+- **Authorization rules:** Public/unauthenticated read; no seller can bias ranking in their own favor (no seller-controlled ranking fields in v1).
+- **Validation requirements:** Search index updates asynchronously on product publish/update/unpublish/seller suspension (event-driven, not synchronous with every write).
+- **Failure states:** Index lag — a just-published product may take a few seconds to appear; must not affect direct-link product page availability.
+- **Security risks:** Search must never surface `draft` products, another seller's private fields, or suspended-seller inventory; unescaped query input must not enable SQL injection (parameterized queries only).
+- **Tests:**
+  - Unit: query-builder produces correctly parameterized filters.
+  - Integration: unpublishing a product removes it from search results within the expected propagation window; suspended seller's products excluded.
+  - E2E: customer searches by keyword, filters by size/price, and reaches a product page from the results.
+- **Forward compatibility:** All search reads/writes go through a `SearchService` interface (see [`ARCHITECTURE.md`](ARCHITECTURE.md)) so an Algolia adapter can be swapped in later without changing calling code.
+
+---
+
+### 9.10 Cart
+
+**Domain module:** `cart`
+
+- **User story:** As a customer, I want to add items from multiple sellers to one cart so I can check out once.
+- **Acceptance criteria:** Cart holds line items from any number of sellers; cart persists across sessions for logged-in customers; guest cart persists via cookie/local storage until login or expiry.
+- **Data ownership:** `cart`, `cart_line_item` (Medusa cart module). Not seller-scoped — owned by the customer/session.
+- **Authorization rules:** Only the owning customer/session can read or mutate their cart.
+- **Validation requirements:** Line item quantity ≤ available inventory at add-to-cart time (soft check; hard check at checkout); price shown reflects current server-side price.
+- **Failure states:** Adding an out-of-stock variant is rejected with a clear message; merging a guest cart into an account on login resolves quantity conflicts by summing, capped at available stock.
+- **Security risks:** Cart line items must reference server-side price/inventory, never accept a client-supplied price or override; cart access must not leak another customer's cart via a guessable ID (use unguessable tokens).
+- **Tests:**
+  - Unit: cart line item quantity/price recalculation logic.
+  - Integration: guest-cart-to-account merge on login.
+  - E2E: customer adds products from two different sellers to one cart and proceeds to checkout with both present.
+
+---
+
+### 9.11 Checkout
+
+**Domain module:** `checkout`
+
+- **User story:** As a customer, I want a single checkout flow — one shipping/payment entry — that correctly handles items from multiple sellers behind the scenes.
+- **Acceptance criteria:** Single address/shipping-method entry per shippable group (see shipping); single payment authorization for the full cart total; order confirmation summarizes per-vendor sub-orders and their individual shipping/return terms.
+- **Data ownership:** Checkout is an orchestration workflow, not a standalone owned table set — it reads cart/pricing/inventory and writes to `order` + `payment` (see §9.13, §9.14).
+- **Authorization rules:** Only the owning customer can execute checkout on their own cart; server re-validates every price/inventory/tax figure — the client never supplies authoritative totals.
+- **Validation requirements:** All cart items still available and priced correctly at submit time; valid US shipping address; valid payment method.
+- **Failure states:** Partial inventory failure (one seller's item sold out mid-checkout) blocks checkout for that line item only, with a prompt to remove/adjust before retrying — never a partially-charged customer.
+- **Security risks:** Double-submission creating duplicate orders/charges (idempotency key required per checkout attempt); price/total tampering from client; abandoned-checkout payment retries creating orphaned holds.
+- **Tests:**
+  - Unit: idempotency-key generation and totals recomputation.
+  - Integration: checkout with a mid-flight inventory failure fails cleanly with no partial charge.
+  - E2E: customer completes checkout with items from two sellers, receives one confirmation covering two vendor sub-orders.
+
+---
+
+### 9.12 Payments
+
+**Domain module:** `payments`
+
+Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-payment mechanics, webhook idempotency). Summary acceptance criteria: one PaymentIntent per checkout charged to the platform's Stripe account; funds later transferred to each seller's connected account net of commission; all webhook handlers idempotent by Stripe event ID; no raw card data ever touches platform servers (Stripe Payment Element only).
+
+---
+
+### 9.13 Commissions
+
+**Domain module:** `commissions`
+
+- **User story:** As the platform, I want to automatically calculate and record the commission owed on every order so revenue is never manually reconciled.
+- **Acceptance criteria:** Commission computed per vendor sub-order at order-creation time using the seller's effective commission rate (seller-specific override, else category default, else platform default); recorded as an immutable ledger line; reversed proportionally on refund.
+- **Data ownership:** `commission_rule`, `commission_ledger_entry` — platform-owned, but each ledger entry references the owning `vendor_id` for seller-facing reporting.
+- **Authorization rules:** Only Admin/Super Admin can set commission rules; sellers have read-only access to their own commission history.
+- **Validation requirements:** Rate between 0–100%; exactly one effective rate resolvable per order line (deterministic precedence: seller override > category > platform default).
+- **Failure states:** Missing/ambiguous rate resolution blocks order finalization rather than silently defaulting to 0%.
+- **Security risks:** A seller manipulating their own commission rate (must be admin-only write, verified server-side); rounding errors accumulating across high volume (use integer minor-unit arithmetic, never floats).
+- **Tests:**
+  - Unit: rate-precedence resolution; integer-cents rounding.
+  - Integration: refund triggers a proportional, correctly-signed reversal ledger entry.
+  - E2E: admin sets a category override rate; a new order in that category reflects the correct commission in the seller's dashboard.
+
+---
+
+### 9.14 Payouts
+
+**Domain module:** `payouts`
+
+- **User story:** As a seller, I want to receive my earnings (minus commission) automatically and see a clear payout history.
+- **Acceptance criteria:** Payouts move funds from the platform's Stripe balance to each seller's connected Stripe Express account via Transfers, on a defined schedule (e.g., rolling/weekly, configurable); seller portal shows payout history and pending balance.
+- **Data ownership:** `payout`, `payout_line_item` referencing `commission_ledger_entry` — scoped by `vendor_id`.
+- **Authorization rules:** Only the owning seller can view their own payouts; only the payout background job (system actor) creates Transfers; admins have read access for support/dispute handling.
+- **Validation requirements:** A payout only includes funds from captured, non-refunded (or already-adjusted) orders; a seller with incomplete Stripe onboarding cannot receive a Transfer (checked immediately before creating it, not just at onboarding time).
+- **Failure states:** Stripe Transfer failure (e.g., account restricted) marks the payout `failed`, retries on a backoff schedule, and surfaces the reason to both seller and admin.
+- **Security risks:** Double-payout of the same ledger entries (must mark ledger entries as "paid out" atomically with Transfer creation); payout job must be idempotent like all payment-adjacent code.
+- **Tests:**
+  - Unit: payout batch selection (only unpaid, settled ledger entries).
+  - Integration: re-running the payout job does not double-pay the same entries.
+  - E2E: seller completes onboarding, an order settles, the next payout cycle shows the correct net amount in their dashboard.
+
+---
+
+### 9.15 Orders & Vendor-Order Splitting
+
+**Domain modules:** `orders`, `vendor-order-splitting`
+
+- **User story:** As a customer, I want one order confirmation even though my cart spans multiple sellers; as a seller, I want to see and manage only my portion of that order.
+- **Acceptance criteria:** One `order` (customer-facing, "order group") splits automatically into one `vendor_order` per seller present in the cart, each with its own status lifecycle (`pending`, `confirmed`, `shipped`, `delivered`, `cancelled`, `returned`); customer sees a unified view with per-vendor sub-status; seller sees only their own `vendor_order`(s).
+- **Data ownership:** `order` (customer-owned, cross-vendor), `vendor_order` and `vendor_order_item` (carry `vendor_id`, seller-owned for fulfillment purposes but linked back to the parent order for the customer view).
+- **Authorization rules:** A seller can only read/update `vendor_order` rows matching their own `vendor_id`; a customer can only read orders where they are the owning customer; admins can read all.
+- **Validation requirements:** Splitting logic is deterministic and runs exactly once per checkout (idempotent on the checkout's idempotency key); every `vendor_order_item` traces back to a cart line item and a vendor.
+- **Failure states:** If splitting fails partway (e.g., one seller's stock reservation fails after payment capture began), the whole checkout fails atomically before capture — never a partially-split order with a captured payment and no corresponding vendor order.
+- **Security risks:** A seller querying `vendor_order` without a `vendor_id` filter (must be enforced in the module's service layer, not left to callers); status transitions bypassing the state machine (e.g., a seller marking another seller's item "shipped").
+- **Tests:**
+  - Unit: order → vendor_order splitting algorithm; status state-machine transitions.
+  - Integration: seller API calls are scoped to their own `vendor_order`s only (negative authz test); splitting is idempotent under retry.
+  - E2E: customer checks out a 2-seller cart; each seller sees only their own sub-order in their portal; customer's order page shows both.
+
+---
+
+### 9.16 Shipping
+
+**Domain module:** `shipping`
+
+- **User story:** As a seller, I want to define my own shipping options and rates, and mark orders shipped with tracking, so customers know when to expect their items.
+- **Acceptance criteria:** Seller configures shipping options (e.g., standard/express) and flat or weight-based rates per option; at fulfillment, seller enters a carrier + tracking number; customer sees tracking per vendor sub-order.
+- **Data ownership:** `shipping_option`, `shipment` — scoped by `vendor_id` (Medusa fulfillment module, seller-scoped provider config).
+- **Authorization rules:** Only the owning seller manages their shipping options and marks their own shipments; customer/admin have read access.
+- **Validation requirements:** At least one active shipping option required before a seller can go live; tracking number format loosely validated (non-empty, carrier-appropriate pattern where known).
+- **Failure states:** Marking "shipped" without a tracking number is allowed only if the seller explicitly opts out of tracked shipping for that option (flagged clearly to the customer).
+- **Security risks:** A seller's shipping config leaking into another seller's checkout rate calculation; tampering with shipping cost client-side (server always recalculates from the seller's own configured rates).
+- **Tests:**
+  - Unit: rate calculation per shipping option.
+  - Integration: checkout applies each seller's own shipping rate independently within one order.
+  - E2E: seller adds a tracking number; customer's order detail page reflects it immediately.
+
+---
+
+### 9.17 Returns & Refunds
+
+**Domain modules:** `returns`, `refunds`
+
+- **User story:** As a customer, I want to request a return on an item I bought and get refunded once the seller (or admin) approves it.
+- **Acceptance criteria:** Customer requests a return against a specific `vendor_order_item` within a return window (seller- or platform-configured); seller (or admin, on escalation) approves/denies with a reason; approved return triggers a refund through Stripe and a proportional commission reversal.
+- **Data ownership:** `return_request`, `refund` — scoped by `vendor_id` (return/refund always belongs to exactly one seller's sub-order) and linked to the parent `order` for the customer view.
+- **Authorization rules:** Customer can create/view only their own return requests; seller can approve/deny only returns against their own `vendor_order`s; admin can override/escalate any return.
+- **Validation requirements:** Return window enforced server-side; refund amount cannot exceed the original captured payment for that item; a return can only be actioned once (no double-refund).
+- **Failure states:** Refund attempt against an already-refunded item is rejected idempotently, not silently re-processed; Stripe refund failure surfaces to admin for manual follow-up rather than silently marking the return "complete."
+- **Security risks:** Refund-amount tampering (server computes from stored order data, never a client-sent amount); a seller approving a refund larger than the original charge; replayed refund webhook causing a duplicate refund (idempotency by Stripe event ID).
+- **Tests:**
+  - Unit: return-window enforcement; refund-amount bounds checking.
+  - Integration: refund triggers correct Stripe refund call and correct commission reversal ledger entry in one transaction/workflow.
+  - E2E: customer requests a return, seller approves it, customer sees refund status update and receives a notification.
+
+---
+
+### 9.18 Reviews
+
+**Domain module:** `reviews`
+
+- **User story:** As a customer, I want to leave a review on a product I purchased so other shoppers can make informed decisions.
+- **Acceptance criteria:** Review allowed only for a verified purchase (customer has a delivered `vendor_order_item` for that product); star rating + text; seller can publicly respond once; reviews go through moderation before appearing publicly (see §9.19).
+- **Data ownership:** `review`, `review_response` — linked to `product` (`vendor_id` inherited) and the reviewing `customer_id`.
+- **Authorization rules:** Only the verified purchaser can create a review for that purchase; only the owning seller can respond to a review on their product; admin can moderate/remove any review.
+- **Validation requirements:** One review per customer per purchased item; rating 1–5; text length bounds; profanity/PII basic filtering before entering the moderation queue.
+- **Failure states:** Attempted duplicate review on the same purchase is rejected with a clear message pointing to the existing review (editable instead).
+- **Security risks:** Fake reviews from non-purchasers (enforced via verified-purchase check, not client-trusted); stored-XSS via review text (sanitize/escape on render, never trust raw HTML).
+- **Tests:**
+  - Unit: verified-purchase eligibility check; duplicate-review prevention.
+  - Integration: review submission enters the moderation queue and is not publicly visible until approved.
+  - E2E: customer receives a delivered order, leaves a review, seller responds, review appears on the product page after moderation approval.
+
+---
+
+### 9.19 Moderation
+
+**Domain module:** `moderation`
+
+- **User story:** As an admin, I want a queue of products and reviews awaiting or flagged for moderation so I can keep the marketplace's content clean and compliant.
+- **Acceptance criteria:** New products and reviews enter a moderation queue (either pre-publish gate or post-publish flag-based, per content type — see [`MARKETPLACE-FLOWS.md`](MARKETPLACE-FLOWS.md)); admin can approve, reject with reason, or request changes; customers/sellers can flag existing content for re-review.
+- **Data ownership:** `moderation_item` (polymorphic reference to `product` or `review`), `moderation_flag` — platform-owned.
+- **Authorization rules:** Only Admin/Super Admin acts on moderation items; sellers/customers can only create flags, not resolve them.
+- **Validation requirements:** A moderation decision must record an actor and, for rejections, a reason (never a silent rejection).
+- **Failure states:** A flagged-but-not-yet-reviewed item remains visible (flag-based) or hidden (pre-publish gate) per its content type's configured policy — this must be unambiguous per type, not left to interpretation.
+- **Security risks:** A rejected product silently reappearing on re-save without re-entering the queue; moderation actions without audit trail.
+- **Tests:**
+  - Unit: moderation state-machine per content type.
+  - Integration: rejecting a product removes it from storefront search/browse immediately.
+  - E2E: admin rejects a flagged review; it disappears from the product page; the audit log records the action.
+
+---
+
+### 9.20 Notifications
+
+**Domain module:** `notifications`
+
+- **User story:** As a customer or seller, I want timely emails about my orders, shipments, returns, and payouts so I stay informed without checking the portal constantly.
+- **Acceptance criteria:** Transactional emails for: order confirmation, shipment/tracking update, return status change, refund processed, seller payout sent, seller application approved/rejected. Templated, branded consistently with the design system.
+- **Data ownership:** `notification_template`, `notification_log` — platform-owned; `notification_log` entries reference the recipient (`customer_id`, `seller_user_id`, or admin) and, where applicable, `vendor_id`.
+- **Authorization rules:** Only the system (background job) sends notifications; no user-facing API to send arbitrary notifications to another user.
+- **Validation requirements:** Every notification is deduped against `notification_log` before sending (no duplicate emails for the same event).
+- **Failure states:** Email provider failure is retried with backoff and logged; it never blocks the underlying business transaction (e.g., a failed shipment-email send must not roll back the shipment update).
+- **Security risks:** Notification content must not leak another party's data (e.g., a shipment email must never include another seller's order details); email template injection from user-supplied content (sanitize before interpolation).
+- **Tests:**
+  - Unit: dedup-by-event-id logic; template rendering with escaping.
+  - Integration: order confirmation email fires exactly once per order even under retry.
+  - E2E: full order → shipment → delivery flow produces the expected sequence of emails in a test inbox.
+
+---
+
+### 9.21 Reporting
+
+**Domain module:** `reporting`
+
+- **User story:** As a seller, I want to see my sales, orders, and payout summaries; as an admin, I want platform-wide visibility into GMV, commission revenue, and seller performance.
+- **Acceptance criteria:** Seller dashboard: sales over time, order counts, top products, payout summary — scoped to their own `vendor_id`. Admin dashboard: platform GMV, commission revenue, active sellers, order volume, return rate.
+- **Data ownership:** Reporting reads existing owned tables (orders, commissions, payouts) via scoped aggregation queries/views; it does not own primary data.
+- **Authorization rules:** Seller reporting endpoints are hard-scoped to the caller's own `vendor_id`; platform-wide reporting is Admin/Super Admin only.
+- **Validation requirements:** Date-range inputs bounded and validated; aggregation queries scoped server-side (never accept a client-supplied `vendor_id` filter for a seller caller — the caller's own ID is always used, ignoring any client override).
+- **Failure states:** Large date ranges degrade gracefully (paginated/summarized) rather than timing out.
+- **Security risks:** A seller passing another seller's ID as a query parameter to view their reporting (must be rejected server-side regardless of client input).
+- **Tests:**
+  - Unit: aggregation query correctness against known fixture data.
+  - Integration: seller reporting endpoint ignores/rejects a client-supplied foreign `vendor_id`.
+  - E2E: seller views their sales dashboard after a completed order and sees correct figures.
+
+---
+
+### 9.22 Audit Logs
+
+**Domain module:** `audit-logs`
+
+- **User story:** As an admin/compliance stakeholder, I want an immutable record of every sensitive action so we can investigate disputes and satisfy compliance requirements.
+- **Acceptance criteria:** Every sensitive action (see [`SECURITY.md`](SECURITY.md) for the full list) writes an append-only `audit_log` entry with actor, action, entity, before/after state where relevant, timestamp, and IP.
+- **Data ownership:** `audit_log` — platform-owned, append-only; entries reference `vendor_id` where the action is seller-scoped.
+- **Authorization rules:** No one can update or delete audit log entries through the application (append-only at the DB/permission level); only Admin/Super Admin can read audit logs, scoped to their own investigation needs; sellers may see a limited, filtered audit trail of actions on their own account (e.g., their own status changes) but not platform-wide logs.
+- **Validation requirements:** An audit entry is written in the same transaction/workflow as the action it records — never best-effort/fire-and-forget for critical actions (payment, refund, seller status, role changes).
+- **Failure states:** If audit logging fails for a critical action, the triggering action itself fails/rolls back rather than proceeding silently unlogged.
+- **Security risks:** Tampering with historical entries (mitigated by DB-level append-only constraints/permissions, not just application code); audit log itself leaking cross-seller data to a seller-scoped viewer.
+- **Tests:**
+  - Unit: audit entry shape/required fields per action type.
+  - Integration: a seller status change and its audit entry commit atomically; a forced audit-write failure rolls back the parent action.
+  - E2E: admin performs a seller suspension; the audit log shows the action with correct actor/timestamp/reason.
+
+---
+
+## 10. Success metrics (initial)
+
+- Number of approved, active sellers.
+- GMV and commission revenue.
+- Checkout completion rate (cart → paid order).
+- Order defect rate (returns/refunds as % of orders).
+- Seller onboarding completion rate (applied → Stripe-ready).
+- Time-to-payout after order settlement.
+
+## 11. Open questions
+
+See [`IMPLEMENTATION-PLAN.md`](IMPLEMENTATION-PLAN.md) §"Risks" for the risk register; cross-cutting open questions (commission default rate, return window length, payout cadence) are flagged there as decisions needed before/during Phase 1.
