@@ -13,12 +13,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/*
+ * Dark mode is explicitly deferred (see docs/DESIGN-SYSTEM.md #2) - v1 stays
+ * light regardless of OS/browser preference. packages/ui components use
+ * fixed neutral-900-on-white text colors that would lose contrast if this
+ * page's background flipped dark without the components also adapting.
+ */
 
 body {
   background: var(--background);
