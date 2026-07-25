@@ -265,21 +265,21 @@ Each feature below maps to one or more of the required domain modules. For every
 
 ---
 
-### 9.10 Cart
+### 9.10 Cart (implemented)
 
-**Domain module:** `cart`
+**Domain module:** native Medusa `cart` module, with custom marketplace validation/privacy logic in `apps/backend/src/cart/`
 
 - **User story:** As a customer, I want to add items from multiple sellers to one cart so I can check out once.
-- **Acceptance criteria:** Cart holds line items from any number of sellers; cart persists across sessions for logged-in customers; guest cart persists via cookie/local storage until login or expiry.
-- **Data ownership:** `cart`, `cart_line_item` (Medusa cart module). Not seller-scoped — owned by the customer/session.
-- **Authorization rules:** Only the owning customer/session can read or mutate their cart.
-- **Validation requirements:** Line item quantity ≤ available inventory at add-to-cart time (soft check; hard check at checkout); price shown reflects current server-side price.
-- **Failure states:** Adding an out-of-stock variant is rejected with a clear message; merging a guest cart into an account on login resolves quantity conflicts by summing, capped at available stock.
-- **Security risks:** Cart line items must reference server-side price/inventory, never accept a client-supplied price or override; cart access must not leak another customer's cart via a guessable ID (use unguessable tokens).
+- **Acceptance criteria:** Cart holds line items from any number of sellers, presented as one unified Bawi cart (no vendor count/grouping surfaced); cart persists across sessions for logged-in customers (resolved by `customer_id`); guest cart persists via an opaque cart id (httpOnly/secure/`SameSite=Lax` cookie on the storefront, forwarded to the backend as an `x-cart-id` header) until login/merge or the configurable expiration window elapses.
+- **Data ownership:** `cart`, native Medusa line items (unmodified schema). Not seller-scoped — owned by the customer/session. Vendor ownership per line item lives only in the line item's internal `metadata.vendor_id`, never serialized to any response — enough to split the order in a later checkout/fulfillment phase.
+- **Authorization rules:** Only the owning customer/session can read or mutate their cart (guest: cart id must match and the cart must still be an actual guest cart, i.e. `customer_id IS NULL`; customer: resolved strictly by `customer_id` from the verified session, never a client-supplied id). Seller and admin actor types have no route that can reach cart data.
+- **Validation requirements:** `variant_id` is the only product reference accepted from the client — price, vendor ownership, and availability are always re-resolved server-side (`resolveCartVariant`), never trusted from the request or from what's stored on the line item. Quantity must be a positive whole number, within the configurable per-line-item maximum, and within currently available inventory (hard rejection at add/update time, not a soft check). Only a `product_listing` with `status: "approved"` can be added or remain resolvable.
+- **Failure states:** Adding a draft/pending_review/rejected/archived/out-of-stock variant, or a quantity above inventory/the maximum, is rejected (400/404) with a clear message. An item that becomes unavailable or under-stocked *after* being added is not silently dropped — it stays in the cart, flagged (`is_available`/`quantity_exceeds_inventory` warning) and excluded from the subtotal, with `checkout_blocked: true` on the cart. A price drift is detected and persisted on every read, surfaced as a `price_changed` warning. Guest-cart merge on login resolves quantity conflicts by summing and capping to live inventory/the maximum, never rejecting; a repeated merge call for the same guest cart is idempotent (a no-op once already claimed).
+- **Security risks:** Cart line items must reference server-side price/inventory, never accept a client-supplied price or override (verified by an integration test that submits both and asserts they're ignored); cart access must not leak another customer's cart via a guessable ID (guest cart ids are Medusa's own ULIDs). Public cart responses never include `vendor_id`, seller id, Stripe account id, private SKU, or pickup location; a per-item `brand` is resolved through the same `public_brand_display_approved` gate used elsewhere (`resolvePublicBrand()`), not the seller's raw name.
 - **Tests:**
-  - Unit: cart line item quantity/price recalculation logic.
-  - Integration: guest-cart-to-account merge on login.
-  - E2E: customer adds products from two different sellers to one cart and proceeds to checkout with both present.
+  - Unit: quantity validation (`validateRequestedQuantity`), shipping-estimate/free-shipping-threshold calculation, cart-expiration boundary logic, `resolvePublicBrand`.
+  - Integration: guest and authenticated cart create/update, multi-vendor cart, no private-data leakage, seller cannot reach cart data, client-submitted price/vendor_id ignored, every non-approved/out-of-stock/over-quantity case rejected, price/availability drift reflected on refresh, guest-to-customer merge (including the quantity-conflict and idempotent-replay cases), cart expiration.
+  - E2E: customer adds products from two different sellers and sees one cart; quantity update and item removal; registering with an existing guest cart merges without duplicates; a returning customer's cart persists across a fresh login; an item that becomes unavailable is flagged; no vendor identity or private SKU appears anywhere in the UI or a captured network response.
 
 ---
 

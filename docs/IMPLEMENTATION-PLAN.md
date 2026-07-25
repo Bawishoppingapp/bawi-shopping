@@ -1,6 +1,6 @@
 # Bawi Shopping — Implementation Plan
 
-**Status: Phase 0, Phase 1, Phase 2, and Phase 3 are done.** Four vertical slices are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left, not a not-yet-started plan — update it as each phase progresses rather than treating it as historical.
+**Status: Phase 0 through Phase 5 are done.** Six vertical slices are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left, not a not-yet-started plan — update it as each phase progresses rather than treating it as historical.
 
 ## 1. Phased build order
 
@@ -42,9 +42,9 @@ With merchant-of-record now resolved (Bawi is merchant of record — see [`DECIS
 
 | User-facing phase label | Doc phase # | Scope |
 |---|---|---|
-| Phase 1 — Stripe Connect seller onboarding | Phase 4 | Seller connects a Stripe Express account; `account.updated` webhook idempotently updates connection status; business-configuration + feature-flag foundation ships alongside it (see [`DECISIONS.md`](DECISIONS.md)) |
-| Phase 2 — Multi-vendor shopping cart | Phase 5 | `cart` module (native Medusa), multi-seller line items, storefront cart UI |
-| Phase 3 — Bawi merchant-of-record checkout | Phase 6 | `checkout` workflow, single `PaymentIntent` on Bawi's platform account, Stripe Payment Element, price/inventory re-validation |
+| Phase 1 — Stripe Connect seller onboarding ✅ done | Phase 4 | Seller connects a Stripe Express account; `account.updated` webhook idempotently updates connection status; business-configuration + feature-flag foundation ships alongside it (see [`DECISIONS.md`](DECISIONS.md)) |
+| Phase 2 — Multi-vendor shopping cart ✅ done | Phase 5 | Native Medusa `cart` module + custom server-side validation layer (`apps/backend/src/cart/`): approval/price/inventory re-resolved on every add and refresh, multi-seller line items with vendor ownership tracked only in internal metadata, guest cart id forwarded as a header from a storefront-owned cookie, login/register-time merge workflow, storefront cart page/icon/add-to-cart control. See [`DECISIONS.md`](DECISIONS.md) |
+| Phase 3 — Bawi merchant-of-record checkout | Phase 6 | `checkout` workflow, single `PaymentIntent` on Bawi's platform account, Stripe Payment Element, price/inventory re-validation (reuses the cart's own `resolveCartVariant()` re-resolution rather than a separate mechanism) |
 | Phase 4 — Parent orders and vendor fulfillment orders | Phase 7 | `order` (customer-facing group) + `vendor_order`-equivalent per-seller fulfillment orders, vendor-order splitting workflow |
 | Phase 5 — Private vendor fulfillment codes and packaging | Phase 8 | Fulfillment/pickup/tracking codes (three distinct, unguessable, single-use-on-collection), vendor-facing order view built to exclude customer PII by construction |
 | Phase 6 — Courier assignment, pickup QR, delivery, and tracking | Phase 9 | `courier` role/portal, QR generation/scanning, delivery status, tracking surfaced to the customer without exposing vendor identity |
@@ -84,7 +84,7 @@ The original plan called for one seller/one product/one customer/one paid order 
 
 ### Recommended next vertical slice
 
-With identity, seller applications, admin review, the core catalog slice, product discovery/search/filtering, and merchant-of-record now resolved, the next slice is **Phase 1 (doc Phase 4): Stripe Connect seller onboarding**, per the twelve-phase breakdown above - an approved, activated seller connects a Stripe Express account and becomes "live" for Stripe purposes, which every later payment phase depends on. Cart (Phase 2/doc Phase 5) and checkout (Phase 3/doc Phase 6) follow directly after, at which point the private-fulfillment model decided in [`PRD.md`](PRD.md) §9.23 needs to be designed into the orders/shipping schema from the start (Phase 4-6/doc Phase 7-9), not retrofitted.
+With identity, seller applications, admin review, the core catalog slice, product discovery/search/filtering, merchant-of-record, Stripe Connect seller onboarding, and the multi-vendor cart now all built, the next slice is **Phase 3 (doc Phase 6): Bawi merchant-of-record checkout** - a single `PaymentIntent` on Bawi's platform account for the full cart total, Stripe Payment Element on the storefront, and server-side price/inventory re-validation at submit time reusing the cart's own `resolveCartVariant()`/refresh logic rather than a new mechanism. After that, the private-fulfillment model decided in [`PRD.md`](PRD.md) §9.23 needs to be designed into the orders/shipping schema from the start (Phase 4-6/doc Phase 7-9), not retrofitted.
 
 ## 4. Non-actions requiring confirmation first
 

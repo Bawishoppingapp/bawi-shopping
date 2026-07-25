@@ -6,6 +6,8 @@ This document walks the four flows that define the marketplace: customer purchas
 
 ## 1. Customer purchase flow (multi-vendor cart → single checkout)
 
+**Cart is implemented; checkout is not yet.** The diagram below still describes the intended end-to-end flow, but the "add to cart" portion at the top is real today (`apps/backend/src/cart/`, custom `/store/cart/*` routes over Medusa's native `cart` module - see `docs/DECISIONS.md`), while everything from "Proceed to checkout" onward remains the next phase. Two details worth calling out against the diagram as drawn: the availability check on add-to-cart is a **hard** rejection today (quantity above live inventory or the configurable per-line-item maximum is refused outright), not the "soft-check" implied below - checkout's own re-validation at submit time will reuse the same `resolveCartVariant()` re-resolution the cart already applies on every read, not a separate mechanism; and an item that becomes unavailable *after* being added is never silently dropped from the cart - it stays, flagged, with `checkout_blocked: true` on the cart, until the customer resolves it.
+
 ```mermaid
 sequenceDiagram
     participant C as Customer
