@@ -5,15 +5,10 @@ import type {
 import { SELLER_APPLICATION_MODULE } from "../../../../../modules/seller-application"
 import type SellerApplicationModuleService from "../../../../../modules/seller-application/service"
 import { isValidTransition } from "../../../../../modules/seller-application/state-machine"
-import {
-  ACTIVATION_TOKEN_TTL_MS,
-  generateActivationToken,
-  generateUniqueSlug,
-} from "../../../../../modules/seller-application/utils"
+import { generateUniqueSlug } from "../../../../../modules/seller-application/utils"
 import { SELLER_MODULE } from "../../../../../modules/seller"
 import type SellerModuleService from "../../../../../modules/seller/service"
-import { AUDIT_LOG_MODULE } from "../../../../../modules/audit-log"
-import type AuditLogModuleService from "../../../../../modules/audit-log/service"
+import { approveSellerApplicationWorkflow } from "../../../../../workflows/approve-seller-application"
 
 /**
  * Admin-only (see middlewares.ts). The admin's identity is always read from
@@ -24,7 +19,11 @@ import type AuditLogModuleService from "../../../../../modules/audit-log/service
  * re-calling this route returns the existing seller/seller_user rather
  * than creating duplicates. This guards the realistic case (double click,
  * retried request); a true concurrent-request race is a known residual
- * risk noted in docs/DECISIONS.md pending a workflow-based rewrite.
+ * risk noted in docs/DECISIONS.md.
+ *
+ * The actual writes (seller, seller_user, application, audit log) run
+ * inside approveSellerApplicationWorkflow so they're all-or-nothing - see
+ * docs/DECISIONS.md for why a workflow rather than a raw DB transaction.
  */
 export async function POST(
   req: AuthenticatedMedusaRequest,
@@ -33,7 +32,6 @@ export async function POST(
   const sellerApplicationModuleService: SellerApplicationModuleService =
     req.scope.resolve(SELLER_APPLICATION_MODULE)
   const sellerModuleService: SellerModuleService = req.scope.resolve(SELLER_MODULE)
-  const auditLogModuleService: AuditLogModuleService = req.scope.resolve(AUDIT_LOG_MODULE)
 
   let application
   try {
@@ -69,45 +67,23 @@ export async function POST(
     return Boolean(existing)
   })
 
-  const seller = await sellerModuleService.createSellers({
-    name: application.store_name,
-    slug,
-    status: "approved",
-  })
-
-  const sellerUser = await sellerModuleService.createSellerUsers({
-    seller_id: seller.id,
-    email: application.business_email,
-    role: "owner",
-    activation_token: generateActivationToken(),
-    activation_token_expires_at: new Date(Date.now() + ACTIVATION_TOKEN_TTL_MS),
-  })
-
-  const updated = await sellerApplicationModuleService.updateSellerApplications({
-    id: application.id,
-    status: "approved",
-    seller_id: seller.id,
-    reviewed_by: adminUserId,
-    reviewed_at: new Date(),
-  })
-
-  await auditLogModuleService.record({
-    actorType: "user",
-    actorId: adminUserId,
-    action: "seller_application.approved",
-    entityType: "seller_application",
-    entityId: application.id,
-    vendorId: seller.id,
-    beforeState: { status: previousStatus },
-    afterState: { status: "approved", seller_id: seller.id },
+  const { result } = await approveSellerApplicationWorkflow(req.scope).run({
+    input: {
+      applicationId: application.id,
+      storeName: application.store_name,
+      slug,
+      businessEmail: application.business_email,
+      adminUserId,
+      previousStatus,
+    },
   })
 
   const sellerPortalUrl = process.env.SELLER_PORTAL_URL ?? "http://localhost:3001"
 
   res.json({
-    application: updated,
-    seller,
-    seller_user: { id: sellerUser.id, email: sellerUser.email },
-    activation_link: `${sellerPortalUrl}/activate?token=${sellerUser.activation_token}`,
+    application: result.application,
+    seller: result.seller,
+    seller_user: { id: result.sellerUser.id, email: result.sellerUser.email },
+    activation_link: `${sellerPortalUrl}/activate?token=${result.sellerUser.activation_token}`,
   })
 }

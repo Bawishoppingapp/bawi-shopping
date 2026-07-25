@@ -29,6 +29,30 @@ async function get(path: string, token?: string) {
   return { status: response.status, data: await response.json() }
 }
 
+/**
+ * Forces every INSERT/UPDATE against `table` to fail for the duration of
+ * `fn`, by adding a CHECK(false) constraint that Postgres enforces
+ * regardless of role privileges (unlike GRANT/REVOKE, which the app's own
+ * DB role - a local-dev superuser - would simply bypass). Used to prove the
+ * approve/reject workflows roll back everything already written when a
+ * later step genuinely fails, without needing any test-only hook in the
+ * application code itself.
+ */
+async function withForcedFailure(
+  dbClient: Client,
+  table: string,
+  fn: () => Promise<void>
+) {
+  await dbClient.query(
+    `ALTER TABLE ${table} ADD CONSTRAINT force_test_failure CHECK (false) NOT VALID`
+  )
+  try {
+    await fn()
+  } finally {
+    await dbClient.query(`ALTER TABLE ${table} DROP CONSTRAINT force_test_failure`)
+  }
+}
+
 function createAdmin(email: string, password: string) {
   execFileSync("npx", ["medusa", "user", "-e", email, "-p", password], {
     cwd: BACKEND_ROOT,
@@ -283,6 +307,32 @@ describe("Seller application, admin review, and approval", () => {
     expect(approveAfterReject.status).toBe(422)
   })
 
+  test("repeated rejection is idempotent and does not create a second audit-log entry", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const applicationId = submitted.data.application.id
+
+    const firstRejection = await post(
+      `/admin/seller-applications/${applicationId}/reject`,
+      { reason: "Incomplete application." },
+      adminToken
+    )
+    expect(firstRejection.status).toBe(200)
+
+    const secondRejection = await post(
+      `/admin/seller-applications/${applicationId}/reject`,
+      { reason: "Incomplete application." },
+      adminToken
+    )
+    expect(secondRejection.status).toBe(200)
+    expect(secondRejection.data.already_rejected).toBe(true)
+
+    const { rows } = await dbClient.query(
+      "SELECT count(*)::int AS count FROM audit_log WHERE entity_id = $1 AND action = 'seller_application.rejected'",
+      [applicationId]
+    )
+    expect(rows[0].count).toBe(1)
+  })
+
   test("rejecting without a reason is rejected", async () => {
     const submitted = await post("/seller-applications", validApplicationPayload())
     const response = await post(
@@ -291,5 +341,164 @@ describe("Seller application, admin review, and approval", () => {
       adminToken
     )
     expect(response.status).toBe(400)
+  })
+
+  describe("approve/reject atomicity - a failure partway through rolls back everything already written", () => {
+    test("a failure creating the seller leaves the application unapproved and creates no seller, seller_user, or audit-log entry", async () => {
+      const email = `rollback-seller-${suffix}@example.test`
+      const submitted = await post(
+        "/seller-applications",
+        validApplicationPayload({ business_email: email })
+      )
+      const applicationId = submitted.data.application.id
+      const storeName = submitted.data.application.store_name ?? undefined
+
+      let response
+      await withForcedFailure(dbClient, "seller", async () => {
+        response = await post(
+          `/admin/seller-applications/${applicationId}/approve`,
+          undefined,
+          adminToken
+        )
+      })
+
+      expect(response!.status).toBeGreaterThanOrEqual(500)
+
+      const statusCheck = await get(`/seller-applications/${applicationId}`)
+      expect(statusCheck.data.application.status).toBe("submitted")
+
+      const { rows: sellerRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM seller WHERE name = $1",
+        [storeName]
+      )
+      expect(sellerRows[0].count).toBe(0)
+
+      const { rows: sellerUserRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM seller_user WHERE email = $1",
+        [email]
+      )
+      expect(sellerUserRows[0].count).toBe(0)
+
+      const { rows: auditRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM audit_log WHERE entity_id = $1 AND action = 'seller_application.approved'",
+        [applicationId]
+      )
+      expect(auditRows[0].count).toBe(0)
+    })
+
+    test("a failure creating the seller_user rolls back the already-created seller and leaves the application unapproved", async () => {
+      const email = `rollback-seller-user-${suffix}@example.test`
+      const submitted = await post(
+        "/seller-applications",
+        validApplicationPayload({ business_email: email })
+      )
+      const applicationId = submitted.data.application.id
+      const storeName = submitted.data.application.store_name
+
+      let response
+      await withForcedFailure(dbClient, "seller_user", async () => {
+        response = await post(
+          `/admin/seller-applications/${applicationId}/approve`,
+          undefined,
+          adminToken
+        )
+      })
+
+      expect(response!.status).toBeGreaterThanOrEqual(500)
+
+      const statusCheck = await get(`/seller-applications/${applicationId}`)
+      expect(statusCheck.data.application.status).toBe("submitted")
+
+      // The seller created in the earlier step must not survive - otherwise
+      // this would leave an "approved"-looking seller with no owner and no
+      // application pointing at it.
+      const { rows: sellerRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM seller WHERE name = $1",
+        [storeName]
+      )
+      expect(sellerRows[0].count).toBe(0)
+
+      const { rows: auditRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM audit_log WHERE entity_id = $1 AND action = 'seller_application.approved'",
+        [applicationId]
+      )
+      expect(auditRows[0].count).toBe(0)
+    })
+
+    test("a failure recording the approval audit log rolls back the seller, the seller_user, and the application status change", async () => {
+      const email = `rollback-audit-log-${suffix}@example.test`
+      const submitted = await post(
+        "/seller-applications",
+        validApplicationPayload({ business_email: email })
+      )
+      const applicationId = submitted.data.application.id
+      const storeName = submitted.data.application.store_name
+
+      let response
+      await withForcedFailure(dbClient, "audit_log", async () => {
+        response = await post(
+          `/admin/seller-applications/${applicationId}/approve`,
+          undefined,
+          adminToken
+        )
+      })
+
+      expect(response!.status).toBeGreaterThanOrEqual(500)
+
+      const statusCheck = await get(`/seller-applications/${applicationId}`)
+      expect(statusCheck.data.application.status).toBe("submitted")
+
+      const { rows: sellerRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM seller WHERE name = $1",
+        [storeName]
+      )
+      expect(sellerRows[0].count).toBe(0)
+
+      const { rows: sellerUserRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM seller_user WHERE email = $1",
+        [email]
+      )
+      expect(sellerUserRows[0].count).toBe(0)
+    })
+
+    test("a failure recording the rejection audit log rolls back the application status change", async () => {
+      const email = `rollback-reject-audit-log-${suffix}@example.test`
+      const submitted = await post(
+        "/seller-applications",
+        validApplicationPayload({ business_email: email })
+      )
+      const applicationId = submitted.data.application.id
+
+      let response
+      await withForcedFailure(dbClient, "audit_log", async () => {
+        response = await post(
+          `/admin/seller-applications/${applicationId}/reject`,
+          { reason: "Insufficient business information provided." },
+          adminToken
+        )
+      })
+
+      expect(response!.status).toBeGreaterThanOrEqual(500)
+
+      const statusCheck = await get(`/seller-applications/${applicationId}`)
+      expect(statusCheck.data.application.status).toBe("submitted")
+
+      // A seller who was never actually rejected must still be able to log
+      // in once activated later - i.e. this application must not be stuck
+      // in a half-rejected state with no audit trail explaining why.
+      const secondAttempt = await post(
+        `/admin/seller-applications/${applicationId}/reject`,
+        { reason: "Insufficient business information provided." },
+        adminToken
+      )
+      expect(secondAttempt.status).toBe(200)
+      expect(secondAttempt.data.already_rejected).toBeUndefined()
+
+      const { rows: auditRows } = await dbClient.query(
+        "SELECT count(*)::int AS count FROM audit_log WHERE entity_id = $1 AND action = 'seller_application.rejected'",
+        [applicationId]
+      )
+      expect(auditRows[0].count).toBe(1)
+    })
   })
 })

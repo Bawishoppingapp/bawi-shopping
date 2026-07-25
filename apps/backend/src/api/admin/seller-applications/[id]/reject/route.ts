@@ -6,13 +6,16 @@ import { SELLER_APPLICATION_MODULE } from "../../../../../modules/seller-applica
 import type SellerApplicationModuleService from "../../../../../modules/seller-application/service"
 import { isValidTransition } from "../../../../../modules/seller-application/state-machine"
 import { rejectApplicationSchema } from "../../../../../modules/seller-application/schemas"
-import { AUDIT_LOG_MODULE } from "../../../../../modules/audit-log"
-import type AuditLogModuleService from "../../../../../modules/audit-log/service"
+import { rejectSellerApplicationWorkflow } from "../../../../../workflows/reject-seller-application"
 
 /**
  * Admin-only (see middlewares.ts). The rejection reason is stored on the
  * application (private - never returned from a public endpoint, see
  * docs/SECURITY.md) and recorded in the audit log for accountability.
+ *
+ * The application update and the audit-log write run inside
+ * rejectSellerApplicationWorkflow so they're all-or-nothing - see
+ * docs/DECISIONS.md.
  */
 export async function POST(
   req: AuthenticatedMedusaRequest,
@@ -29,7 +32,6 @@ export async function POST(
 
   const sellerApplicationModuleService: SellerApplicationModuleService =
     req.scope.resolve(SELLER_APPLICATION_MODULE)
-  const auditLogModuleService: AuditLogModuleService = req.scope.resolve(AUDIT_LOG_MODULE)
 
   let application
   try {
@@ -57,23 +59,14 @@ export async function POST(
   const previousStatus = application.status
   const adminUserId = req.auth_context.actor_id
 
-  const updated = await sellerApplicationModuleService.updateSellerApplications({
-    id: application.id,
-    status: "rejected",
-    rejection_reason: parsed.data.reason,
-    reviewed_by: adminUserId,
-    reviewed_at: new Date(),
+  const { result } = await rejectSellerApplicationWorkflow(req.scope).run({
+    input: {
+      applicationId: application.id,
+      reason: parsed.data.reason,
+      adminUserId,
+      previousStatus,
+    },
   })
 
-  await auditLogModuleService.record({
-    actorType: "user",
-    actorId: adminUserId,
-    action: "seller_application.rejected",
-    entityType: "seller_application",
-    entityId: application.id,
-    beforeState: { status: previousStatus },
-    afterState: { status: "rejected", rejection_reason: parsed.data.reason },
-  })
-
-  res.json({ application: updated })
+  res.json({ application: result.application })
 }
