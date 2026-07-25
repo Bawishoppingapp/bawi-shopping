@@ -29,6 +29,7 @@ Full definitions live in [`USER-ROLES.md`](USER-ROLES.md). Summary:
 - **Seller Staff** — additional users under a seller account with scoped permissions (e.g., catalog editor, order fulfiller).
 - **Admin (platform staff)** — approves sellers, moderates content, handles escalations, views platform-wide reporting.
 - **Super Admin** — admin with the ability to manage other admins and platform-level configuration.
+- **Courier** *(role decided, not yet built — see §9.23)* — limited-access role that completes pickup/delivery handoffs without seeing customer or seller identity beyond what a handoff requires.
 
 ## 5. Business model
 
@@ -75,9 +76,9 @@ In scope for v1 (detailed specs in §9):
 - International sellers, currencies, or shipping.
 - Algolia integration itself (only the abstraction/interface ships now — see [`ARCHITECTURE.md`](ARCHITECTURE.md)).
 - Seller subscription tiers / paid placement / advertising.
-- Multi-currency or multi-language storefront.
+- Multi-currency storefront (currency stays USD-only for v1; multi-*language* is decided and planned — see §9.24 — but not built this slice).
 - SMS or push notifications (email only for v1).
-- Live chat / messaging between customer and seller.
+- Live chat / messaging between customer and seller (and, once built, this stays intermediated by Bawi even for fulfillment-related contact — see §9.23; there is no v1 or later plan for a direct customer↔seller channel).
 - Seller-to-seller marketplace features (bundles across sellers, cross-seller promotions).
 - Gift cards, store credit, loyalty points.
 - Marketplace financing / seller cash advances.
@@ -85,6 +86,9 @@ In scope for v1 (detailed specs in §9):
 - Mobile native apps (responsive web only).
 - Wishlists, saved-for-later, size-recommendation/AI styling features.
 - Custom RLS-based database isolation (documented as a future hardening option in [`SECURITY.md`](SECURITY.md), not required for v1).
+- **Delivery/fulfillment execution, temporary fulfillment codes, single-use expiring pickup QR codes, and the `courier` role/portal** — the private-fulfillment *model* is decided (§9.23), the mechanics are not built.
+- **The full translation system** (seller/AI translation submission UI, Bawi approval workflow, locale-aware storefront rendering) — the language list and storage model are decided (§9.24), the system is not built. The product-catalog slice only reserves the schema shape (translations in a separate table, never inline columns).
+- **Merchant-of-record** is an explicitly open legal/business decision — not deferred as "not important," deferred because it isn't decided yet and nothing in the current or next slice should assume an answer either way.
 
 ## 9. Feature specifications
 
@@ -192,10 +196,10 @@ Each feature below maps to one or more of the required domain modules. For every
 **Domain modules:** `products`, `product-variants`
 
 - **User story:** As a seller, I want to list products with variants (size, color) so customers can pick the exact item they want.
-- **Acceptance criteria:** Product has title, description, images, brand (= seller), category, status (`draft`, `published`, `archived`); each product has ≥1 variant with SKU, size/color options, price, and inventory link.
+- **Acceptance criteria:** Product has title, description, images, brand (= seller), category, status (`draft`, `published`, `archived`); each product has ≥1 variant with SKU, size/color options, price, and inventory link. Every product also gets a **permanent `product_code`**, issued once and never reused or reassigned even if the product is retitled, re-slugged, or archived — distinct from the (mutable, human-editable) slug. See [`DECISIONS.md`](DECISIONS.md).
 - **Data ownership:** `product`, `product_variant`, `product_option`, `product_image` — all carry `vendor_id` (the owning seller). Owned exclusively by the seller that created them.
 - **Authorization rules:** A seller can only create/edit/delete their own products and variants; admins can read all products and can unpublish/moderate any product; no seller can read another seller's draft products.
-- **Validation requirements:** Required title, ≥1 image, ≥1 published variant with price and SKU before a product can move to `published`; SKU unique per seller (not necessarily platform-wide).
+- **Validation requirements:** Required title, ≥1 image, ≥1 published variant with price and SKU before a product can move to `published`; SKU unique per seller (not necessarily platform-wide). **The variant SKU is private** — it is the seller's own internal reference and is never returned from a public/storefront-facing endpoint, same sensitivity tier as `seller_application.rejection_reason` (see [`SECURITY.md`](SECURITY.md) §11).
 - **Failure states:** Publishing without a complete variant set is blocked with field-level errors; deleting a product referenced by past orders is disallowed (archive instead, to preserve order history integrity).
 - **Security risks:** Cross-seller data leakage via a missing `vendor_id` filter on a list/detail query; image upload used to smuggle non-image files (must validate MIME/type and size server-side, not just by extension).
 - **Tests:**
@@ -481,6 +485,31 @@ Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-paym
   - Unit: audit entry shape/required fields per action type.
   - Integration: a seller status change and its audit entry commit atomically; a forced audit-write failure rolls back the parent action.
   - E2E: admin performs a seller suspension; the audit log shows the action with correct actor/timestamp/reason.
+
+---
+
+### 9.23 Private Fulfillment & Delivery *(decided, not yet built)*
+
+**Domain modules:** `fulfillment-privacy` (planned), `courier` role (planned)
+
+- **User story:** As a customer or seller, I want my order fulfilled without either party learning the other's real identity or contact details, so the marketplace — not an individual seller or courier — is who I trust with my information.
+- **Decided model:** Bawi is the intermediary for all buyer/seller logistics contact. Sellers fulfill orders, but packaging, communication, tracking, and returns are all Bawi-controlled rather than a direct seller→customer channel. Handoff/pickup uses **temporary fulfillment codes** and **single-use, expiring pickup QR codes** rather than exposing either party's address/contact info to the other. A **`courier`** role exists with access limited strictly to what a pickup/delivery task requires (no customer PII beyond the handoff, no seller PII, no order financials).
+- **What this means for the current product-catalog slice:** the `product` table gets a permanent `product_code` (§9.6); seller identity is never exposed to customers beyond what the product spec already required; the schema does not yet grow fulfillment-code or QR-code tables.
+- **Explicitly not built this slice or the next:** delivery execution, fulfillment-code generation/validation, QR code generation/scanning, the courier role's portal/API, Bawi-mediated messaging.
+- **Security risks (for when this is built):** a leaked or reused pickup QR code granting delivery access to the wrong person (single-use + expiry are non-negotiable, not just a UX nicety); a courier session scoped too broadly and able to read customer/seller PII beyond the handoff; fulfillment codes guessable/sequential (must be unguessable, same as order IDs — see [`SECURITY.md`](SECURITY.md) §5).
+- **Merchant-of-record:** who is legally the seller of record (Bawi vs. each vendor) is **explicitly unresolved** and has direct implications for this feature (returns authority, tax, liability) — do not implicitly decide it via how this feature ends up implemented; it needs its own explicit decision first.
+
+---
+
+### 9.24 Localization & Translations *(decided, not yet built)*
+
+**Domain module:** `localization`/`translation` (planned)
+
+- **User story:** As a customer who reads Amharic, Tigrinya, Afaan Oromo, Simplified Chinese, or Spanish, I want to browse and shop in my language.
+- **Decided model:** Six supported languages — English, Amharic, Tigrinya, Afaan Oromo, Simplified Chinese, Spanish. **English is the base language and the fallback** whenever a translation is missing for a given locale. Product translations are stored in a **table separate from the base product record** (keyed by `product_id` + `locale`), never as inline per-locale columns on `product` — this keeps the base product record's shape stable regardless of how many languages are eventually supported. **Every seller-submitted or AI-generated translation requires Bawi approval** before it's shown to customers, mirroring product approval itself (translations are content, and content is moderated).
+- **What this means for the current product-catalog slice:** the product schema must not bake per-language fields into `product`/`product_variant` — title/description/etc. on the base row are implicitly the English content. No translation table, submission UI, or approval workflow is built yet.
+- **Explicitly not built this slice or the next:** the translation submission UI (seller or AI-assisted), the Bawi translation-approval queue, locale-aware storefront rendering/routing, and any AI-translation integration itself.
+- **Security/content risks (for when this is built):** unapproved translations reaching customers (same approval-gate discipline as product moderation — see §9.19); a translation used to inject misleading pricing/claims not present in the approved English original (translations should be diffed/reviewed against the source, not approved blind); stored-XSS via translated free text (same escaping/sanitization rule as reviews — see [`SECURITY.md`](SECURITY.md) §5).
 
 ---
 

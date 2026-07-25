@@ -19,6 +19,8 @@ Five deployables, one repo:
 | **Commerce backend** (`apps/backend`) | Medusa instance: all modules, workflows, REST/Store/Admin APIs, webhook receivers | Node/TypeScript, the only app with direct DB access. **Built:** `seller`, `seller-application`, `audit-log` custom modules. |
 | **Background jobs** (`apps/workers`) | Scheduled jobs and queue consumers: payouts, search index sync, notification delivery, webhook retry, reporting rollups | Separate Node process from the API, shares the module layer as a library, scales independently. **Not yet built.** |
 
+*A dedicated courier-facing client is undecided — it may be a thin scoped view (e.g. within `apps/admin` or its own minimal page set) rather than a sixth full app, given how narrow the courier role's access is (see [`USER-ROLES.md`](USER-ROLES.md) §2.7). Not designed yet; noted here so a future session doesn't assume a full app is required by default.*
+
 Each frontend calls the commerce backend only through its published API surface (Store API for storefront, a seller-scoped/public API namespace for the seller portal, Admin API for the admin portal). No frontend talks to PostgreSQL directly.
 
 ## 3. System diagram
@@ -101,6 +103,8 @@ Medusa v2 ships a set of native commerce modules; the marketplace-specific conce
 | Notifications | Native Medusa `notification` module | Email provider + templates, dedup log |
 | Reporting | **Custom module: `reporting`** | Read-side aggregation over existing modules, no owned source-of-truth data |
 | Audit logs | **Custom module: `audit-log`** (implemented) | Append-by-convention today (no application code path issues UPDATE/DELETE against it); a single `record()` method on the module service, called directly by mutating routes rather than via an event subscriber for now — see [`SECURITY.md`](SECURITY.md) §6 |
+| Private fulfillment | **Custom module: `fulfillment-privacy`** *(decided, not yet built)* | Temporary fulfillment codes, single-use expiring pickup QR codes, Bawi-mediated communication/tracking/returns/packaging; the `courier` actor type/role lives here. See [`DECISIONS.md`](DECISIONS.md), [`PRD.md`](PRD.md) §9.23, [`SECURITY.md`](SECURITY.md) §11. |
+| Localization | **Custom module: `localization`/`translation`** *(decided, not yet built)* | Six-language support (English fallback), product translations stored in their own table keyed by `product_id` + `locale`, Bawi approval required before a translation is customer-visible. See [`PRD.md`](PRD.md) §9.24. |
 
 Custom modules communicate with native modules exclusively through Medusa's module-link and workflow/event-subscriber mechanisms — never direct cross-module table joins — preserving the modular-monolith boundary so any module could theoretically be extracted into its own service later without a rewrite.
 

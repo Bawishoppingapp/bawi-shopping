@@ -2,6 +2,8 @@
 
 This document walks the four flows that define the marketplace: customer purchase, seller onboarding, multi-vendor payment/order-splitting, and returns/refunds. Each includes a sequence diagram and the failure/edge cases the implementation must handle.
 
+**Note on fulfillment/returns and identity separation:** the shipping and returns flows below predate the private-fulfillment decision in [`DECISIONS.md`](DECISIONS.md) and don't yet reflect it — they'll need a redesign pass (temporary fulfillment codes, Bawi-mediated tracking/returns/packaging, no direct seller↔customer shipping contact) once the fulfillment slice is actually built. Until then, treat any step below that implies direct seller-to-customer shipping/tracking contact as provisional, not as contradicting the decided model.
+
 ## 1. Customer purchase flow (multi-vendor cart → single checkout)
 
 ```mermaid

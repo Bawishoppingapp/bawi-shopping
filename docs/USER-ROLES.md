@@ -9,6 +9,7 @@ Authentication (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §4) recognizes three i
 | Customer | Storefront | `customer` |
 | Seller user | Seller portal | `seller_user` (belongs to exactly one `seller`) |
 | Admin user | Admin portal | `admin_user` |
+| Courier *(planned, not yet built)* | Undecided — likely a scoped view, not a full app (see [`ARCHITECTURE.md`](ARCHITECTURE.md)) | `courier` — access limited to assigned pickup/delivery tasks only |
 
 ## 2. Roles
 
@@ -71,6 +72,15 @@ Everything Admin can do, plus:
 - Set platform-wide default commission rate.
 - Hard-delete a seller (irreversible; requires a distinct confirmation step and is always audit-logged with full before-state).
 - Full, unfiltered audit log read access.
+
+### 2.7 Courier *(decided, not yet built — see `docs/PRD.md` §9.23)*
+
+A limited-access role for completing pickup/delivery handoffs under the platform's private-fulfillment model (see `docs/DECISIONS.md`). Not a seller-side or customer-side actor — its own actor type.
+
+- Can see only the pickup/delivery tasks assigned to it, and only the fields a handoff requires (a pickup code/QR to validate, a drop-off location, a task status to update).
+- Cannot see the customer's full identity/contact details, the seller's identity, order financials (price, commission), or any product/catalog data beyond what identifies the parcel for handoff.
+- Cannot message the customer or seller directly — any communication need routes through Bawi, per the identity-separation rule (see [`SECURITY.md`](SECURITY.md) §11).
+- Session model, portal, and authorization implementation are undecided (see [`ARCHITECTURE.md`](ARCHITECTURE.md)) — this section defines *scope*, not yet mechanism.
 
 ## 3. Permission matrix (representative actions)
 

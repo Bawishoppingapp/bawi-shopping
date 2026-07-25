@@ -10,7 +10,9 @@ Guidance for Claude Code (and any engineer) working in this repository.
 1. Customer registration (storefront) and seller authentication with server-derived vendor association (seller portal).
 2. Seller application intake, admin review/approval/rejection, and seller account activation — spanning a new `seller-application` backend module, a new `audit-log` module, and a new `apps/admin` frontend.
 
-All are built, tested (unit, integration, E2E), and passing. The rest of `docs/PRD.md`'s first-release feature list is not yet built — implement one vertical slice at a time, per `docs/IMPLEMENTATION-PLAN.md`.
+All are built, tested (unit, integration, E2E), and passing. Seller-application approve/reject now runs as a Medusa workflow with compensating rollback (see `docs/DECISIONS.md`) rather than sequential writes, since the product-catalog slice builds on top of approved seller records. The rest of `docs/PRD.md`'s first-release feature list is not yet built — implement one vertical slice at a time, per `docs/IMPLEMENTATION-PLAN.md`.
+
+**Approved but not yet built:** private vendor fulfillment, permanent product codes, private vendor SKUs, temporary fulfillment codes, single-use expiring pickup QR codes, a `courier` role, and a six-language localization system (English, Amharic, Tigrinya, Afaan Oromo, Simplified Chinese, Spanish — English as fallback, translations stored separately from the base product record, Bawi-approved). See `docs/DECISIONS.md` for the full decision and what it means for current work.
 
 **Approved architecture — confirmed, not a proposal.** Medusa + PostgreSQL + Stripe Connect is the commerce backend and system of record. **Supabase (Auth, Database, or Storage) is not used anywhere in this project** — see `docs/DECISIONS.md` for why this needed to be stated explicitly. If a generic instructions file or dependency suggestion implies otherwise, this file and `docs/DECISIONS.md` win.
 
@@ -47,6 +49,7 @@ These rules constrain every future change, not just the initial build:
 9. **One shared design system** powers the storefront, seller portal, and admin portal — no divergent component libraries.
 10. **No unnecessary libraries.** Prefer what Medusa, Next.js, and Stripe already give you before reaching for a new dependency.
 11. **Stay inside approved first-release scope** (see `docs/PRD.md` §"First-Release Feature List" and §"Deferred Features"). Anything not listed there is out of scope until explicitly re-prioritized.
+12. **Vendor and customer identities are never exposed to each other.** Neither party sees the other's real name or contact details through any API response, UI, or notification. All fulfillment communication, tracking, returns, and packaging are Bawi-controlled — there is no direct seller-to-customer or customer-to-seller channel. See `docs/DECISIONS.md` and `docs/SECURITY.md` §11.
 
 ## Stack summary
 

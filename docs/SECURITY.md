@@ -2,7 +2,7 @@
 
 ## 1. Threat model summary
 
-The dominant risk in a multi-vendor marketplace is **cross-tenant data leakage** — one seller reading or modifying another seller's products, orders, or financials — followed by **payment integrity** (never trusting client-supplied money figures) and **content integrity** (moderation bypass, fake reviews). This document defines how each is prevented structurally, not just by convention.
+The dominant risk in a multi-vendor marketplace is **cross-tenant data leakage** — one seller reading or modifying another seller's products, orders, or financials — followed by **payment integrity** (never trusting client-supplied money figures), **content integrity** (moderation bypass, fake reviews), and (once fulfillment is built) **buyer/seller identity leakage** — either party learning the other's real identity or contact details through an API response, UI, or notification that wasn't supposed to expose it. This document defines how each is prevented structurally, not just by convention.
 
 ## 2. Tenant isolation (seller-to-seller)
 
@@ -70,3 +70,13 @@ Postgres **Row-Level Security** policies keyed on a per-request session variable
 - Customer PII (addresses, order history) is readable only by that customer and by Admin for support purposes (logged). Sellers see only the shipping information needed to fulfill their own `VendorOrder`s — never a customer's full account/order history across other sellers.
 - Object storage for product images is not used for any customer PII — product images only.
 - No data is sent to any third party beyond what's required for the transaction (Stripe for payment, email provider for transactional notifications) — no analytics/ad-tech data sharing decisions are made in this document; if introduced later, they require a privacy review.
+
+## 11. Identity separation & private fulfillment *(decided, not yet built)*
+
+See [`DECISIONS.md`](DECISIONS.md) for the full requirement and [`PRD.md`](PRD.md) §9.23 for the feature spec. Captured here now, ahead of the fulfillment slice, because it's a rule the current product-catalog work must already respect even though the fulfillment mechanics aren't built yet:
+
+- **Vendor and customer identities are never exposed to each other**, in either direction, through any API response, UI, or notification. This is CLAUDE.md rule #12 — a stronger, bidirectional version of the existing "seller identity must not be publicly exposed to customers" rule already in effect for products (§9.6 in `PRD.md`).
+- **All fulfillment communication, tracking, returns, and packaging are Bawi-controlled.** There is no direct seller-to-customer or customer-to-seller channel, now or in any currently-planned future slice — a "let sellers message customers directly" feature would need its own explicit re-decision, not an incremental addition to fulfillment.
+- **Planned controls once delivery is built:** single-use, expiring pickup QR codes (a stale or reused code must be rejected, not just discouraged in the UI); unguessable temporary fulfillment codes (same "non-sequential ID" principle as §5); a `courier` role (see [`USER-ROLES.md`](USER-ROLES.md) §2.7) scoped strictly to its assigned handoff, unable to read customer/seller PII or order financials beyond that.
+- **Product-catalog-slice implication today:** the private `vendor_sku` and the permanent `product_code` (see [`DATABASE.md`](DATABASE.md)) both exist partly to support this — a product's permanent code is safe to expose in a fulfillment-code/QR context later without also exposing the seller's own private SKU or the seller's identity.
+- **Merchant-of-record is an explicitly open legal/business decision.** It has direct security/compliance implications here (who has legal authority over a return, who is liable for a lost/damaged parcel, whose name appears on receipts/tax documents) — none of those questions are answered by this document, and nothing in the current implementation should assume an answer either way.

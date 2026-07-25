@@ -96,10 +96,14 @@ Still to come with the seller-onboarding slice: `description`, `logo_url`, `supp
 No bank account, card, tax ID, SSN, or identity-document fields are collected at this stage — those belong to the future Stripe Connect onboarding slice (see `docs/PAYMENTS.md`).
 
 **`product`**
-`id, vendor_id (FK → seller.id, NOT NULL), title, description, status (draft|published|archived), created_at, updated_at, deleted_at`
+`id, vendor_id (FK → seller.id, NOT NULL), product_code (text, unique, permanent — issued once, never reused/reassigned even if the product is retitled/re-slugged/archived; distinct from the mutable slug — see docs/DECISIONS.md), title, description, status (draft|published|archived), created_at, updated_at, deleted_at`
 
 **`product_variant`**
-`id, product_id (FK, NOT NULL), vendor_id (FK → seller.id, NOT NULL, denormalized for scoped-query performance), sku, size, color, created_at, updated_at`
+`id, product_id (FK, NOT NULL), vendor_id (FK → seller.id, NOT NULL, denormalized for scoped-query performance), sku (PRIVATE — the seller's own internal reference, never returned from a public/storefront-facing endpoint, same sensitivity tier as seller_application.rejection_reason — see docs/SECURITY.md §11), size, color, created_at, updated_at`
+
+**Deferred (not part of this slice's migrations):**
+- **`product_translation`** *(planned)* — `product_id (FK), locale, title, description, status (draft|pending_review|approved), submitted_by, approved_by, created_at, updated_at`. Keyed by `product_id` + `locale`, entirely separate from `product` — the base `product` row's title/description are implicitly the English content, and this table is never collapsed into per-locale columns on `product` itself. See `docs/PRD.md` §9.24, `docs/DECISIONS.md`.
+- **Fulfillment-code / pickup-QR / `courier` tables** *(planned)* — support the private-fulfillment model (`docs/PRD.md` §9.23, `docs/SECURITY.md` §11); not designed yet beyond the requirement that fulfillment/pickup codes must be unguessable and pickup QR codes single-use and expiring.
 
 **`order`** (customer-facing group)
 `id, customer_id (FK, NOT NULL), status, currency (USD), total_amount, shipping_address_id, created_at, updated_at`
