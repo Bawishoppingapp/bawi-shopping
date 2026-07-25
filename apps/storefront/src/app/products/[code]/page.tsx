@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { translate } from "@bawi/i18n"
 import { getLocale } from "@bawi/i18n/server"
 import { getPublicProduct } from "@/features/products/services/products-client"
+import { AddToCartForm } from "@/features/cart/components/add-to-cart-form"
 
 function formatUsd(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
@@ -70,6 +71,10 @@ export default async function ProductDetailPage({
             ? translate(locale, "product.inStock")
             : translate(locale, "product.outOfStock")}
         </p>
+
+        <div className="mt-2">
+          <AddToCartForm variants={product.variants} />
+        </div>
 
         <table className="mt-2 w-full text-left text-sm">
           <thead className="text-neutral-500">

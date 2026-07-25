@@ -35,6 +35,20 @@ export default defineMiddlewares({
       middlewares: [authenticate("user", ["bearer", "session"])],
     },
     {
+      // Optional auth: a valid customer bearer token identifies an
+      // authenticated customer's cart, but guests (no token) are not
+      // rejected - they're identified by the opaque x-cart-id header
+      // instead (see src/cart/cart-session.ts).
+      matcher: "/store/cart*",
+      middlewares: [
+        authenticate("customer", ["bearer", "session"], { allowUnauthenticated: true }),
+      ],
+    },
+    {
+      matcher: "/store/cart/merge",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
       method: ["POST"],
       matcher: "/webhooks/stripe",
       // Stripe signature verification needs the exact raw request body -

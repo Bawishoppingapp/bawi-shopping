@@ -10,7 +10,7 @@ export default async function AccountPage() {
   const customer = sessionToken ? await getCurrentCustomer(sessionToken) : null
 
   if (!customer) {
-    redirect("/register")
+    redirect("/login")
   }
 
   return (

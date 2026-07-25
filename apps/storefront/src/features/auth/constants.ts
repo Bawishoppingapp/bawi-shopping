@@ -10,3 +10,14 @@ export const initialRegisterState: RegisterFormState = {
   status: "idle",
   fieldErrors: {},
 }
+
+export interface LoginFormState {
+  status: "idle" | "error"
+  fieldErrors: Partial<Record<"email" | "password", string>>
+  formError?: string
+}
+
+export const initialLoginState: LoginFormState = {
+  status: "idle",
+  fieldErrors: {},
+}

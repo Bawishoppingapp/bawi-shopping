@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { LanguageSelector, LocaleProvider, translate } from "@bawi/i18n";
 import { getLocale } from "@bawi/i18n/server";
+import { CartIcon, CartIconSkeleton } from "@/features/cart/components/cart-icon";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -43,7 +45,12 @@ export default async function RootLayout({
                 {translate(locale, "nav.search")}
               </Link>
             </nav>
-            <LanguageSelector />
+            <div className="flex items-center gap-4">
+              <Suspense fallback={<CartIconSkeleton />}>
+                <CartIcon />
+              </Suspense>
+              <LanguageSelector />
+            </div>
           </header>
           {children}
         </LocaleProvider>

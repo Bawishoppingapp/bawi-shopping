@@ -1,6 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
+import Link from "next/link"
 import { Button, FormField, Input } from "@bawi/ui"
 import { useTranslations } from "@bawi/i18n"
 import { registerCustomer } from "../actions/register"
@@ -39,6 +40,13 @@ export function RegisterForm() {
       <Button type="submit" loading={pending} className="mt-2">
         {pending ? t("register.submitting") : t("register.submit")}
       </Button>
+
+      <p className="text-center text-sm text-neutral-500">
+        {t("register.haveAccount")}{" "}
+        <Link href="/login" className="font-medium text-neutral-900 hover:underline">
+          {t("login.submit")}
+        </Link>
+      </p>
     </form>
   )
 }

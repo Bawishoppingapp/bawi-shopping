@@ -10,6 +10,7 @@ import {
   registerCustomerAuthIdentity,
   MedusaAuthError,
 } from "../services/medusa-auth-client"
+import { mergeGuestCartOnLogin } from "@/features/cart/actions/merge-cart"
 
 export async function registerCustomer(
   _prevState: RegisterFormState,
@@ -51,6 +52,15 @@ export async function registerCustomer(
       sameSite: "lax",
       path: "/",
     })
+
+    // Best-effort: a customer who just created an account should never be
+    // blocked from finishing registration because of a guest-cart merge
+    // hiccup - the guest cart cookie simply stays around to retry later.
+    try {
+      await mergeGuestCartOnLogin(sessionToken)
+    } catch {
+      // Intentionally swallowed - see comment above.
+    }
   } catch (error) {
     if (error instanceof MedusaAuthError) {
       const isDuplicate = /already exists/i.test(error.message)
