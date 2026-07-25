@@ -88,7 +88,7 @@ In scope for v1 (detailed specs in §9):
 - Custom RLS-based database isolation (documented as a future hardening option in [`SECURITY.md`](SECURITY.md), not required for v1).
 - **Delivery/fulfillment execution, temporary fulfillment codes, single-use expiring pickup QR codes, and the `courier` role/portal** — the private-fulfillment *model* is decided (§9.23), the mechanics are not built.
 - **The full translation system** (seller/AI translation submission UI, Bawi approval workflow, locale-aware storefront rendering) — the language list and storage model are decided (§9.24), the system is not built. The product-catalog slice only reserves the schema shape (translations in a separate table, never inline columns).
-- **Merchant-of-record** is an explicitly open legal/business decision — not deferred as "not important," deferred because it isn't decided yet and nothing in the current or next slice should assume an answer either way.
+- ~~**Merchant-of-record** is an explicitly open legal/business decision~~ — **resolved: Bawi Shopping is the merchant of record.** See [`DECISIONS.md`](DECISIONS.md).
 
 ## 9. Feature specifications
 
@@ -504,7 +504,7 @@ Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-paym
 - **What this means for the current product-catalog slice:** the `product` table gets a permanent `product_code` (§9.6); seller identity is never exposed to customers beyond what the product spec already required; vendor IDs stay server-side and private (never in a client-facing response); the schema does not yet grow fulfillment-code, pickup-code, or tracking-code tables.
 - **Explicitly not built this slice or the next:** delivery execution, fulfillment/pickup/tracking-code generation and validation, QR code generation/scanning, the courier role's portal/API, Bawi-mediated messaging, returns handling.
 - **Security risks (for when this is built):** a leaked or reused pickup code granting delivery access to the wrong person (single-use + expire-on-collection are non-negotiable, not just a UX nicety); a courier session scoped too broadly and able to read customer/seller PII beyond its one assigned delivery; a vendor-facing order view accidentally including customer PII because it was filtered rather than built to exclude it by construction; fulfillment/pickup/tracking codes guessable/sequential (must be unguessable, same as order IDs — see [`SECURITY.md`](SECURITY.md) §5); all sensitive access and status changes must be audit-logged (CLAUDE.md rule #6, extended to code issuance/consumption).
-- **Merchant-of-record:** who is legally the seller of record (Bawi vs. each vendor) is **explicitly unresolved** and **must be finalized before payments are implemented** — it has direct implications for this feature too (returns authority, tax, liability, what appears on receipts). Do not implicitly decide it via how any feature ends up implemented; it needs its own explicit decision first.
+- **Merchant-of-record:** **resolved — Bawi Shopping is the merchant of record.** Bawi has legal authority over returns, tax, liability, and receipts; a vendor never appears as the customer-facing merchant. See [`DECISIONS.md`](DECISIONS.md).
 
 ---
 

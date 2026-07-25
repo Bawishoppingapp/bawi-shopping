@@ -60,6 +60,8 @@ erDiagram
 | `authentication` | `auth_identity`, `provider_identity` | No — global identities |
 | `customer` | `customer`, `customer_address` | No |
 | `seller` (implemented) | `seller`, `seller_user` | `seller.id` is the vendor key itself. `role` is a plain enum column on `seller_user`, not a separate table (simpler than originally sketched — no need for a join table at this scale). |
+| `business-config` (implemented) | `business_config_entry` | No (platform-owned) |
+| `webhook-event` (implemented) | `processed_webhook_event` | No (platform-owned; idempotency ledger for external-provider webhooks, e.g. Stripe) |
 | `seller-application` (implemented) | `seller_application` | No (platform-owned; references `seller.id` via a plain `seller_id` column once approved — not a formal Medusa module-link, see [`DECISIONS.md`](DECISIONS.md)) |
 | `product` (native Medusa) | `product`, `product_variant`, `product_option`, `product_image` | No native column - ownership is layered on via `product-listing` below, not a native Medusa field |
 | `product-listing` (implemented) | `product_listing` | **Yes** — this is the actual vendor-ownership anchor for products; `product_listing.product_id` is a plain reference to the native `product.id` (same loose-coupling pattern as `seller_application.seller_id`, see [`DECISIONS.md`](DECISIONS.md)) |
@@ -85,9 +87,15 @@ erDiagram
 ## 4. Key tables (illustrative columns, not final DDL)
 
 **`seller`** *(migrated — `apps/backend/src/modules/seller/migrations`)*
-`id, name, slug (unique, partial index on deleted_at IS NULL), status (pending|approved|suspended|rejected, default 'pending'), created_at, updated_at, deleted_at`
+`id, name, slug (unique, partial index on deleted_at IS NULL), status (pending|approved|suspended|rejected, default 'pending'), stripe_account_id (text, nullable, unique — opaque Stripe Connect Express account reference, never a full account object), stripe_charges_enabled (boolean, default false), stripe_payouts_enabled (boolean, default false), stripe_details_submitted (boolean, default false), public_brand_display_approved (boolean, default false — a vendor's own store name/brand is private until Bawi admin explicitly approves public display, see docs/DECISIONS.md), created_at, updated_at, deleted_at`
 
-Still to come with the seller-onboarding slice: `description`, `logo_url`, `support_email`, `stripe_account_id`, `stripe_charges_enabled`, `stripe_payouts_enabled`, `commission_rate_override`. Not added yet — this migration only covers what registration/login/vendor-association needed (see `docs/DECISIONS.md`).
+**No bank account, card, identity-document, or tax-ID fields are ever added to this table** — Stripe hosts all of that as part of Express onboarding; the platform stores only the account-id reference and the three status booleans, derived exclusively from `account.updated` webhooks (see `docs/DECISIONS.md`, `docs/PAYMENTS.md` §2). Still to come with a later payments slice: `description`, `logo_url`, `support_email`, `commission_rate_override` (an admin-set override read by the `business-config` rate-resolution order: seller-specific override → category default → platform default).
+
+**`business_config_entry`** *(migrated — `apps/backend/src/modules/business-config/migrations`)*
+`id, category (commission|transfer_timing|returns|shipping|preparation|cancellation|service_area|brand_visibility|payment_methods|tax|courier|email|sms|support|feature_flag), key (text), value (jsonb), value_type (integer|boolean|string|json), label (text), description (text, nullable), is_placeholder (boolean, default false — true for a seeded development/staging value standing in for a real, still-pending business/legal decision), is_sensitive (boolean, default false), updated_by (text, nullable — Medusa `user.id`, always server-derived), created_at, updated_at, deleted_at`. Unique index on `(category, key)`. Every write is recorded in `audit_log` (before/after value, actor) — see `docs/SECURITY.md` §12.
+
+**`processed_webhook_event`** *(migrated — `apps/backend/src/modules/webhook-event/migrations`)*
+`id, provider (text, e.g. 'stripe'), event_id (text, unique per provider), event_type (text), processed_at (timestamptz), created_at`. The idempotency mechanism required by `docs/PAYMENTS.md` §7 and CLAUDE.md's payment-webhook rule: a handler checks this table for `(provider, event_id)` before applying any side effect, and inserts a row atomically with that side effect so a Stripe redelivery of the same event can never double-apply it.
 
 **`seller_user`** *(migrated — same module)*
 `id, email (text, NOT NULL - the login identity, set at creation time independent of activation), auth_identity_id (text, nullable - links to Medusa's auth_identity via app_metadata.seller_user_id once activated, see ARCHITECTURE.md §4.1), role (owner|catalog_manager|order_fulfiller|analyst, default 'owner'), activation_token (text, nullable, unique), activation_token_expires_at (timestamptz, nullable), seller_id (FK → seller.id, NOT NULL, indexed), created_at, updated_at, deleted_at`

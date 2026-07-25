@@ -77,6 +77,23 @@ Per [`PRD.md`](PRD.md) §9.5/§9.9 - implemented this slice, tested at every lev
   - Admin: create a parent category, create a nested child under it, edit the child's translation and confirm it persisted *without* silently detaching the parent link (the specific regression caught during this slice - see `docs/DECISIONS.md`); confirm delete is blocked while a child exists and succeeds once it's removed.
 - A live-browser walkthrough (not just automated E2E) of the admin category edit flow is worth doing by hand once when this area next changes materially - the parent-link regression this slice found was only visible by watching the actual pre-filled form state, not by asserting on API JSON shape alone.
 
+## 4.3 Stripe Connect seller onboarding and business-configuration test requirements
+
+Per [`PAYMENTS.md`](PAYMENTS.md) §2 and [`DECISIONS.md`](DECISIONS.md) - the platform never makes a real Stripe API call in automated tests; a fake Stripe client satisfying the same minimal interface (`accounts.create`, `accountLinks.create`, `webhooks.constructEvent`) is used instead, gated the same way as the existing `seller-test-support` routes (`ENABLE_TEST_SUPPORT_ROUTES=true`), so no test requires a real Stripe key:
+
+- **Unit:** business-config value-type coercion and `is_placeholder` bookkeeping; feature-flag default-`false` invariants; the Stripe-status-to-UI-label derivation (not connected / pending / live) is a pure function, tested without a network call.
+- **Integration (real HTTP server, real Postgres, fake Stripe client):**
+  - An unauthenticated or non-seller caller cannot request an onboarding link or read another seller's Stripe status.
+  - Requesting an onboarding link when no Stripe account exists yet creates one and stores only `stripe_account_id` on the seller row - never a bank/identity/tax field, verified by asserting the full response/DB row never contains those keys.
+  - Requesting a link again reuses the existing `stripe_account_id` rather than creating a second Stripe account (idempotent by design, not by luck).
+  - `POST /webhooks/stripe` rejects a request with an invalid/missing signature before any parsing or side effect.
+  - Replaying the same `event.id` twice applies the `account.updated` side effect exactly once (`processed_webhook_event` uniqueness enforced at the DB level, not only in application logic).
+  - Every Stripe-status change and every `business_config_entry` write produces exactly one `audit_log` row with the real authenticated actor id - never a client-supplied value.
+  - The public storefront/seller APIs never return `stripe_account_id` or any other Stripe reference in their response bodies (same "serialize and grep" discipline already used for `vendor_id`/SKU checks in the product-discovery slice).
+  - The production-readiness check script reports every `is_placeholder: true` row and every `real_*`/`live_payments_enabled` flag still `false`, and exits non-zero while any placeholder remains.
+- **Component:** the seller-portal onboarding banner renders the three states (not connected / pending / live) correctly from a given status prop; the admin business-config page renders every category and marks placeholder values visibly.
+- **E2E:** an activated seller clicks "Connect payouts" and is redirected to a URL matching Stripe's own domain pattern (the test does not - and cannot - complete Stripe's real hosted form); a simulated `account.updated` webhook (posted directly to the test server with a validly-signed test payload) flips the seller portal's displayed status from "pending" to "live" on next load; an admin can see a seller's Stripe connection status on the sellers list.
+
 ## 5. CI gates
 
 - Every pull request runs: lint, type-check, unit tests, and integration tests against a fresh disposable database — all required to pass before merge.

@@ -1,18 +1,23 @@
 # Bawi Shopping — Payments
 
+**Merchant-of-record: resolved.** Bawi Shopping is the merchant of record for every transaction — not a proposal, not an open question. See [`DECISIONS.md`](DECISIONS.md) for the full decision. Everything below was already designed on this assumption; this note confirms it's now final.
+
 ## 1. Principles
 
 - **Stripe Connect only.** No custom card storage, no alternate payment rails in v1.
 - **Stripe is the only system that ever sees card data.** The storefront uses Stripe's Payment Element (Stripe.js); the backend only ever handles a `PaymentIntent` ID and its status — never a PAN, CVC, or raw card number.
-- **The platform's Stripe account is merchant of record.** Customers pay the platform once per checkout; the platform then moves seller shares out via Stripe Connect Transfers.
-- **All money math is integer cents.** No floating-point currency arithmetic anywhere in the codebase.
-- **Every webhook handler is idempotent.** Stripe redelivers events; the same event ID must never apply its side effect twice.
+- **Bawi Shopping's own Stripe platform account is merchant of record — final, not provisional.** Customers pay Bawi once per checkout; Bawi then moves seller shares out via Stripe Connect Transfers. A vendor never appears as the customer-facing merchant on any receipt, statement descriptor, or Payment Element — that's the direct-charges pattern, and it's explicitly not used (see §2-3).
+- **All money math is integer cents.** No floating-point currency arithmetic anywhere in the codebase. Rates (commission, etc.) are basis-points integers, resolved via `business-config` (see [`DECISIONS.md`](DECISIONS.md)) — never a hardcoded literal in checkout/order/payout logic.
+- **Every webhook handler is idempotent**, tracked via the `processed_webhook_event` table (`(provider, event_id)` unique, see [`DATABASE.md`](DATABASE.md)) — Stripe redelivers events; the same event ID must never apply its side effect twice. This same idempotency discipline applies to every Stripe operation that moves money or state (payment, transfer, refund, dispute), not only inbound webhooks.
+- **Stripe test mode only, until an explicit, separate production-launch approval.** No `live_payments_enabled`/`real_transfers_enabled`/`real_payouts_enabled`/`real_refunds_enabled` feature flag is ever `true` by default, by migration, or by seed script — see [`DECISIONS.md`](DECISIONS.md).
+- **Bawi's own database never stores bank account numbers, identity documents, tax IDs, or a full Stripe account object.** Only an opaque `stripe_account_id` reference plus onboarding-status booleans, derived exclusively from `account.updated` webhooks — see §2 and [`DATABASE.md`](DATABASE.md).
 
-## 2. Connect account type: Express
+## 2. Connect account type: Express *(seller onboarding implemented)*
 
 Sellers onboard as **Stripe Connect Express** accounts:
 
-- Stripe hosts the onboarding UI (KYC, bank account) and the seller's payout dashboard — the platform never collects or stores bank details or identity documents.
+- Stripe hosts the onboarding UI (KYC, bank account) and the seller's payout dashboard — the platform never collects or stores bank details or identity documents. The platform's own database stores exactly one Stripe reference (`seller.stripe_account_id`) plus three status booleans (`stripe_charges_enabled`, `stripe_payouts_enabled`, `stripe_details_submitted`), all derived from `account.updated` webhooks — never the raw webhook payload, never a bank/identity/tax field. See [`DECISIONS.md`](DECISIONS.md), [`DATABASE.md`](DATABASE.md).
+- Onboarding flow: the seller-authenticated `POST /seller/stripe/onboarding-link` creates (or reuses) the seller's Express account and returns a single-use, short-lived Stripe Account Link URL; the seller portal redirects there. Stripe redirects back to a seller-portal `return_url` on completion or `refresh_url` if the link expired — neither URL is ever cached or logged (see [`SECURITY.md`](SECURITY.md) §8). `GET /seller/me` reports the seller's own connection status (never the raw account id) so the seller portal can show "not connected / pending / live."
 - The platform retains control over branding/UX for everything except the onboarding and payout-dashboard steps Stripe hosts, which fits "professional, clean, platform-branded" while keeping compliance burden on Stripe.
 - Alternative considered: **Standard** accounts (seller manages their own full Stripe dashboard/relationship — too much control ceded, weaker platform branding) and **Custom** accounts (fully white-labeled, but shifts significant compliance/liability onto the platform, unnecessary for v1). Express is the right default for an Amazon-Marketplace-style model where the platform, not the seller, is the customer-facing brand.
 
@@ -29,7 +34,7 @@ This is preferred over the alternative **Destination Charges** pattern (one `Pay
 
 ## 4. Commission calculation
 
-- Effective commission rate resolution order: **seller-specific override → category default → platform default**. Exactly one of these always resolves; there is no code path that leaves the rate undefined.
+- Effective commission rate resolution order: **seller-specific override → category default → platform default**. Exactly one of these always resolves; there is no code path that leaves the rate undefined. The platform default reads from `business-config` (`category: commission`), development default 15.00% (1500 basis points), flagged `is_placeholder: true` until replaced with a real approved rate (see [`DECISIONS.md`](DECISIONS.md)).
 - Commission applies to the item subtotal by default; shipping is excluded from commission by default (configurable per category in a later phase, not v1).
 - Commission is computed and recorded as a `CommissionLedgerEntry` at `VendorOrder` creation time (i.e., right after successful capture), not at payout time — so seller-facing "amount owed" figures are accurate immediately, even before the next payout cycle runs.
 - All amounts are integer cents; rate is stored as a basis-points integer (e.g., 1500 = 15.00%) to avoid floating-point rate multiplication — the multiply-then-round step happens once, server-side, using a documented rounding rule (round-half-up to the nearest cent).
@@ -37,6 +42,7 @@ This is preferred over the alternative **Destination Charges** pattern (one `Pay
 ## 5. Payout cadence
 
 - Payouts run on a scheduled batch job (`apps/workers`), not synchronously with checkout — default cadence: weekly rolling, configurable per environment.
+- A Transfer is never created until the configured fulfillment/delivery/risk checks for that vendor order have passed **and** the `business-config` transfer-hold period (`category: transfer_timing`, development default 7 days after confirmed delivery, `is_placeholder: true`) has elapsed since delivery confirmation — this holding period is read live from `business-config`, never a hardcoded constant, so it can be tuned without a code deploy (see [`DECISIONS.md`](DECISIONS.md)). Every order snapshots the transfer-hold value in effect at order-creation time (see [`DECISIONS.md`](DECISIONS.md) rule on snapshotting) so a later config change never retroactively alters an order already in flight.
 - A payout batch selects all `CommissionLedgerEntry` rows for a seller that are: (a) tied to a captured, non-refunded (or already-adjusted) `VendorOrder`, (b) past the seller's/platform's return window (to reduce clawback risk on already-paid-out funds), and (c) not yet included in a prior `Payout`.
 - A seller only receives a Transfer if their Stripe account currently reports `payouts_enabled` — checked immediately before creating the Transfer, not only inferred from onboarding history.
 - Selected entries are marked "included in payout" atomically with `Payout`/`PayoutLineItem` creation, in the same transaction, so re-running the batch job can never double-select the same entries.

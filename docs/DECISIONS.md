@@ -318,3 +318,72 @@ A running log of decisions that aren't obvious from reading the code, in the ord
 **Why this is worth recording:** neither bug was caught by unit tests (both are integration-boundary issues - a real Postgres schema state, and a real Medusa ORM query-shape default) and the second was only caught by *watching real rendered UI state in a browser*, not by asserting on API JSON shape alone. Backend integration tests proved the API *inputs* worked; they didn't prove the admin *UI* read its own API responses correctly. This is why this slice's verification included a live `Claude_Browser` walkthrough of the admin category edit flow in addition to Playwright E2E, not just automated test suites - and it's a concrete argument for keeping `select` explicit on every `listX` call that feeds a UI form's pre-filled state, not just on the ones already known to need it.
 
 **How to apply:** Never call a Medusa `listX`/`retrieveX` method without an explicit `select` (or `fields`) when the result will be used to populate more than an existence check - relying on "no select means all fields" is not a safe assumption in this Medusa version. When adding a new migration, always verify it actually ran against the test database with a direct `psql \dt` check (or equivalent), not just a "Migrations completed" log line from a command whose `DATABASE_URL` was assembled indirectly (shell substitution, `.env` parsing) rather than passed literally.
+
+---
+
+## Merchant-of-record: RESOLVED — Bawi Shopping is the merchant of record
+
+**Date:** start of the payments/checkout build-out, immediately before Phase 1 (Stripe Connect seller onboarding).
+
+**Decision:** Every previously-"unresolved" mention of merchant-of-record in this codebase's documentation (`CLAUDE.md`, `docs/PRD.md`, `docs/SECURITY.md`, `docs/IMPLEMENTATION-PLAN.md`) is now **finalized, not open**: **Bawi Shopping is the merchant of record for every transaction.** Customers purchase from Bawi Shopping, not directly from an individual vendor. Bawi controls the customer relationship, payment, receipts, customer service, delivery tracking, returns, refunds, disputes, and seller payment. This confirms, rather than changes, the payment *mechanics* already sketched in `docs/PAYMENTS.md` (Separate Charges and Transfers, platform Stripe account as merchant of record) - what was missing was the explicit business/legal sign-off that those mechanics were the final answer, not a placeholder assumption. Nothing about the technical design changes as a result; every doc that said "must be finalized before payments are implemented" can now proceed.
+
+**Payment architecture, confirmed as final (not a re-derivation - see `docs/PAYMENTS.md` for full mechanics):**
+1. Customer charges are created on Bawi's Stripe **platform** account (`PaymentIntent`), never on a seller's connected account.
+2. Sellers onboard as Stripe Connect **Express** connected accounts (KYC/bank details hosted entirely by Stripe - see §2 below).
+3. **Separate Charges and Transfers**, not Destination Charges - required because one cart can span multiple vendors and the customer pays exactly once regardless of how many sellers are represented.
+4. **No direct charges.** A vendor must never appear as the Stripe-visible, customer-facing merchant on any receipt, statement descriptor, or Payment Element.
+5. Bawi bears Stripe fees, refund/dispute/chargeback liability, negative-balance risk, and reconciliation - a seller's connected account is a payout destination, not a second merchant of record.
+6. Seller Transfers are created separately from, and always after, the customer charge - never atomically combined with it.
+7. A Transfer is never created until the configured fulfillment/delivery/risk checks for that vendor order have passed (mechanics land with Phase 7 - Commission ledger, seller transfers, and payout reporting).
+8. Transfer timing/holding-period is a **configurable business value** (see the business-configuration entry below), not a hardcoded constant - required so it can be tuned per environment and per future policy change without a code deploy.
+9. Refunds and disputes must be able to reverse a Transfer and adjust the seller's ledger - designed in from the start at Phase 7/8, not retrofitted.
+10. Every Stripe payment, transfer, refund, dispute, and webhook operation is idempotent by provider event/object ID - same discipline already established for `seller-application`/`product-listing` approval workflows, extended to money movement.
+11. **Stripe test mode only, until an explicit, separate production-launch approval.** No code path may switch to live Stripe keys automatically - see the feature-flag entry below (`live_payments_enabled`, hardcoded default `false`, never flipped by a migration/seed/config default).
+12. **Bawi's own database never stores bank account numbers, identity documents, tax IDs, or a full Stripe account object.** The `seller` table gains exactly one Stripe reference (`stripe_account_id`, an opaque ID string) plus three booleans (`stripe_charges_enabled`, `stripe_payouts_enabled`, `stripe_details_submitted`) derived from `account.updated` webhooks - never the raw webhook payload, never anything Stripe classifies as KYC/financial-instrument data.
+
+**Privacy requirements, confirmed as final:**
+- Vendor identity stays private from customers; customer identity and delivery address stay private from vendors (reaffirms CLAUDE.md rule #12 and `docs/SECURITY.md` §11 - not a new rule, a confirmation it now also governs the payments/checkout build-out).
+- **Product brand and vendor identity are separate concepts**, made explicit for the first time here: a normal product brand (e.g., a manufacturer/label name on the product itself) may be shown publicly same as today. A *vendor's own store name or vendor-owned brand* is different - it may only be published when Bawi admin explicitly approves it for public display (a new `seller.public_brand_display_approved` flag, admin-controlled, defaults `false`; see `docs/DATABASE.md`). Until approved, a vendor-owned brand is treated with the same privacy tier as the vendor's identity generally.
+- Never expose `vendor_id`, Stripe connected-account IDs, private SKUs, pickup addresses, seller emails, or seller phone numbers through the storefront - reaffirms and extends the existing "never expose vendor_id or private SKU" discipline already enforced on the product/discovery routes to now explicitly cover Stripe account IDs as equally sensitive.
+- Seller-facing APIs must never return customer names, delivery addresses, phone numbers, emails, or payment information - reaffirms `docs/SECURITY.md` §11's existing rule, now explicitly extended to payment information.
+- Courier access is limited to the courier's one assigned delivery and is logged (mechanics land with Phase 6).
+- All sensitive data access and status changes require audit records - reaffirms CLAUDE.md rule #6, now explicitly extended to Stripe account status changes and business-configuration edits (see below).
+
+**Why now, why this answer:** the business decided Bawi is the merchant of record (not each vendor) - an Amazon-Marketplace-style model, consistent with everything already built (Bawi already controls listings, pricing, customer service framing, and private fulfillment per the earlier private-fulfillment decision). This was the one remaining fact needed to unblock Phase 4 (checkout/payments) in `docs/IMPLEMENTATION-PLAN.md`, and it resolves in the direction every other doc already assumed as the *likely* answer while explicitly declining to build against it as fact - so this decision changes zero code by itself, only doc language and what's now permitted to be built.
+
+**How to apply:** Every "explicitly unresolved" / "must be finalized before payments" sentence across `CLAUDE.md`, `docs/PRD.md`, `docs/SECURITY.md`, and `docs/IMPLEMENTATION-PLAN.md` is updated in this same change to say "resolved - Bawi is merchant of record" and point here. No future doc or code should re-litigate this as open.
+
+---
+
+## Business configuration is centralized, versioned, and audit-logged - development/staging defaults are explicit mocks, not silent placeholders
+
+**Date:** same window, immediately before Phase 1 implementation began.
+
+**Decision:** Rather than hardcoding commission rate, transfer-hold period, return window, seller prep deadline, shipping fee, free-shipping threshold, service area, and similar business inputs into checkout/order/fulfillment logic as they're built phase by phase, a new custom module (`business-config`) is a **generic category/key/value configuration store**, seeded now with explicit development/staging default values, each one flagged `is_placeholder: true` where it represents a real business/legal/operational decision still pending final approval. A parallel, fixed set of **feature flags** (`live_payments_enabled`, `real_transfers_enabled`, `real_payouts_enabled`, `real_refunds_enabled`, `real_tax_calculation_enabled`, `real_email_enabled`, `real_sms_enabled`, `real_courier_booking_enabled`, `promotional_codes_enabled`) all default to `false` and gate every code path that would otherwise move real money, send a real communication, or book a real courier.
+
+**Seeded development/staging defaults (all `is_placeholder: true` unless noted):**
+- Marketplace commission: 15% (1500 basis points)
+- Seller transfer hold: 7 days after confirmed delivery
+- Customer return window: 14 days after delivery
+- Seller preparation deadline: 48 hours
+- Initial service area: Dallas-Fort Worth, Texas
+- Standard shipping fee: $6.99 (690 cents)
+- Free-shipping threshold: $75 (7500 cents) per order
+- Cancellation policy: allowed until the seller marks the fulfillment order "preparing"
+- Return shipping: customer pays, unless the product is defective/damaged/incorrect/materially different from the listing
+- Support email: `support@example.bawishopping.com` (placeholder domain, not a real mailbox)
+- Support phone: a clearly fake test value, never a real number
+- Tax provider: mock tax-calculation adapter (no real tax jurisdiction logic yet)
+- Courier provider: internal mock courier adapter (no real courier integration yet)
+- Currency: USD (not a placeholder - a genuine v1 scope decision, see `docs/PAYMENTS.md`)
+- Promotional codes: disabled for v1 testing (not a placeholder - a genuine scope decision, tracked by the `promotional_codes_enabled` feature flag)
+- Vendor-owned store name/brand: hidden by default, requires explicit Bawi admin approval to display publicly (not a placeholder - the confirmed privacy rule itself, see above)
+
+**Why:** four reasons, in order of importance. (1) None of these values are engineering defaults to guess at - they're real business/legal/operational inputs this project has repeatedly (and correctly) refused to invent (see the merchant-of-record entry above, and every "not an engineering default to guess at" note already in `docs/IMPLEMENTATION-PLAN.md`). Centralizing them makes every one individually visible, individually replaceable, and impossible to silently forget. (2) Snapshotting: rule - every order, at creation time, copies the commission rate/shipping fee/return-window value *in effect at that moment* onto the order itself (a later config change must never retroactively alter a past order's economics) - this requires the values to live somewhere versioned and readable at order-creation time, which a scattered set of hardcoded constants cannot provide. (3) Feature-flagging every real-money/real-communication code path is the only way to let phases 2-11 be built and fully tested end-to-end (including Playwright E2E) without any risk of an accidental real Stripe transfer, real payout, real email, or real SMS - the flags are the actual technical mechanism, not just documentation, that make "use mock adapters, continue building" safe. (4) A single, queryable "is this placeholder still in place" surface is what makes a production-readiness check (see below) possible at all.
+
+**How to apply:**
+- Money values are integer cents; rates are basis-points integers - reaffirms `docs/DATABASE.md` §1's existing monetary-representation rule, now explicit for business-config values too.
+- Every write to a `business_config_entry` is audit-logged (actor, before/after value) via the same `audit-log` module already used for seller-application/category actions - no exception.
+- A new `apps/backend/src/scripts/check-production-readiness.ts` (`medusa exec` script) lists every `is_placeholder: true` row still at its seeded default, and every `real_*`/`live_payments_enabled` feature flag still `false`, as a single readable report; it exits non-zero when any placeholder remains, so it can gate a release process later even though no CI pipeline runs it automatically yet (see `docs/IMPLEMENTATION-PLAN.md`).
+- Mock adapters (tax, courier, email, SMS) are only built as each consuming phase actually lands (checkout/Phase 3 for tax, Phase 6 for courier, Phase 9 for email/SMS) - the category/key rows and feature flags exist now so those phases have a place to read from and a flag to gate on, but an adapter with no caller yet is not built ahead of need (reaffirms CLAUDE.md rule #10, "no unnecessary libraries/abstractions built ahead of a real consumer").
+- Before real production launch, an operator must explicitly replace and approve: commission percentage, seller transfer schedule, return policy, shipping fees, service area, tax provider, courier provider, customer-support details, legal policies, live Stripe credentials, and production email/SMS providers - none of these flip automatically, and `live_payments_enabled`/`real_*` flags are never set to `true` by a migration, seed script, or environment-variable default.

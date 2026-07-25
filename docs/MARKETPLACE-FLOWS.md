@@ -59,7 +59,7 @@ sequenceDiagram
 
 ## 2. Seller onboarding flow
 
-**Implemented so far:** application submission → admin review → approval/rejection → seller account activation → seller login. **Not yet built:** Stripe Connect account linking (§2.2) — an approved, activated seller can log in and (once catalog exists) build a draft catalog, but cannot yet be marked fully "live" for real transactions until that slice ships.
+**Implemented so far:** application submission → admin review → approval/rejection → seller account activation → seller login → Stripe Connect account linking (§2.2). An approved, activated seller can log in, build a catalog, and connect a Stripe Express account to become "live" for real transactions once test-mode Stripe is later graduated to live mode (see `docs/DECISIONS.md`).
 
 ### 2.1 Application, review, and activation (implemented)
 
@@ -120,9 +120,34 @@ sequenceDiagram
 - **Activation token reuse:** a second `POST /seller-activation/complete` with an already-consumed token is rejected (the token is cleared on first successful use).
 - **Concurrent approval requests (residual risk):** the idempotency check has a narrow TOCTOU window under true concurrent requests (not just sequential retries) — see `docs/IMPLEMENTATION-PLAN.md` risks.
 
-### 2.2 Stripe Connect account linking (not yet built)
+### 2.2 Stripe Connect account linking (implemented)
 
-Deferred to a later slice. Once built, it layers on **after** activation: an activated seller can log in and manage a draft catalog, but isn't "live" for real transactions until Stripe onboarding completes. The originally-planned flow (Stripe Express account + account link, `account.updated` webhook as the onboarding-status source of truth, never inferred from client navigation) is unchanged from the original design — see `docs/PAYMENTS.md`.
+Layers on **after** activation: an activated seller can log in and manage a draft catalog, but isn't "live" for real transactions until Stripe onboarding completes. The seller-authenticated `POST /seller/stripe/onboarding-link` creates (or reuses) a Stripe Express account and returns a single-use, short-lived Account Link URL; the seller portal redirects there. `account.updated` webhooks (verified by Stripe signature, deduplicated via `processed_webhook_event`) are the onboarding-status source of truth — never inferred from client navigation or a "seller says they finished" claim. See `docs/PAYMENTS.md` §2, `docs/DECISIONS.md`.
+
+```mermaid
+sequenceDiagram
+    participant S as Activated seller
+    participant SP as Seller portal
+    participant API as Backend API
+    participant SEL as seller module
+    participant STRIPE as Stripe
+    participant AUDIT as audit-log module
+
+    S->>SP: Open dashboard, click "Connect payouts"
+    SP->>API: POST /seller/stripe/onboarding-link
+    API->>SEL: Reuse existing stripe_account_id, or create a new Express account
+    API->>STRIPE: accounts.create (if none exists yet)
+    API->>STRIPE: accountLinks.create (return_url, refresh_url)
+    API->>AUDIT: record("seller.stripe_onboarding_link_created")
+    API-->>SP: Account Link URL
+    SP-->>S: Redirect to Stripe-hosted onboarding
+    S->>STRIPE: Complete KYC + bank details (never touches Bawi's servers)
+    STRIPE-->>API: Webhook: account.updated (signature-verified, idempotency-checked)
+    API->>SEL: Update stripe_charges_enabled / stripe_payouts_enabled / stripe_details_submitted
+    API->>AUDIT: record("seller.stripe_status_updated")
+    STRIPE-->>S: Redirect back to seller portal's return_url
+    S->>SP: Dashboard now shows "Payouts: live" (or "pending" if not yet complete)
+```
 
 ## 3. Multi-vendor payment and order-splitting flow
 
