@@ -50,6 +50,7 @@
             "email",
             "sms",
             "support",
+            "cart",
             "feature_flag"
           ],
           "mappedType": "enum"

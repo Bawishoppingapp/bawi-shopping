@@ -37,6 +37,7 @@ export type BusinessConfigCategory =
   | "email"
   | "sms"
   | "support"
+  | "cart"
   | "feature_flag"
 
 export type DefaultConfigEntry = {
@@ -203,6 +204,23 @@ export const DEFAULT_BUSINESS_CONFIG_ENTRIES: DefaultConfigEntry[] = [
     label: "Customer support phone",
     description: "A clearly fake test value - never a real phone number.",
     is_placeholder: true,
+  },
+  {
+    category: "cart",
+    key: "cart_expiration_days",
+    value: 30,
+    value_type: "integer",
+    label: "Cart expiration (days of inactivity)",
+    description: "A cart untouched for this many days is treated as abandoned; a new cart is started transparently rather than reusing stale line items.",
+    is_placeholder: false,
+  },
+  {
+    category: "cart",
+    key: "max_quantity_per_line_item",
+    value: 10,
+    value_type: "integer",
+    label: "Maximum quantity per cart line item",
+    is_placeholder: false,
   },
   ...FEATURE_FLAG_KEYS.map(
     (key): DefaultConfigEntry => ({

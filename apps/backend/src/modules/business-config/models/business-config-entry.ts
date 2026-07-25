@@ -17,6 +17,7 @@ export const BusinessConfigEntry = model.define("business_config_entry", {
     "email",
     "sms",
     "support",
+    "cart",
     "feature_flag",
   ]),
   key: model.text(),

@@ -10,6 +10,7 @@ import { PRODUCT_LISTING_MODULE } from "../modules/product-listing"
 import type ProductListingModuleService from "../modules/product-listing/service"
 import { SELLER_MODULE } from "../modules/seller"
 import type SellerModuleService from "../modules/seller/service"
+import { resolvePublicBrand } from "../modules/seller/public-brand"
 
 const MAX_CANDIDATES = 500
 
@@ -200,7 +201,7 @@ export class PostgresSearchService implements SearchService {
       hits.push({
         productCode: listing.product_code,
         title: product.title,
-        brand: seller.name,
+        brand: resolvePublicBrand(seller),
         thumbnail: product.thumbnail ?? null,
         priceMin,
         priceMax,

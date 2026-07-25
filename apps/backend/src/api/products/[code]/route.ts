@@ -4,6 +4,7 @@ import { PRODUCT_LISTING_MODULE } from "../../../modules/product-listing"
 import type ProductListingModuleService from "../../../modules/product-listing/service"
 import { SELLER_MODULE } from "../../../modules/seller"
 import type SellerModuleService from "../../../modules/seller/service"
+import { resolvePublicBrand } from "../../../modules/seller/public-brand"
 
 /**
  * Public, unauthenticated. Only ever returns an `approved` listing - draft/
@@ -77,7 +78,7 @@ export async function GET(
       product_code: listing.product_code,
       title: product.title,
       description: product.description,
-      brand: seller.name,
+      brand: resolvePublicBrand(seller),
       images: product.images?.map((image) => image.url) ?? [],
       thumbnail: product.thumbnail,
       colors: Array.from(
