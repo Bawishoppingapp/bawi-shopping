@@ -23,5 +23,8 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/audit-log",
     },
+    {
+      resolve: "./src/modules/product-listing",
+    },
   ],
 })
