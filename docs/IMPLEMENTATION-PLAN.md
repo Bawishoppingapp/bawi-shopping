@@ -1,6 +1,6 @@
 # Bawi Shopping — Implementation Plan
 
-**Status: Phase 0 and most of Phase 1 are done.** Two vertical slices are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left, not a not-yet-started plan — update it as each phase progresses rather than treating it as historical.
+**Status: Phase 0, Phase 1, and the core of Phase 2 are done.** Three vertical slices are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left, not a not-yet-started plan — update it as each phase progresses rather than treating it as historical.
 
 ## 1. Phased build order
 
@@ -21,11 +21,14 @@ Phases are sequential and each produces a working, demoable slice — not a hori
 - ✅ Admin portal (`apps/admin`) exists and is authenticated - built as a full Next.js app on the shared design system, not a Medusa Admin Extension (see [`DECISIONS.md`](DECISIONS.md)).
 - ❌ Not yet built: Stripe Connect Express linking (the rest of "seller onboarding" - see [`MARKETPLACE-FLOWS.md`](MARKETPLACE-FLOWS.md) §2.2). An approved, activated seller can log in today but isn't "live" for Stripe purposes yet.
 
-### Phase 2 — Catalog (in progress)
-- `categories`, `catalog`/`products`/`product-variants`, `inventory`, `pricing`, plus the new custom `product-listing` module (vendor ownership, approval status, permanent `product_code`).
-- Seller portal: create/edit/publish products. Storefront: category and product detail pages (no search/cart yet — direct links only).
-- **Also building this phase:** the i18n foundation (`packages/i18n`, locale selector/persistence, English-fallback lookup — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12, [`PRD.md`](PRD.md) §9.24) — infrastructure only, not full translations, deliberately built now before the number of pages grows.
-- **Explicitly not in this phase:** private-fulfillment mechanics (fulfillment/pickup/tracking codes, courier role, QR codes), checkout, payments, returns — see [`PRD.md`](PRD.md) §9.23 and the risk entries below.
+### Phase 2 — Catalog ✅ core slice done
+- ✅ Native Medusa `product`/`product-variant`/`inventory`/`pricing` modules, extended with the new custom `product-listing` module (vendor ownership, approval status `draft|pending_review|approved|rejected|archived`, permanent `product_code`, private per-variant SKU). Native option/variant creation supplies duplicate-variant rejection; the native `file` module (local provider) handles image storage.
+- ✅ Seller portal: product list, create, edit draft/rejected (variant editor + image uploader inline), preview, submit for review. v1 limitation: editing can't introduce a brand-new color/size value not present at creation (see [`DECISIONS.md`](DECISIONS.md)) - creating a new product covers that case for now.
+- ✅ Admin portal: product list with status filters, detail, approve/reject with private reason - reuses the seller-application approve/reject pattern (Medusa workflow with compensating rollback, same as [`DECISIONS.md`](DECISIONS.md)'s atomicity fix).
+- ✅ Storefront: public product detail page (`/products/:code`) - approved-only, no vendor identity/SKU exposed, per-variant price/availability from live inventory.
+- ✅ The i18n foundation (`packages/i18n`, locale selector/persistence, English-fallback lookup — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12, [`PRD.md`](PRD.md) §9.24) — infrastructure only, not full translations, built ahead of the page count growing; wired into the storefront first.
+- ✅ Tested: 41 backend unit tests (schema/state-machine/product-code generation), 17 backend integration tests (ownership, negative-authz, status transitions, idempotent approval, audit logging, public-visibility scoping), 2 E2E specs (full create→submit→approve→public-view journey; cross-seller edit blocked) spanning all three frontends.
+- **Explicitly not in this phase:** category management (categories are seeded, not admin-editable yet), search/browse (direct link only), private-fulfillment mechanics (fulfillment/pickup/tracking codes, courier role, QR codes), checkout, payments, returns — see [`PRD.md`](PRD.md) §9.23 and the risk entries below.
 
 ### Phase 3 — Discovery
 - `search` module (Postgres FTS adapter behind the interface), storefront browse/search/filter UI.
@@ -72,12 +75,9 @@ The original plan called for one seller/one product/one customer/one paid order 
 
 ### Recommended next vertical slice
 
-With identity, seller applications, and admin review now in place, the next slice should be **catalog**: a seller can create and publish one product (with one variant, price, and inventory count) from the seller portal, and a customer can view it on the storefront via a direct link (no search yet). This is the natural next step because:
-- It's required before the "one seller, one product, one customer, one paid order" slice from the original plan can proceed.
-- It exercises the `product`/`inventory`/`pricing` native Medusa modules extended with `vendor_id` scoping, which is a different vendor-isolation surface than auth (this time it's about a seller only ever editing their own products, not their own session) - so it's still meaningfully de-risking, not just repeating what's proven.
-- It doesn't require Stripe Connect, keeping scope tight.
+With identity, seller applications, admin review, and the core catalog slice now in place, the next slice should be **Stripe Connect account linking** to complete seller onboarding (the remaining piece of Phase 1 - see above), since checkout/payments (Phase 4) depends on sellers actually being "live" for Stripe purposes, and **merchant-of-record must be decided before that phase starts** (see the risk table above). Category management (admin-editable category tree, currently seeded-only) and Postgres FTS search/browse (Phase 3) are lower-risk options if Stripe Connect or the merchant-of-record decision aren't ready to start.
 
-After catalog: checkout/payments/order-splitting (the original Phase 4, still the highest-risk remaining phase), then Stripe Connect account linking to complete seller onboarding.
+After Stripe Connect linking: checkout/payments/order-splitting (the original Phase 4, still the highest-risk remaining phase) - at which point the private-fulfillment model decided in [`PRD.md`](PRD.md) §9.23 needs to be designed into the orders/shipping schema from the start, not retrofitted.
 
 ## 4. Non-actions requiring confirmation first
 

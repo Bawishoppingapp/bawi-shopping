@@ -7,6 +7,10 @@ import { getCurrentAdmin } from "@/features/auth/services/medusa-auth-client"
 import { listSellerApplications } from "@/features/seller-applications/services/seller-applications-client"
 import { StatusFilter } from "@/features/seller-applications/components/status-filter"
 
+// Session-scoped (admin-authenticated) content must never be cached by the
+// browser keyed only on the URL.
+export const dynamic = "force-dynamic"
+
 export default async function ApplicationsPage({
   searchParams,
 }: {
@@ -28,6 +32,12 @@ export default async function ApplicationsPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-12">
+      <nav className="flex gap-4 text-sm">
+        <span className="font-medium text-neutral-900">Applications</span>
+        <Link href="/products" className="text-neutral-500 hover:underline">
+          Products
+        </Link>
+      </nav>
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold text-neutral-900">
           Seller applications

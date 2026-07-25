@@ -61,10 +61,11 @@ erDiagram
 | `customer` | `customer`, `customer_address` | No |
 | `seller` (implemented) | `seller`, `seller_user` | `seller.id` is the vendor key itself. `role` is a plain enum column on `seller_user`, not a separate table (simpler than originally sketched — no need for a join table at this scale). |
 | `seller-application` (implemented) | `seller_application` | No (platform-owned; references `seller.id` via a plain `seller_id` column once approved — not a formal Medusa module-link, see [`DECISIONS.md`](DECISIONS.md)) |
-| `product` (catalog/products/variants) | `product`, `product_variant`, `product_option`, `product_image` | **Yes** |
-| `product-category` | `category`, `product_category` | No (platform-owned taxonomy) |
-| `inventory` | `inventory_item`, `inventory_level`, `reservation` | **Yes** (via owning stock location) |
-| `pricing` | `price`, `price_set` | **Yes** (via owning variant) |
+| `product` (native Medusa) | `product`, `product_variant`, `product_option`, `product_image` | No native column - ownership is layered on via `product-listing` below, not a native Medusa field |
+| `product-listing` (implemented) | `product_listing` | **Yes** — this is the actual vendor-ownership anchor for products; `product_listing.product_id` is a plain reference to the native `product.id` (same loose-coupling pattern as `seller_application.seller_id`, see [`DECISIONS.md`](DECISIONS.md)) |
+| `product-category` (seeded, not yet admin-editable) | `category`, `product_category` | No (platform-owned taxonomy) |
+| `inventory` (native Medusa) | `inventory_item`, `inventory_level`, `reservation` | No native column - scoped indirectly via the owning product's `product_listing.vendor_id` |
+| `pricing` (native Medusa) | `price`, `price_set` | No native column - same indirect scoping as inventory |
 | `search` | (index only, no owned source-of-truth table) | n/a |
 | `cart` | `cart`, `cart_line_item` | No (customer/session-owned) |
 | `payment` | `payment`, `payment_intent_ref` | No (order-owned, cross-vendor) |
@@ -95,15 +96,16 @@ Still to come with the seller-onboarding slice: `description`, `logo_url`, `supp
 
 No bank account, card, tax ID, SSN, or identity-document fields are collected at this stage — those belong to the future Stripe Connect onboarding slice (see `docs/PAYMENTS.md`).
 
-**`product`**
-`id, vendor_id (FK → seller.id, NOT NULL), product_code (text, unique, permanent — issued once, never reused/reassigned even if the product is retitled/re-slugged/archived; distinct from the mutable slug — see docs/DECISIONS.md), title, description, status (draft|published|archived), created_at, updated_at, deleted_at`
+**`product`**, **`product_variant`** *(native Medusa tables, unmodified — no custom migration)* — standard Medusa columns (`title`, `description`, `status`, `handle`/slug, `options`/`option values`, variant `sku`, etc.). No `vendor_id` or permanent code column exists on these tables natively - see `product_listing` below for where that ownership actually lives. The variant's native `sku` column is where the seller's private SKU is stored; it's private by response-shaping (never selected/returned on the public `GET /products/:code` route or any customer-facing payload — see [`SECURITY.md`](SECURITY.md) §11), not by a schema-level flag.
 
-**`product_variant`**
-`id, product_id (FK, NOT NULL), vendor_id (FK → seller.id, NOT NULL, denormalized for scoped-query performance), sku (PRIVATE — the seller's own internal reference, never returned from a public/storefront-facing endpoint, same sensitivity tier as seller_application.rejection_reason — see docs/SECURITY.md §11), size, color, created_at, updated_at`
+**`product_listing`** *(migrated — `apps/backend/src/modules/product-listing/migrations`)*
+`id, product_id (text, unique — plain reference to the native product.id, same loose-coupling pattern as seller_application.seller_id, not a hard FK or Medusa module-link), vendor_id (FK → seller.id, NOT NULL, indexed - the actual ownership anchor for the product), product_code (text, unique, permanent — issued once, never reused/reassigned even if the product is retitled/re-slugged/archived; distinct from the native product's mutable handle/slug — see [`DECISIONS.md`](DECISIONS.md)), status (draft|pending_review|approved|rejected|archived, default 'draft', indexed), rejection_reason (text, nullable, PRIVATE — never returned from a public endpoint), submitted_at (timestamptz, nullable), reviewed_by (text, nullable — Medusa `user.id`, always server-derived), reviewed_at (timestamptz, nullable), created_at, updated_at, deleted_at`
+
+Approving a listing sets its own `status = approved` *and* flips the native `product.status` to `published` (in the same atomic workflow, see [`DECISIONS.md`](DECISIONS.md)) - native Medusa mechanics and this module's own authorization check both agree on visibility, rather than relying on a single flag.
 
 **Deferred (not part of this slice's migrations):**
 - **`product_translation`** *(planned)* — `product_id (FK), locale (en-US|am|ti|om|zh-CN|es), title, description, status (draft|pending_review|approved), submitted_by, approved_by, created_at, updated_at`. Keyed by `product_id` + `locale`, entirely separate from `product` — the base `product` row's title/description are implicitly the English content, and this table is never collapsed into per-locale columns on `product` itself, and there is never a duplicate `product` row per language. Sellers (or AI) may create a row here; only Bawi (admin) approval makes it customer-visible — same shape as product approval itself. See `docs/PRD.md` §9.24, `docs/DECISIONS.md`.
-- **`fulfillment_code` / `pickup_code` / `tracking_code` tables** *(planned)* — three distinct, order-scoped temporary codes (not one shared code) supporting the private-fulfillment model (`docs/PRD.md` §9.23, `docs/SECURITY.md` §11). Not designed yet beyond: all three must be unguessable (same non-sequential-ID principle as order IDs); pickup codes are single-use and expire immediately on collection (event-based, not just a TTL); none of these is the permanent `product.product_code`, which is a separate, unrelated concept.
+- **`fulfillment_code` / `pickup_code` / `tracking_code` tables** *(planned)* — three distinct, order-scoped temporary codes (not one shared code) supporting the private-fulfillment model (`docs/PRD.md` §9.23, `docs/SECURITY.md` §11). Not designed yet beyond: all three must be unguessable (same non-sequential-ID principle as order IDs); pickup codes are single-use and expire immediately on collection (event-based, not just a TTL); none of these is the permanent `product_listing.product_code`, which is a separate, unrelated concept.
 - **`courier` tables** *(planned)* — a courier's assignment scope must resolve to exactly the one delivery they're assigned, never a broader account/order query surface; no customer or vendor PII beyond what a specific handoff requires. See `docs/USER-ROLES.md` §2.7.
 
 **`order`** (customer-facing group)

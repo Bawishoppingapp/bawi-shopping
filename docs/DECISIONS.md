@@ -269,3 +269,15 @@ A running log of decisions that aren't obvious from reading the code, in the ord
 - Prices stay USD-only for this release regardless of locale - locale changes display language, not currency/units.
 - Non-Latin scripts (Amharic and Tigrinya specifically use Ge'ez script) must render correctly everywhere text flows: UI, database storage, emails, and search - this is a UTF-8-throughout requirement (Postgres already defaults to UTF-8; verify email templates and any future search-index configuration don't silently assume Latin-1/ASCII).
 - Layouts must not assume English-length strings - a button/menu/form built to fit an English label must not break when the same slot holds a longer Amharic or Spanish translation; this is a design-system requirement (`docs/DESIGN-SYSTEM.md` §12), not just a translation-content concern.
+
+---
+
+## Every session-scoped Next.js page exports `dynamic = "force-dynamic"`
+
+**Date:** during the product-catalog vertical slice, while writing its E2E tests.
+
+**Decision:** Every page across all three frontends that renders data scoped to the caller's session (seller product list/detail/preview, seller dashboard, admin product list/detail, admin application list/detail) now has an explicit `export const dynamic = "force-dynamic"`.
+
+**Why:** An E2E test ("seller A is blocked from editing seller B's product") initially failed with the product detail page returning HTTP 200 and seller B's private draft content for a request made under seller A's session. Investigated as a potential real cross-tenant data leak (the highest-severity class of bug for this platform per `docs/SECURITY.md` §1) before doing anything else. Three independent checks - an isolated Node script hitting the backend directly with fresh tokens, the full backend integration-test suite, and the E2E test itself once given an explicit wait for the login redirect to complete - all confirmed the *backend* authorization was correct throughout; the failure was a Playwright test race (asserting on the target page before the login Server Action's cookie swap had fully completed), not a real vulnerability. `force-dynamic` was added anyway during the investigation as defense-in-depth: even though it turned out not to be the root cause here, rendering a session-scoped page without it leaves the door open for the browser (or a future production reverse-proxy/CDN) to cache a response for a URL whose authorized content differs per caller - exactly the shape of bug this investigation was chasing.
+
+**How to apply:** Any new page reading `cookies()` to resolve a caller's identity and then fetching data scoped to that identity should include `export const dynamic = "force-dynamic"` as a matter of course, not only when a bug prompts it. Public, non-session-scoped pages (storefront product pages, the seller-application public status page) don't need this - the same content is correct for every viewer, so caching them is fine and even desirable.

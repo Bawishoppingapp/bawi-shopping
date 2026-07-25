@@ -7,6 +7,11 @@ import { getCurrentAdmin } from "@/features/auth/services/medusa-auth-client"
 import { getSellerApplication } from "@/features/seller-applications/services/seller-applications-client"
 import { ReviewActions } from "@/features/seller-applications/components/review-actions"
 
+// This page shows a private rejection_reason field - must never be cached
+// by the browser keyed only on the URL (found while investigating the same
+// class of issue on the product-listing pages - see docs/DECISIONS.md).
+export const dynamic = "force-dynamic"
+
 export default async function ApplicationDetailPage({
   params,
 }: {
