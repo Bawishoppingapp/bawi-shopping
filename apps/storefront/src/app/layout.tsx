@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
-import { LanguageSelector, LocaleProvider } from "@bawi/i18n";
+import { LanguageSelector, LocaleProvider, translate } from "@bawi/i18n";
 import { getLocale } from "@bawi/i18n/server";
 import "./globals.css";
 
@@ -33,7 +34,15 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <LocaleProvider locale={locale}>
-          <header className="flex justify-end border-b border-neutral-200 p-3">
+          <header className="flex items-center justify-between border-b border-neutral-200 p-3">
+            <nav className="flex items-center gap-4 text-sm font-medium text-neutral-700">
+              <Link href="/" className="text-neutral-900">
+                {translate(locale, "common.appName")}
+              </Link>
+              <Link href="/search" className="hover:text-neutral-900">
+                {translate(locale, "nav.search")}
+              </Link>
+            </nav>
             <LanguageSelector />
           </header>
           {children}
