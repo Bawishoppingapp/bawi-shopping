@@ -11,5 +11,11 @@
   "register.submit": "Create account",
   "register.submitting": "Creating account...",
   "validation.required": "This field is required",
-  "validation.invalidEmail": "Enter a valid email address"
+  "validation.invalidEmail": "Enter a valid email address",
+  "product.soldBy": "Sold by",
+  "product.colors": "Colors",
+  "product.sizes": "Sizes",
+  "product.inStock": "In stock",
+  "product.outOfStock": "Out of stock",
+  "product.notFound": "Product not found"
 }

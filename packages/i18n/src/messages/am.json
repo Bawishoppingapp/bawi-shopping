@@ -11,5 +11,11 @@
   "register.submit": "አካውንት ፍጠር",
   "register.submitting": "አካውንት በመፍጠር ላይ...",
   "validation.required": "ይህ መስክ የግድ ነው",
-  "validation.invalidEmail": "ትክክለኛ ኢሜይል ያስገቡ"
+  "validation.invalidEmail": "ትክክለኛ ኢሜይል ያስገቡ",
+  "product.soldBy": "የሚሸጠው በ",
+  "product.colors": "ቀለሞች",
+  "product.sizes": "መጠኖች",
+  "product.inStock": "በስቶክ ውስጥ አለ",
+  "product.outOfStock": "ከስቶክ ውጪ ነው",
+  "product.notFound": "ምርቱ አልተገኘም"
 }

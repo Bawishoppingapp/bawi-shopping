@@ -11,5 +11,11 @@
   "register.submit": "Akkaawuntii Uumi",
   "register.submitting": "Akkaawuntii uumaa jira...",
   "validation.required": "Iddoon kun barbaachisaa dha",
-  "validation.invalidEmail": "Imeelii sirrii galchi"
+  "validation.invalidEmail": "Imeelii sirrii galchi",
+  "product.soldBy": "Kan gurgurame",
+  "product.colors": "Halluu",
+  "product.sizes": "Gita",
+  "product.inStock": "Kuusaa keessa jira",
+  "product.outOfStock": "Kuusaa keessa hin jiru",
+  "product.notFound": "Oomishni hin argamne"
 }

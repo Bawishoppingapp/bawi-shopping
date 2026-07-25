@@ -11,5 +11,11 @@
   "register.submit": "Crear cuenta",
   "register.submitting": "Creando cuenta...",
   "validation.required": "Este campo es obligatorio",
-  "validation.invalidEmail": "Ingresa un correo electrónico válido"
+  "validation.invalidEmail": "Ingresa un correo electrónico válido",
+  "product.soldBy": "Vendido por",
+  "product.colors": "Colores",
+  "product.sizes": "Tallas",
+  "product.inStock": "En stock",
+  "product.outOfStock": "Agotado",
+  "product.notFound": "Producto no encontrado"
 }

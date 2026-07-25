@@ -11,5 +11,11 @@
   "register.submit": "ሕሳብ ፍጠር",
   "register.submitting": "ሕሳብ ኣብ ምፍጣር...",
   "validation.required": "እዚ ቦታ እዚ ግድን እዩ",
-  "validation.invalidEmail": "ቅኑዕ ኢመይል ኣእቱ"
+  "validation.invalidEmail": "ቅኑዕ ኢመይል ኣእቱ",
+  "product.soldBy": "ዝሽየጠሉ ብ",
+  "product.colors": "ሕብርታት",
+  "product.sizes": "መጠናት",
+  "product.inStock": "ኣብ ስቶክ ኣሎ",
+  "product.outOfStock": "ስቶክ የለን",
+  "product.notFound": "እቲ ፍርያት ኣይተረኽበን"
 }

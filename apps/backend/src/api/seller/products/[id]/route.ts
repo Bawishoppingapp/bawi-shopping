@@ -1,5 +1,5 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { resolveVendorId } from "../../utils"
 import { PRODUCT_LISTING_MODULE } from "../../../../modules/product-listing"
 import type ProductListingModuleService from "../../../../modules/product-listing/service"
@@ -42,7 +42,48 @@ export async function GET(
     relations: ["variants", "variants.options", "options", "options.values", "images", "categories"],
   })
 
-  res.json({ listing, product })
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const { data: variantData } = await query.graph({
+    entity: "product_variant",
+    fields: [
+      "id",
+      "inventory_items.inventory.location_levels.stocked_quantity",
+      "prices.amount",
+      "prices.currency_code",
+    ],
+    filters: { id: product.variants?.map((v) => v.id) ?? [] },
+  })
+
+  const inventoryByVariantId = new Map<string, number>()
+  const priceByVariantId = new Map<string, number>()
+  for (const variant of variantData as Record<string, unknown>[]) {
+    const items = (variant.inventory_items ?? []) as Array<{
+      inventory?: { location_levels?: Array<{ stocked_quantity?: number }> }
+    }>
+    const stocked = items.reduce((sum, item) => {
+      const levels = item.inventory?.location_levels ?? []
+      return sum + levels.reduce((s, l) => s + (l.stocked_quantity ?? 0), 0)
+    }, 0)
+    inventoryByVariantId.set(variant.id as string, stocked)
+
+    const prices = (variant.prices ?? []) as Array<{ amount: number; currency_code: string }>
+    const usdPrice = prices.find((price) => price.currency_code === "usd")
+    if (usdPrice) {
+      priceByVariantId.set(variant.id as string, usdPrice.amount)
+    }
+  }
+
+  res.json({
+    listing,
+    product: {
+      ...product,
+      variants: product.variants?.map((variant) => ({
+        ...variant,
+        inventory_quantity: inventoryByVariantId.get(variant.id) ?? 0,
+        price: priceByVariantId.get(variant.id) ?? null,
+      })),
+    },
+  })
 }
 
 /** Editable only while the listing is `draft` or `rejected` (see state-machine.ts). */

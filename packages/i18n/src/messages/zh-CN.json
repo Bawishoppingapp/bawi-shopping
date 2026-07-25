@@ -11,5 +11,11 @@
   "register.submit": "创建账户",
   "register.submitting": "正在创建账户...",
   "validation.required": "此项为必填项",
-  "validation.invalidEmail": "请输入有效的电子邮箱地址"
+  "validation.invalidEmail": "请输入有效的电子邮箱地址",
+  "product.soldBy": "销售方",
+  "product.colors": "颜色",
+  "product.sizes": "尺码",
+  "product.inStock": "有库存",
+  "product.outOfStock": "无库存",
+  "product.notFound": "未找到该商品"
 }
