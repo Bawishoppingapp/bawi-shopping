@@ -76,7 +76,7 @@ In scope for v1 (detailed specs in §9):
 - International sellers, currencies, or shipping.
 - Algolia integration itself (only the abstraction/interface ships now — see [`ARCHITECTURE.md`](ARCHITECTURE.md)).
 - Seller subscription tiers / paid placement / advertising.
-- Multi-currency storefront (currency stays USD-only for v1; multi-*language* is decided and planned — see §9.24 — but not built this slice).
+- Multi-currency storefront (currency stays USD-only for v1; multi-*language* is decided and its i18n foundation is built this slice — see §9.24).
 - SMS or push notifications (email only for v1).
 - Live chat / messaging between customer and seller (and, once built, this stays intermediated by Bawi even for fulfillment-related contact — see §9.23; there is no v1 or later plan for a direct customer↔seller channel).
 - Seller-to-seller marketplace features (bundles across sellers, cross-seller promotions).
@@ -493,23 +493,42 @@ Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-paym
 **Domain modules:** `fulfillment-privacy` (planned), `courier` role (planned)
 
 - **User story:** As a customer or seller, I want my order fulfilled without either party learning the other's real identity or contact details, so the marketplace — not an individual seller or courier — is who I trust with my information.
-- **Decided model:** Bawi is the intermediary for all buyer/seller logistics contact. Sellers fulfill orders, but packaging, communication, tracking, and returns are all Bawi-controlled rather than a direct seller→customer channel. Handoff/pickup uses **temporary fulfillment codes** and **single-use, expiring pickup QR codes** rather than exposing either party's address/contact info to the other. A **`courier`** role exists with access limited strictly to what a pickup/delivery task requires (no customer PII beyond the handoff, no seller PII, no order financials).
-- **What this means for the current product-catalog slice:** the `product` table gets a permanent `product_code` (§9.6); seller identity is never exposed to customers beyond what the product spec already required; the schema does not yet grow fulfillment-code or QR-code tables.
-- **Explicitly not built this slice or the next:** delivery execution, fulfillment-code generation/validation, QR code generation/scanning, the courier role's portal/API, Bawi-mediated messaging.
-- **Security risks (for when this is built):** a leaked or reused pickup QR code granting delivery access to the wrong person (single-use + expiry are non-negotiable, not just a UX nicety); a courier session scoped too broadly and able to read customer/seller PII beyond the handoff; fulfillment codes guessable/sequential (must be unguessable, same as order IDs — see [`SECURITY.md`](SECURITY.md) §5).
-- **Merchant-of-record:** who is legally the seller of record (Bawi vs. each vendor) is **explicitly unresolved** and has direct implications for this feature (returns authority, tax, liability) — do not implicitly decide it via how this feature ends up implemented; it needs its own explicit decision first.
+- **Decided model:** Bawi Shopping is a **private-vendor-fulfillment marketplace** — customers shop only from Bawi, never directly from a vendor. Bawi controls product listings, pricing, customer service, tracking, returns, receipts, and vendor communication; sellers fulfill orders but never gain customer identity, contact, payment, or delivery-address information, and customers never gain vendor identity or pickup-location information.
+- **Order-level codes (three, distinct):** a temporary **fulfillment code**, a temporary **pickup code**, and a temporary **tracking code** — each scoped to its own purpose, separate from the permanent `product_code` (§9.6). **Pickup codes are single-use and expire on collection** (consumed the moment pickup is confirmed, not just time-limited).
+- **Per-role information scoping:**
+  - **Vendors** receive, per order, only: product, size, quantity, a preparation deadline, and pickup instructions. Never the customer's name, contact details, payment information, or delivery address.
+  - **Couriers** receive only the pickup and delivery information needed for their one assigned delivery — no broader account or order access.
+  - **Seller-facing APIs must never return customer delivery information** — an absolute rule, not a best-effort filter, to be designed and tested from the first order-related endpoint onward.
+- **Architecture flexibility:** the design must support either **direct courier pickup at the vendor's location** or a **future Bawi-operated sorting hub** — pickup location must be a resolvable value per order, not an assumption baked into fulfillment-code generation. (This slice's single shared stock location, `apps/backend/src/workflows/shared/default-stock-location.ts`, is already compatible with this — it doesn't assume per-vendor pickup addresses.)
+- **What this means for the current product-catalog slice:** the `product` table gets a permanent `product_code` (§9.6); seller identity is never exposed to customers beyond what the product spec already required; vendor IDs stay server-side and private (never in a client-facing response); the schema does not yet grow fulfillment-code, pickup-code, or tracking-code tables.
+- **Explicitly not built this slice or the next:** delivery execution, fulfillment/pickup/tracking-code generation and validation, QR code generation/scanning, the courier role's portal/API, Bawi-mediated messaging, returns handling.
+- **Security risks (for when this is built):** a leaked or reused pickup code granting delivery access to the wrong person (single-use + expire-on-collection are non-negotiable, not just a UX nicety); a courier session scoped too broadly and able to read customer/seller PII beyond its one assigned delivery; a vendor-facing order view accidentally including customer PII because it was filtered rather than built to exclude it by construction; fulfillment/pickup/tracking codes guessable/sequential (must be unguessable, same as order IDs — see [`SECURITY.md`](SECURITY.md) §5); all sensitive access and status changes must be audit-logged (CLAUDE.md rule #6, extended to code issuance/consumption).
+- **Merchant-of-record:** who is legally the seller of record (Bawi vs. each vendor) is **explicitly unresolved** and **must be finalized before payments are implemented** — it has direct implications for this feature too (returns authority, tax, liability, what appears on receipts). Do not implicitly decide it via how any feature ends up implemented; it needs its own explicit decision first.
 
 ---
 
-### 9.24 Localization & Translations *(decided, not yet built)*
+### 9.24 Localization & Translations *(i18n foundation built this slice; full translation system built later)*
 
-**Domain module:** `localization`/`translation` (planned)
+**Domain module:** `localization`/`translation` (content/moderation side still planned); i18n plumbing (`packages/i18n` or equivalent) built now — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12.
 
 - **User story:** As a customer who reads Amharic, Tigrinya, Afaan Oromo, Simplified Chinese, or Spanish, I want to browse and shop in my language.
-- **Decided model:** Six supported languages — English, Amharic, Tigrinya, Afaan Oromo, Simplified Chinese, Spanish. **English is the base language and the fallback** whenever a translation is missing for a given locale. Product translations are stored in a **table separate from the base product record** (keyed by `product_id` + `locale`), never as inline per-locale columns on `product` — this keeps the base product record's shape stable regardless of how many languages are eventually supported. **Every seller-submitted or AI-generated translation requires Bawi approval** before it's shown to customers, mirroring product approval itself (translations are content, and content is moderated).
-- **What this means for the current product-catalog slice:** the product schema must not bake per-language fields into `product`/`product_variant` — title/description/etc. on the base row are implicitly the English content. No translation table, submission UI, or approval workflow is built yet.
-- **Explicitly not built this slice or the next:** the translation submission UI (seller or AI-assisted), the Bawi translation-approval queue, locale-aware storefront rendering/routing, and any AI-translation integration itself.
-- **Security/content risks (for when this is built):** unapproved translations reaching customers (same approval-gate discipline as product moderation — see §9.19); a translation used to inject misleading pricing/claims not present in the approved English original (translations should be diffed/reviewed against the source, not approved blind); stored-XSS via translated free text (same escaping/sanitization rule as reviews — see [`SECURITY.md`](SECURITY.md) §5).
+- **Supported locales:** English `en-US` (fallback), Amharic `am`, Tigrinya `ti`, Afaan Oromo `om`, Simplified Chinese `zh-CN`, Spanish `es`.
+- **Decided model:**
+  1. A **language selector** on the storefront; the customer's selection is **remembered** (persisted, not re-asked every visit).
+  2. **English is the unconditional fallback** wherever a translation is unavailable — never a blank string or a raw i18n key shown to a user.
+  3. Translated surfaces (as each is built): navigation, forms, buttons, validation messages, product categories, product descriptions, policies, emails, and order updates.
+  4. **One product record per product, always.** Translations are stored in a table **separate from the base product record** (keyed by `product_id` + `locale`), never inline per-locale columns and never duplicate per-language product rows.
+  5. **Admins review and edit product translations**; **sellers may submit translations, but Bawi controls what's published** — same moderation shape as product approval (§9.19), not an auto-publish path.
+  6. **Search must eventually recognize products in every supported language** — not required this slice, but the search interface (§9.9) must not be designed in a way that forecloses per-locale indexing later.
+  7. **Unreviewed AI translations are never auto-published** — same approval gate as (5), regardless of translation source.
+  8. **Prices stay USD-only** for this release; locale changes display language, not currency.
+  9. **Amharic and Tigrinya (Ge'ez script) must render correctly** throughout the interface, database, emails, and search — a UTF-8-throughout requirement, not solved by the font alone.
+  10. **Layouts must tolerate longer translated text** without breaking buttons, menus, forms, or mobile screens (see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) §12).
+  11. **Accessibility labels are localized** in the selected language, not hard-coded English (see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) §8).
+  12. **No separate application and no separate product record per language** — one codebase, one product table, locale is a rendering/lookup concern, not a data-partitioning one.
+- **What's built this slice (the "i18n foundation"):** locale context/provider, cookie-based locale persistence, an English-fallback string-lookup mechanism, and a message-catalog file structure with stub locale files for all six locales — wired into the storefront first. See [`ARCHITECTURE.md`](ARCHITECTURE.md) §12 for the concrete implementation and [`TESTING.md`](TESTING.md) for the required foundation-level tests (switching, persistence, fallback, non-Latin rendering, mobile layout resilience).
+- **Explicitly not built this slice:** the product-translation table itself, the seller/AI translation submission UI, the Bawi translation-approval queue, locale-aware search indexing, and translated email templates — these fill in gradually, per-feature, on top of the foundation.
+- **Security/content risks (for when the full system is built):** unapproved translations reaching customers (same approval-gate discipline as product moderation — see §9.19); a translation used to inject misleading pricing/claims not present in the approved English original (translations should be diffed/reviewed against the source, not approved blind); stored-XSS via translated free text (same escaping/sanitization rule as reviews — see [`SECURITY.md`](SECURITY.md) §5).
 
 ---
 

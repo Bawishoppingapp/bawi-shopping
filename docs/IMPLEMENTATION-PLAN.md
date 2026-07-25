@@ -21,9 +21,11 @@ Phases are sequential and each produces a working, demoable slice — not a hori
 - ✅ Admin portal (`apps/admin`) exists and is authenticated - built as a full Next.js app on the shared design system, not a Medusa Admin Extension (see [`DECISIONS.md`](DECISIONS.md)).
 - ❌ Not yet built: Stripe Connect Express linking (the rest of "seller onboarding" - see [`MARKETPLACE-FLOWS.md`](MARKETPLACE-FLOWS.md) §2.2). An approved, activated seller can log in today but isn't "live" for Stripe purposes yet.
 
-### Phase 2 — Catalog
-- `categories`, `catalog`/`products`/`product-variants`, `inventory`, `pricing`.
+### Phase 2 — Catalog (in progress)
+- `categories`, `catalog`/`products`/`product-variants`, `inventory`, `pricing`, plus the new custom `product-listing` module (vendor ownership, approval status, permanent `product_code`).
 - Seller portal: create/edit/publish products. Storefront: category and product detail pages (no search/cart yet — direct links only).
+- **Also building this phase:** the i18n foundation (`packages/i18n`, locale selector/persistence, English-fallback lookup — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12, [`PRD.md`](PRD.md) §9.24) — infrastructure only, not full translations, deliberately built now before the number of pages grows.
+- **Explicitly not in this phase:** private-fulfillment mechanics (fulfillment/pickup/tracking codes, courier role, QR codes), checkout, payments, returns — see [`PRD.md`](PRD.md) §9.23 and the risk entries below.
 
 ### Phase 3 — Discovery
 - `search` module (Postgres FTS adapter behind the interface), storefront browse/search/filter UI.
@@ -31,9 +33,11 @@ Phases are sequential and each produces a working, demoable slice — not a hori
 ### Phase 4 — Cart, checkout, payments, order splitting
 - `cart`, `checkout` workflow, `payments` (Stripe Connect, Separate Charges and Transfers), `commissions`, `orders`, `vendor-order-splitting`.
 - This is the highest-risk phase (see §2) and the recommended first vertical slice target — see §3.
+- **Blocking prerequisite: merchant-of-record must be finalized before this phase starts.** Whether Bawi or each vendor is the legal seller of record affects who's on receipts/tax documents, refund/chargeback liability, and Stripe Connect account structure - this is a business/legal decision, not an engineering default to guess at (see [`DECISIONS.md`](DECISIONS.md), [`SECURITY.md`](SECURITY.md) §11).
 
 ### Phase 5 — Fulfillment & post-purchase
 - `shipping`, seller portal order management (view/fulfill/ship), `returns`, `refunds` (with commission reversal), `payouts` (batch job in `apps/workers`).
+- **Private-vendor-fulfillment model applies here**, not as a bolt-on: separate temporary fulfillment/pickup/tracking codes per order, pickup codes single-use and expiring on collection, vendors seeing only product/size/quantity/prep-deadline/pickup-instructions, a `courier` role scoped to its one assigned delivery, no direct seller↔customer contact, returns routed through Bawi rather than a vendor's address, and a pickup-location model that supports either direct vendor pickup or a future Bawi sorting hub (see [`PRD.md`](PRD.md) §9.23, [`SECURITY.md`](SECURITY.md) §11, [`ARCHITECTURE.md`](ARCHITECTURE.md) §11).
 
 ### Phase 6 — Trust & operations
 - `reviews`, `moderation`, `notifications` (email), `reporting`, `audit-logs` (though audit logging is implemented incrementally alongside every phase above, not bolted on at the end — this phase is about the admin-facing audit/reporting UI, not the logging itself).
@@ -54,10 +58,13 @@ Phases are sequential and each produces a working, demoable slice — not a hori
 | Modular monolith boundaries erode over time (modules start reaching into each other's tables directly) | Technical / Architectural | Module-link/workflow-only cross-module access is a stated rule (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §5); enforced by code review, and by the boundary being real in Medusa's module system rather than just a folder convention |
 | Search relevance/quality on Postgres FTS may be mediocre compared to customer expectations before Algolia lands | Product | Interface-first design (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §6) means the Algolia migration is a swap, not a rewrite, when this becomes a priority |
 | Undefined commission rate / return window / payout cadence defaults | Business decision (open) | Must be decided in Phase 0 — these are business inputs, not engineering defaults to guess at |
-| Seller-application approval isn't fully atomic: the audit-log write and the Seller/SellerUser creation are sequential `await`s in one route handler, not one DB transaction | Technical | Acceptable for v1 volume (a mid-sequence crash is rare and would leave an inconsistent-but-detectable state, not a security hole); revisit as a Medusa workflow once the pattern repeats for more approval-like actions (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §4.2 and the eslint warning `@medusajs/no-service-mutations-in-api-route` that already flags this) |
+| ~~Seller-application approval isn't fully atomic~~ — **resolved.** Approve/reject now run as Medusa workflows with compensating rollback (`apps/backend/src/workflows/{approve,reject}-seller-application.ts`) | Technical | Fixed before the product-catalog slice began (explicitly required as a prerequisite); the same pattern was reused for product-listing approve/reject. See [`DECISIONS.md`](DECISIONS.md) |
 | Approval idempotency has a narrow race window under true concurrent requests (two simultaneous approve calls could both pass the "not yet approved" check before either writes `seller_id`) | Technical | Sequential retries (the realistic case: double-click, network retry) are fully handled; genuine concurrent double-approval is a documented residual risk, not yet guarded by a DB-level lock or unique constraint |
 | No email/notification service exists yet, so the seller-application approval flow surfaces the activation link directly in the admin UI instead of emailing the seller | Product / UX | Explicit, documented stand-in (see [`DECISIONS.md`](DECISIONS.md)) - revisit once the Notifications module (Phase 6) ships |
 | Seller-application spam/abuse (repeated submissions from bots) has no rate-limiting or CAPTCHA yet - only same-email-while-pending dedup | Security | Acceptable for v1 given no production traffic yet; add basic rate-limiting before real public launch |
+| Merchant-of-record is undecided, and Phase 4 (payments) cannot start correctly until it is | Business / Legal (open) | Explicitly flagged as a Phase 4 blocking prerequisite (see above); nothing in Phase 2/3 should assume an answer either way |
+| Private-fulfillment model (fulfillment/pickup/tracking codes, courier role, QR codes) is fully decided but entirely unbuilt - a future slice must retrofit it onto whatever order/shipping schema Phase 4/5 produces | Technical / Product | Decided ahead of time specifically to avoid a rework - Phase 4/5 must design orders/shipping with resolvable per-order pickup location and vendor-info-scoping from the start, not add it after the fact (see [`PRD.md`](PRD.md) §9.23) |
+| i18n foundation is built ahead of full translations - a real risk is the foundation being designed too narrowly (e.g., assuming English string length, or a locale list that's hard to extend) and needing rework once more pages/features are translated | Technical | Foundation built in Phase 2 deliberately before the page count grows; message-catalog structure and fallback logic are app-agnostic (`packages/i18n`) specifically so later phases adopt it rather than reinvent it (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12) |
 
 ## 3. Original first vertical slice, and what actually shipped
 

@@ -228,3 +228,44 @@ A running log of decisions that aren't obvious from reading the code, in the ord
 - **Changes now (product-catalog slice):** the `product` table gets a permanent `product_code` column (distinct from `slug`), and any per-variant seller SKU is treated as private data - never returned from a public/storefront-facing endpoint, same tier of sensitivity as `seller_application.rejection_reason`. The product schema does **not** grow per-locale columns - if/when translations are built, they land in their own table keyed by `product_id` + `locale`.
 - **Documented, not built, in this slice:** delivery/fulfillment execution, temporary fulfillment codes, pickup QR codes, the `courier` role/portal, Bawi-mediated communication/tracking/returns/packaging, the translation UI/approval workflow, and the merchant-of-record decision. See `docs/PRD.md` §8 and the new deferred feature-spec subsections, `docs/USER-ROLES.md` §2.7, `docs/SECURITY.md` §11, and `docs/ARCHITECTURE.md` §4 module map for where each now has a placeholder.
 - Don't design the product-catalog slice's authorization/response shaping in a way that would leak seller identity to customers or customer identity to sellers beyond what's already required for order fulfillment once that slice exists - the identity-separation rule is already in effect even though the fulfillment system that depends on it isn't built yet.
+
+---
+
+## Private-vendor-fulfillment model elaborated: order-level codes, per-role information scoping, sorting-hub flexibility
+
+**Date:** immediately after the entry above, same pre-product-catalog window - the user formalized the model with more operational detail before implementation continued.
+
+**Decision:** Refines (does not replace) the entry above. Bawi Shopping is a **private-vendor-fulfillment marketplace**: customers shop only from Bawi Shopping, never directly from a vendor. Elaborated rules:
+
+- **Bawi controls**, not vendors: product listings, pricing, customer service, tracking, returns, receipts, and vendor communication.
+- **Three distinct order-level codes** (not one) once orders exist: a temporary **fulfillment code**, a temporary **pickup code**, and a temporary **tracking code** - each scoped to its own purpose, none of them the permanent `product_code`.
+- **Pickup codes are single-use and expire on collection** (event-based expiry - consumed the moment pickup is confirmed - not just a fixed time-based TTL).
+- **Vendors receive, per order, only:** product, size, quantity, a preparation deadline, and pickup instructions. Never the customer's name, contact details, payment information, or delivery address.
+- **Couriers receive only** the pickup and delivery information needed for their one assigned delivery - not broader account/order access.
+- **Seller-facing APIs must never return customer delivery information** - not "filtered by default," an absolute rule to design and test against from the first order-related endpoint onward.
+- **Vendor IDs stay server-side and private** - already this project's standing rule (`docs/SECURITY.md` §2), reaffirmed here specifically because it's what keeps a vendor from being identifiable to a customer through an API response.
+- **All sensitive access and status changes are audit-logged** - reaffirms CLAUDE.md rule #6, extended explicitly to fulfillment-code issuance/consumption once that's built.
+- **Returns are handled through Bawi**, never by giving a customer a vendor's address directly.
+- **The architecture must support either direct courier pickup from the vendor or a future Bawi-operated sorting hub** - i.e., don't hard-code "courier always picks up at the vendor's address" into the data model; the pickup location for a given order should be a resolvable value, not an assumption baked into fulfillment-code generation.
+
+**Why:** This is explicitly the trust model the business is built on (per the user: comparable to how gig-delivery platforms never expose restaurant/customer contact info to each other) - not a generic privacy nicety but the mechanism that lets Bawi be the merchant relationship of record for customer service, disputes, and returns regardless of which vendor fulfilled an order.
+
+**How to apply:** Still nothing to build this slice (checkout, courier delivery, pickup QR codes, payouts, and returns remain explicitly out of scope - see `docs/PRD.md` §9.23). What changes now is how later slices must be *designed*: any future order/fulfillment schema needs separate `fulfillment_code`/`pickup_code`/`tracking_code` concepts (not one shared code), any vendor-facing order view must be built by construction to exclude customer PII (not by filtering it out after the fact), and the stock-location model already in place for this slice (`apps/backend/src/workflows/shared/default-stock-location.ts`, a single "Bawi Fulfillment Center" location) is deliberately compatible with a future sorting-hub model - it does not assume per-vendor pickup addresses. **Merchant-of-record remains an explicitly unresolved legal/business decision that must be finalized before payments are implemented** - flagged again here since it's directly load-bearing for the fulfillment model (who has legal authority over returns, who appears on receipts) and must not be implicitly decided by how the payments phase happens to be built.
+
+---
+
+## Multilingual support (six languages) formalized as a core requirement, with an i18n foundation built ahead of full translation
+
+**Date:** immediately after the private-fulfillment elaboration above, same pre-product-catalog window.
+
+**Decision:** Localization (first introduced as a deferred item in the earlier entry above) is now a **core, named requirement** with a locale list and concrete mechanics: English (`en-US`), Amharic (`am`), Tigrinya (`ti`), Afaan Oromo (`om`), Simplified Chinese (`zh-CN`), Spanish (`es`). Unlike the fulfillment/courier/QR-code items, the user asked for an **i18n foundation to be built now** (not fully translated content, but the underlying plumbing), specifically so it doesn't have to be retrofitted once the number of pages grows. See `docs/ARCHITECTURE.md` §12 and `docs/PRD.md` §9.24 for the concrete shape (locale context/provider, cookie persistence, English-fallback lookup, message-catalog file structure) and what was actually implemented this slice vs. deferred.
+
+**Why:** The same reasoning as any cross-cutting infrastructure decision (auth, audit logging) - retrofitting locale-awareness into markup, routing, and data models after dozens of pages exist is materially more expensive than building the seam now and filling in translations incrementally per the user's own framing ("full translations may be completed gradually as each feature is built").
+
+**How to apply:**
+- One product record per product, always - translations are a side table keyed by `product_id` + `locale`, never per-locale duplicate product rows or per-locale columns on `product` (reaffirms the entry above; this is now non-negotiable, not just a schema-shape preference).
+- English is the unconditional fallback at every lookup site - a missing translation renders the English string, never a blank or a raw translation key.
+- Seller-submitted or AI-generated translations are never auto-published - they enter the same kind of admin-approval queue as product content itself (see `docs/PRD.md` §9.19 moderation, §9.24).
+- Prices stay USD-only for this release regardless of locale - locale changes display language, not currency/units.
+- Non-Latin scripts (Amharic and Tigrinya specifically use Ge'ez script) must render correctly everywhere text flows: UI, database storage, emails, and search - this is a UTF-8-throughout requirement (Postgres already defaults to UTF-8; verify email templates and any future search-index configuration don't silently assume Latin-1/ASCII).
+- Layouts must not assume English-length strings - a button/menu/form built to fit an English label must not break when the same slot holds a longer Amharic or Spanish translation; this is a design-system requirement (`docs/DESIGN-SYSTEM.md` §12), not just a translation-content concern.

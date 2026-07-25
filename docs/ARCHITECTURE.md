@@ -103,7 +103,7 @@ Medusa v2 ships a set of native commerce modules; the marketplace-specific conce
 | Notifications | Native Medusa `notification` module | Email provider + templates, dedup log |
 | Reporting | **Custom module: `reporting`** | Read-side aggregation over existing modules, no owned source-of-truth data |
 | Audit logs | **Custom module: `audit-log`** (implemented) | Append-by-convention today (no application code path issues UPDATE/DELETE against it); a single `record()` method on the module service, called directly by mutating routes rather than via an event subscriber for now — see [`SECURITY.md`](SECURITY.md) §6 |
-| Private fulfillment | **Custom module: `fulfillment-privacy`** *(decided, not yet built)* | Temporary fulfillment codes, single-use expiring pickup QR codes, Bawi-mediated communication/tracking/returns/packaging; the `courier` actor type/role lives here. See [`DECISIONS.md`](DECISIONS.md), [`PRD.md`](PRD.md) §9.23, [`SECURITY.md`](SECURITY.md) §11. |
+| Private fulfillment | **Custom module: `fulfillment-privacy`** *(decided, not yet built)* | Separate temporary fulfillment/pickup/tracking codes per order (pickup codes single-use, expire on collection); Bawi-mediated communication/tracking/returns/packaging; the `courier` actor type/role lives here, scoped to its one assigned delivery. Designed so pickup location is resolvable per order (direct vendor pickup or a future Bawi sorting hub), never hard-coded to one model. See [`DECISIONS.md`](DECISIONS.md), [`PRD.md`](PRD.md) §9.23, [`SECURITY.md`](SECURITY.md) §11. |
 | Localization | **Custom module: `localization`/`translation`** *(decided, not yet built)* | Six-language support (English fallback), product translations stored in their own table keyed by `product_id` + `locale`, Bawi approval required before a translation is customer-visible. See [`PRD.md`](PRD.md) §9.24. |
 
 Custom modules communicate with native modules exclusively through Medusa's module-link and workflow/event-subscriber mechanisms — never direct cross-module table joins — preserving the modular-monolith boundary so any module could theoretically be extracted into its own service later without a rewrite.
@@ -196,3 +196,33 @@ Rationale for npm workspaces + Turborepo: minimal, ships with Node (no extra glo
 ## 10. Environments
 
 Three standard environments (local, staging, production), each with its own PostgreSQL database, Stripe Connect test/live mode pairing (test in local/staging, live in production only), and object storage bucket. No environment shares a database or Stripe account with another. Concrete provisioning steps are deferred to [`IMPLEMENTATION-PLAN.md`](IMPLEMENTATION-PLAN.md) — this document defines shape, not hosting choices.
+
+## 11. Private fulfillment (planned) — resolvable pickup location, not a hard-coded model
+
+See [`DECISIONS.md`](DECISIONS.md) and [`PRD.md`](PRD.md) §9.23 for the full requirement. The one architectural constraint that affects code being written *now*: this slice's inventory tracking uses a single shared stock location (`apps/backend/src/workflows/shared/default-stock-location.ts`, "Bawi Fulfillment Center") rather than a per-seller location. That was a v1 simplification made independently of the fulfillment-privacy decision, but it happens to already point the right direction — a future `fulfillment-privacy` module can resolve "where does the courier pick this up" per order (the vendor's own location, or a future Bawi sorting hub) without this slice's inventory model needing to change first.
+
+## 12. Localization / i18n foundation
+
+**Decided requirement, foundation built this slice** — see [`DECISIONS.md`](DECISIONS.md) and [`PRD.md`](PRD.md) §9.24 for the full requirement and locale list (`en-US`, `am`, `ti`, `om`, `zh-CN`, `es`).
+
+No new library was introduced (per the "no unnecessary libraries" rule) — Next.js App Router's own Server/Client Component split and the existing cookie-session pattern already used for auth cover what a foundation needs:
+
+```
+packages/i18n/
+  ├─ locales.ts        (the six supported locale codes + names, DEFAULT_LOCALE = "en-US")
+  ├─ messages/
+  │   ├─ en-US.json     (source of truth - every key must exist here)
+  │   ├─ am.json         } stub files, filled in gradually per feature -
+  │   ├─ ti.json         } missing keys silently fall back to en-US.json
+  │   ├─ om.json         } rather than rendering blank or a raw key
+  │   ├─ zh-CN.json      }
+  │   └─ es.json         }
+  ├─ get-translations.ts (server-side: reads the locale cookie, returns a `t(key)` function bound to that locale with English fallback baked in)
+  └─ locale-provider.tsx (Client Component context - exposes the active locale and a `setLocale` action to Client Components, e.g. the language selector)
+```
+
+- **Persistence:** an HTTP-only-*false* cookie (must be readable by the client-side selector, unlike the auth session cookies) storing the chosen locale code; set via a Server Action, read on every request to pick the initial locale server-side (no flash of the wrong language).
+- **Fallback:** `get-translations.ts`'s `t(key)` looks up `messages/<locale>.json` first, then `messages/en-US.json` - a key missing from every locale file (including English) is a build-time/test-time error, not a silent runtime blank, since `en-US.json` is the required source of truth.
+- **Product translations** (a `product_translation` table keyed by `product_id` + `locale`, per [`DATABASE.md`](DATABASE.md)) are a separate, later concern from this UI-string foundation - the same `t()`/fallback *pattern* applies to both, but product content isn't static JSON, it's reviewed/approved data (see [`PRD.md`](PRD.md) §9.24).
+- **Where it's wired first:** `apps/storefront` (customer-facing, highest priority for the target community); the seller portal and admin portal can adopt the same `packages/i18n` package later without redesigning it, since it's app-agnostic.
+- **Design-system implication:** components must not assume English-length strings fit their allotted space - see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) §12.

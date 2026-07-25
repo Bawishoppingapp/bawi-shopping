@@ -44,6 +44,20 @@
 5. Moderation/review integrity (verified-purchase gating, rejected-content re-queueing).
 6. Everything else named per-feature in [`PRD.md`](PRD.md) §9.
 
+## 4.1 Localization (i18n foundation) test requirements
+
+Per [`PRD.md`](PRD.md) §9.24 and [`ARCHITECTURE.md`](ARCHITECTURE.md) §12 - required as the foundation lands, not deferred to a later "i18n testing" pass:
+
+- **Unit:** the `t(key, locale)` lookup function - returns the requested locale's string when present, falls back to `en-US` when the key is missing from the requested locale, and every key present in any non-English message file also exists in `en-US.json` (a fixture-driven completeness check, not a runtime concern).
+- **Integration/component:**
+  - **Language switching** - selecting a language updates rendered UI strings.
+  - **Language persistence** - the selected locale survives a page reload/new session (cookie read back correctly).
+  - **English fallback behavior** - a locale file missing a specific key still renders the English string for that key, not a blank or a raw key name.
+  - **Missing translations** - an entire locale file missing (or a key present in none of them except English) doesn't crash rendering.
+  - **Non-Latin script rendering** - Amharic, Tigrinya, Afaan Oromo, Simplified Chinese, and Spanish sample strings render without mojibake/tofu-boxes (a snapshot or visual-regression check per locale is sufficient at foundation stage - full linguistic QA is a later, content-driven pass).
+  - **Translated product content** - once `product_translation` exists, a product page under a non-English locale renders the matching translation row when `approved`, and falls back to the English base record when no approved translation exists for that locale.
+- **E2E:** a mobile-viewport pass through at least one page with the longest-known translated strings (per [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) §12) confirming no overflow/clipping of buttons, menus, or form fields.
+
 ## 5. CI gates
 
 - Every pull request runs: lint, type-check, unit tests, and integration tests against a fresh disposable database — all required to pass before merge.

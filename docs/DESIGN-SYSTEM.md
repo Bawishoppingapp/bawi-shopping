@@ -79,3 +79,14 @@ Every data-driven view — product grid, cart, order list, dashboard, moderation
 ## 11. Token delivery
 
 Design tokens (color, type scale, spacing scale, radii, shadows, motion durations) are defined once in `packages/ui` (e.g., as CSS variables/Tailwind config, finalized in [`IMPLEMENTATION-PLAN.md`](IMPLEMENTATION-PLAN.md)) and consumed by all three Next.js apps — no app defines its own competing token set, and no app hardcodes a color/spacing value that already exists as a token.
+
+## 12. Localization & layout resilience
+
+Six supported locales — English `en-US` (fallback), Amharic `am`, Tigrinya `ti`, Afaan Oromo `om`, Simplified Chinese `zh-CN`, Spanish `es` — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12 for the i18n foundation and [`PRD.md`](PRD.md) §9.24 for the full requirement. Design implications:
+
+- **No component is built to fit English string length exactly.** Buttons, nav items, form labels, and menu items must accommodate translated text that's meaningfully longer than the English source (German/Amharic/Spanish UI strings routinely run 20-40% longer) without truncating, overflowing, or breaking layout — this applies to mobile screens especially, where space is tightest.
+- Prefer flexible layout primitives (flex/grid with `min-width`/`flex-wrap`, not fixed pixel widths) for any element that will render translated text.
+- Where truncation is unavoidable (e.g., a product card title), truncate visually (`text-overflow: ellipsis`) but never truncate the underlying accessible name — screen readers and `title` attributes get the full string.
+- **Accessibility labels are localized**, not hard-coded English — `aria-label`, `alt` text, and form error announcements (§8) all resolve through the same `t()`/fallback mechanism as visible UI text, not a separate hard-coded set.
+- Non-Latin scripts (Amharic and Tigrinya use Ge'ez script) must render with correct font coverage and line-height — verify the chosen typography (§3) actually covers Ge'ez, Chinese (Simplified), and Latin-with-diacritics (Spanish) glyph ranges, or define a per-script font fallback stack rather than assuming one typeface covers everything.
+- A language selector is a shared component (§6 pattern: one implementation, used identically wherever it appears), not a one-off per app.
