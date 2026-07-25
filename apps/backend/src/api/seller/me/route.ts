@@ -45,6 +45,16 @@ export async function GET(
       name: sellerUser.seller.name,
       slug: sellerUser.seller.slug,
       status: sellerUser.seller.status,
+      // Never the raw stripe_account_id itself - only the derived
+      // connection status a seller-portal UI needs (see docs/DECISIONS.md,
+      // docs/SECURITY.md §12: a Stripe account id is treated with the same
+      // sensitivity as vendor_id).
+      stripe: {
+        connected: Boolean(sellerUser.seller.stripe_account_id),
+        charges_enabled: sellerUser.seller.stripe_charges_enabled,
+        payouts_enabled: sellerUser.seller.stripe_payouts_enabled,
+        details_submitted: sellerUser.seller.stripe_details_submitted,
+      },
     },
   })
 }

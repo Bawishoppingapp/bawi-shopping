@@ -29,6 +29,12 @@ export default async function CategoriesPage() {
           Products
         </Link>
         <span className="font-medium text-neutral-900">Categories</span>
+        <Link href="/sellers" className="text-neutral-500 hover:underline">
+          Sellers
+        </Link>
+        <Link href="/config" className="text-neutral-500 hover:underline">
+          Configuration
+        </Link>
       </nav>
 
       <div className="flex items-center justify-between">

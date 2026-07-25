@@ -40,6 +40,12 @@ export default async function ApplicationsPage({
         <Link href="/categories" className="text-neutral-500 hover:underline">
           Categories
         </Link>
+        <Link href="/sellers" className="text-neutral-500 hover:underline">
+          Sellers
+        </Link>
+        <Link href="/config" className="text-neutral-500 hover:underline">
+          Configuration
+        </Link>
       </nav>
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold text-neutral-900">

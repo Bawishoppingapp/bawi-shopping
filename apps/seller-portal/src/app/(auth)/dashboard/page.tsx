@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Button } from "@bawi/ui"
 import { SELLER_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentSeller } from "@/features/auth/services/medusa-auth-client"
+import { StripeConnectBanner } from "@/features/stripe/components/stripe-connect-banner"
 
 // Session-scoped content must never be cached by the browser keyed only on
 // the URL - see docs/DECISIONS.md (product-listing page caching finding).
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
           Signed in as {me.seller_user.role} · {me.seller.slug}
         </p>
       </div>
+      <StripeConnectBanner stripe={me.seller.stripe} />
       <Link href="/products">
         <Button>Manage products</Button>
       </Link>

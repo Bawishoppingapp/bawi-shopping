@@ -7,6 +7,9 @@ const STYLES: Record<string, string> = {
   rejected: "bg-red-50 text-red-700",
   withdrawn: "bg-neutral-100 text-neutral-500",
   archived: "bg-neutral-100 text-neutral-500",
+  "Not connected": "bg-neutral-100 text-neutral-500",
+  Pending: "bg-amber-50 text-amber-700",
+  Live: "bg-green-50 text-green-700",
 }
 
 const LABELS: Record<string, string> = {
@@ -18,6 +21,9 @@ const LABELS: Record<string, string> = {
   rejected: "Rejected",
   withdrawn: "Withdrawn",
   archived: "Archived",
+  "Not connected": "Not connected",
+  Pending: "Pending",
+  Live: "Live",
 }
 
 export function StatusBadge({ status }: { status: string }) {

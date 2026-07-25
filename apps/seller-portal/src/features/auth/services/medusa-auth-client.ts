@@ -62,7 +62,18 @@ export async function completeSellerActivation(
 
 export interface SellerMe {
   seller_user: { id: string; role: string }
-  seller: { id: string; name: string; slug: string; status: string }
+  seller: {
+    id: string
+    name: string
+    slug: string
+    status: string
+    stripe: {
+      connected: boolean
+      charges_enabled: boolean
+      payouts_enabled: boolean
+      details_submitted: boolean
+    }
+  }
 }
 
 /**
