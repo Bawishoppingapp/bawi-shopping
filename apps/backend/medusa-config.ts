@@ -29,5 +29,11 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/category-translation",
     },
+    {
+      resolve: "./src/modules/business-config",
+    },
+    {
+      resolve: "./src/modules/webhook-event",
+    },
   ],
 })
