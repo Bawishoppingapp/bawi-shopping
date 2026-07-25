@@ -38,7 +38,7 @@ One shared system (`packages/ui`) powers the customer storefront, seller portal,
 
 ## 6. Core shared components
 
-- **Product card** — image (fixed ratio), brand/seller name, title, price (and compare-at price if on sale), minimal by default (no badges/ribbons clutter; at most one status badge, e.g., "Sold out").
+- **Product card** *(implemented — `packages/ui` `ProductCard`/`ProductGrid`)* — image (fixed 4:5 ratio, neutral placeholder graphic when absent, never repeated title text), brand/seller name, title, price (and compare-at price if on sale), minimal by default (no badges/ribbons clutter; at most one status badge, e.g., "Sold out"). `ProductGrid` reflows 2 columns on mobile up to 4 on desktop, with matching skeleton/empty/error presentational components.
 - **Product detail** — gallery, variant selectors (size/color), price, seller/brand link, description, reviews, shipping/return summary.
 - **Cart / line item row** — image thumbnail, title, variant, seller name, quantity control, price, remove action; grouped visually by seller when the cart spans multiple sellers.
 - **Forms & inputs** — label always visible (no placeholder-as-label), inline validation messaging, consistent error/success states, accessible focus rings.

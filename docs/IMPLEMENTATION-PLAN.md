@@ -1,6 +1,6 @@
 # Bawi Shopping — Implementation Plan
 
-**Status: Phase 0, Phase 1, and the core of Phase 2 are done.** Three vertical slices are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left, not a not-yet-started plan — update it as each phase progresses rather than treating it as historical.
+**Status: Phase 0, Phase 1, Phase 2, and Phase 3 are done.** Four vertical slices are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left, not a not-yet-started plan — update it as each phase progresses rather than treating it as historical.
 
 ## 1. Phased build order
 
@@ -28,10 +28,15 @@ Phases are sequential and each produces a working, demoable slice — not a hori
 - ✅ Storefront: public product detail page (`/products/:code`) - approved-only, no vendor identity/SKU exposed, per-variant price/availability from live inventory.
 - ✅ The i18n foundation (`packages/i18n`, locale selector/persistence, English-fallback lookup — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12, [`PRD.md`](PRD.md) §9.24) — infrastructure only, not full translations, built ahead of the page count growing; wired into the storefront first.
 - ✅ Tested: 41 backend unit tests (schema/state-machine/product-code generation), 17 backend integration tests (ownership, negative-authz, status transitions, idempotent approval, audit logging, public-visibility scoping), 2 E2E specs (full create→submit→approve→public-view journey; cross-seller edit blocked) spanning all three frontends.
-- **Explicitly not in this phase:** category management (categories are seeded, not admin-editable yet), search/browse (direct link only), private-fulfillment mechanics (fulfillment/pickup/tracking codes, courier role, QR codes), checkout, payments, returns — see [`PRD.md`](PRD.md) §9.23 and the risk entries below.
+- **Explicitly not in this phase:** category management (moved to Phase 3, below), search/browse (moved to Phase 3), private-fulfillment mechanics (fulfillment/pickup/tracking codes, courier role, QR codes), checkout, payments, returns — see [`PRD.md`](PRD.md) §9.23 and the risk entries below.
 
-### Phase 3 — Discovery
-- `search` module (Postgres FTS adapter behind the interface), storefront browse/search/filter UI.
+### Phase 3 — Discovery ✅ done
+- Admin category management (create/edit/delete, parent/child nesting, translated names) — native Medusa `product-category` module (parent/child support already existed natively; nothing custom needed for tree structure) plus a new custom `category-translation` module, composed into `create-category`/`update-category`/`delete-category` Medusa workflows with compensating rollback and audit logging.
+- Public discovery API: `GET /categories` (translated, active-only, nested tree), `GET /products` (search/filter/sort/cursor-pagination, approved-only), `GET /brands` (sellers with ≥1 approved listing). All behind a `SearchService` interface (`packages/search-contract`) implemented by a v1 live-query Postgres adapter (`apps/backend/src/search/postgres-search-service.ts`) — no separate index table, see [`DECISIONS.md`](DECISIONS.md).
+- Storefront: fashion-focused homepage (hero, shop-by-category rail, new-arrivals grid), category browse pages (`/categories/:handle`), a search/filter/sort page (`/search`) with a desktop sidebar / mobile drawer filter UI, cursor-based "Load more" pagination, explicit loading/empty/error states. New shared `ProductCard`/`ProductGrid` components in `packages/ui`.
+- Seller portal's category picker now reflects the admin-managed tree (still assign-only, still `is_active`-filtered).
+- Tested: unit (cycle-detection, tree-building, schema validation, cursor encode/decode), integration (approved-only visibility, category CRUD + cycle guard + delete guards, all six filters, all three sorts, pagination exhaustiveness, localization fallback, brand list scoping, no vendor_id/SKU leakage), component (filter/sort/search controls, product card, admin category form), E2E (storefront discovery journey across desktop/mobile, admin category management journey). Two real bugs found and fixed via this testing — see [`DECISIONS.md`](DECISIONS.md).
+- **Explicitly not in this phase:** cart, checkout, payments, delivery, reviews, product-content translations (only category names are translated; product title/description translation remains the deferred `product_translation` table).
 
 ### Phase 4 — Cart, checkout, payments, order splitting
 - `cart`, `checkout` workflow, `payments` (Stripe Connect, Separate Charges and Transfers), `commissions`, `orders`, `vendor-order-splitting`.
@@ -59,7 +64,7 @@ Phases are sequential and each produces a working, demoable slice — not a hori
 | Seller onboarding stalls (incomplete Stripe KYC), leaving "approved but not live" sellers in limbo | Business | Clear seller-portal checklist UI; admin visibility into stalled onboarding; no code fix substitutes for this being a real, expected steady-state — the product must surface it, not hide it |
 | Scope creep into deferred features during build (see [`PRD.md`](PRD.md) §8) | Process | Deferred list is explicit and reviewed at the start of each phase; anything not in the first-release feature list requires an explicit re-scoping conversation, not an in-flight addition |
 | Modular monolith boundaries erode over time (modules start reaching into each other's tables directly) | Technical / Architectural | Module-link/workflow-only cross-module access is a stated rule (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §5); enforced by code review, and by the boundary being real in Medusa's module system rather than just a folder convention |
-| Search relevance/quality on Postgres FTS may be mediocre compared to customer expectations before Algolia lands | Product | Interface-first design (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §6) means the Algolia migration is a swap, not a rewrite, when this becomes a priority |
+| Search relevance/quality/scale on the v1 live-query Postgres adapter (bounded to 500 candidate rows, no ranking) will not hold up as the catalog grows | Product / Technical | Interface-first design (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §6) means a ranked Postgres FTS or Algolia adapter is a swap behind `SearchService`, not a rewrite, when this becomes a priority - revisit once real catalog size or relevance complaints make it worth building |
 | Undefined commission rate / return window / payout cadence defaults | Business decision (open) | Must be decided in Phase 0 — these are business inputs, not engineering defaults to guess at |
 | ~~Seller-application approval isn't fully atomic~~ — **resolved.** Approve/reject now run as Medusa workflows with compensating rollback (`apps/backend/src/workflows/{approve,reject}-seller-application.ts`) | Technical | Fixed before the product-catalog slice began (explicitly required as a prerequisite); the same pattern was reused for product-listing approve/reject. See [`DECISIONS.md`](DECISIONS.md) |
 | Approval idempotency has a narrow race window under true concurrent requests (two simultaneous approve calls could both pass the "not yet approved" check before either writes `seller_id`) | Technical | Sequential retries (the realistic case: double-click, network retry) are fully handled; genuine concurrent double-approval is a documented residual risk, not yet guarded by a DB-level lock or unique constraint |
@@ -75,9 +80,9 @@ The original plan called for one seller/one product/one customer/one paid order 
 
 ### Recommended next vertical slice
 
-With identity, seller applications, admin review, and the core catalog slice now in place, the next slice should be **Stripe Connect account linking** to complete seller onboarding (the remaining piece of Phase 1 - see above), since checkout/payments (Phase 4) depends on sellers actually being "live" for Stripe purposes, and **merchant-of-record must be decided before that phase starts** (see the risk table above). Category management (admin-editable category tree, currently seeded-only) and Postgres FTS search/browse (Phase 3) are lower-risk options if Stripe Connect or the merchant-of-record decision aren't ready to start.
+With identity, seller applications, admin review, the core catalog slice, and now product discovery/search/filtering all in place, the next slice should be **Stripe Connect account linking** to complete seller onboarding (the remaining piece of Phase 1 - see above), since checkout/payments (Phase 4) depends on sellers actually being "live" for Stripe purposes, and **merchant-of-record must be decided before that phase starts** (see the risk table above).
 
-After Stripe Connect linking: checkout/payments/order-splitting (the original Phase 4, still the highest-risk remaining phase) - at which point the private-fulfillment model decided in [`PRD.md`](PRD.md) §9.23 needs to be designed into the orders/shipping schema from the start, not retrofitted.
+After Stripe Connect linking: checkout/payments/order-splitting (the original Phase 4, still the highest-risk remaining phase) - at which point the private-fulfillment model decided in [`PRD.md`](PRD.md) §9.23 needs to be designed into the orders/shipping schema from the start, not retrofitted. Cart is a natural sub-slice to build alongside or just before checkout, since discovery (this slice) intentionally stopped short of it.
 
 ## 4. Non-actions requiring confirmation first
 

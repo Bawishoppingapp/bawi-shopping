@@ -173,21 +173,21 @@ Each feature below maps to one or more of the required domain modules. For every
 
 ---
 
-### 9.5 Catalog & Categories
+### 9.5 Catalog & Categories *(implemented)*
 
-**Domain modules:** `catalog`, `categories`
+**Domain modules:** native Medusa `product-category` + custom `category-translation`
 
-- **User story:** As a seller, I want to organize my products into categories that fit the platform's taxonomy so customers can browse and filter effectively.
-- **Acceptance criteria:** Platform-owned category tree (not seller-editable, to keep taxonomy consistent); products assigned to one or more categories; category pages list active products from all sellers.
-- **Data ownership:** `category`, `product_category` link table. Categories are platform-owned (no `vendor_id`); the link table associates a seller's product with a category.
-- **Authorization rules:** Only Admin manages the category tree; sellers may only assign their own products to existing categories.
-- **Validation requirements:** Category slugs unique; a product must have at least one category to be published.
-- **Failure states:** Deleting a category that still has products attached is blocked (or products are moved to an "uncategorized" holding category, not silently orphaned).
-- **Security risks:** Sellers attempting to create/modify categories directly via API (must be blocked by authz, not just hidden in UI).
+- **User story:** As a seller, I want to organize my products into categories that fit the platform's taxonomy so customers can browse and filter effectively. As an admin, I want to manage a nested category tree with translated names, so the taxonomy stays consistent across languages and can be reorganized without a code change.
+- **Acceptance criteria:** Platform-owned category tree (not seller-editable, to keep taxonomy consistent), with arbitrary-depth parent/child nesting; products assigned to exactly one category; category pages list `approved` products from all sellers. Admin can create, edit (including moving a category to a different parent), and delete categories; deletion is refused while the category still has child categories or products assigned. Category names are translatable into all five non-English supported locales, with English (the category's native `name`) always the fallback.
+- **Data ownership:** native `product_category` (Medusa) - platform-owned, no `vendor_id`. Custom `category_translation` (`category_id` + `locale` + `name`) - also platform-owned, admin-authored directly (no seller-submission workflow, unlike product translations).
+- **Authorization rules:** Only Admin manages the category tree and its translations (`/admin/categories*`, `authenticate("user", ...)`); sellers may only assign their own products to existing `is_active` categories via `GET /seller/categories`.
+- **Validation requirements:** A `parent_category_id` that would make a category its own ancestor is rejected (422, `wouldCreateCycle` ancestor-chain walk); translation locale keys are restricted to the five non-English supported locales (400 otherwise).
+- **Failure states:** Deleting a category with child categories or assigned products returns 409, not a silent cascade or orphan.
+- **Security risks:** Sellers attempting to create/modify categories directly via API - blocked by the `authenticate("user", ...)` middleware on `/admin/categories*`, not just hidden in the seller-portal UI.
 - **Tests:**
-  - Unit: category tree validation (no cycles, unique slugs).
-  - Integration: seller cannot create/edit a category via API.
-  - E2E: admin creates a category; seller assigns a product to it; category page shows the product.
+  - Unit: cycle-detection (`wouldCreateCycle`), tree-building (`buildCategoryTree`), create/update schema validation, translatable-locale validation.
+  - Integration: unauthenticated/non-admin create is rejected; parent/child creation and the resulting tree; self-parent and descendant-cycle rejection; translation set + English fallback; delete blocked by children/products, allowed once empty; only `is_active` categories on the public route.
+  - E2E: admin creates a parent category, a nested child, edits a translation, and confirms deletion is blocked-then-allowed after removing the child first.
 
 ---
 
@@ -245,22 +245,23 @@ Each feature below maps to one or more of the required domain modules. For every
 
 ---
 
-### 9.9 Search
+### 9.9 Product discovery, search, and filtering *(implemented)*
 
-**Domain module:** `search`
+**Domain module:** `packages/search-contract` + `apps/backend/src/search` (v1 `PostgresSearchService`)
 
-- **User story:** As a customer, I want to search and filter products so I can find what I'm looking for across all sellers.
-- **Acceptance criteria:** Keyword search across title/description/brand/category; filter by category, price range, size, color; only `published` products from `approved`/active sellers are searchable.
-- **Data ownership:** Search reads a denormalized index (Postgres `tsvector` + GIN index for v1) built from `catalog`/`products`/`sellers`; no independent source of truth — it is a projection.
-- **Authorization rules:** Public/unauthenticated read; no seller can bias ranking in their own favor (no seller-controlled ranking fields in v1).
-- **Validation requirements:** Search index updates asynchronously on product publish/update/unpublish/seller suspension (event-driven, not synchronous with every write).
-- **Failure states:** Index lag — a just-published product may take a few seconds to appear; must not affect direct-link product page availability.
-- **Security risks:** Search must never surface `draft` products, another seller's private fields, or suspended-seller inventory; unescaped query input must not enable SQL injection (parameterized queries only).
+- **User story:** As a customer, I want to browse a homepage and category pages, search and filter products, and sort results, so I can find what I'm looking for across all sellers on desktop or mobile.
+- **Acceptance criteria:** Fashion-focused homepage with a "shop by category" rail and a "new arrivals" grid; category browse pages (`/categories/:handle`); a search page (`/search`) with keyword search across title/description/brand; filters for category, brand (seller), size, color, price range, and availability; sort by newest/price-ascending/price-descending; cursor-based "Load more" pagination; explicit loading/empty/error states; a mobile filter drawer (desktop shows the same filters as an always-visible sidebar). Only `approved` `product_listing` rows are ever returned - draft/pending_review/rejected/archived are excluded at the query's first filter, not by response-shaping after the fact.
+- **Data ownership:** No independent search index in v1 - `PostgresSearchService` queries live `product_listing` + native `product`/`product_variant`/inventory/pricing data directly through Medusa's query engine (`ContainerRegistrationKeys.QUERY`) on every request. See `docs/ARCHITECTURE.md` §6 and `docs/DECISIONS.md` for why this is deliberately simpler than a denormalized index for v1.
+- **Authorization rules:** `/categories`, `/products`, `/brands` are all public/unauthenticated reads; no seller can bias ranking (no seller-controlled ranking fields).
+- **Validation requirements:** `sort` restricted to `newest|price_asc|price_desc` (falls back to `newest`); `limit` clamped to a max of 60; unrecognized query params are ignored, not errors.
+- **Failure states:** Because there's no index to lag, a just-approved product is visible on the very next request - no propagation window to reason about. A backend fetch failure renders an explicit error state with a message, not a blank page or an unhandled exception.
+- **Security risks:** Search/filter responses never include `vendor_id`, the private variant SKU, or seller identity beyond the public brand name - verified by an integration test that serializes the full response and asserts those strings are absent, same discipline as the single-product route.
 - **Tests:**
-  - Unit: query-builder produces correctly parameterized filters.
-  - Integration: unpublishing a product removes it from search results within the expected propagation window; suspended seller's products excluded.
-  - E2E: customer searches by keyword, filters by size/price, and reaches a product page from the results.
-- **Forward compatibility:** All search reads/writes go through a `SearchService` interface (see [`ARCHITECTURE.md`](ARCHITECTURE.md)) so an Algolia adapter can be swapped in later without changing calling code.
+  - Unit: search-cursor encode/decode round-trip and malformed-input handling; category cycle-detection and tree-building (shared with §9.5); category/product-input schema validation.
+  - Integration: approved-only visibility (draft/pending_review/rejected excluded); category/brand/size/color/price/availability filters; newest/price-asc/price-desc sort; cursor pagination returns every item exactly once across pages; no `vendor_id`/`sku` leakage; brand list excludes sellers with zero approved listings.
+  - Component: filter form field rendering and URL-param updates on submit/clear; sort-select URL updates; product card rendering (price formatting, sold-out badge); admin category form rendering (create/edit modes, translation fields).
+  - E2E: storefront homepage → category page → search → filter → sort, confirming a draft product is never visible anywhere and a mobile viewport exposes filters through a drawer; admin creates a parent category, a nested child, edits a translation, and confirms delete-blocked-then-allowed.
+- **Forward compatibility:** All search reads go through the `SearchService` interface in `packages/search-contract` (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §6) so a ranked-relevance or external provider (Algolia) can be swapped in later without changing `apps/backend/src/api/products/route.ts` or any frontend caller.
 
 ---
 

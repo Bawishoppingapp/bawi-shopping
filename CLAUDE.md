@@ -6,12 +6,13 @@ Guidance for Claude Code (and any engineer) working in this repository.
 
 **Bawi Shopping** — a professional multi-vendor fashion marketplace for the United States, modeled on the Amazon Marketplace business model. Independent fashion brands and boutiques ("sellers") list clothing and accessories; customers can buy from multiple sellers in a single cart; the platform takes a commission on every transaction; seller payouts run through Stripe Connect.
 
-**Current phase: three vertical slices implemented.**
+**Current phase: four vertical slices implemented.**
 1. Customer registration (storefront) and seller authentication with server-derived vendor association (seller portal).
 2. Seller application intake, admin review/approval/rejection, and seller account activation — spanning a new `seller-application` backend module, a new `audit-log` module, and a new `apps/admin` frontend.
 3. Seller product creation, admin review/approval/rejection, and public product viewing — spanning a new `product-listing` backend module (layered on Medusa's native product/variant/inventory/pricing modules), new pages across all three frontends, and the `packages/i18n` localization foundation.
+4. Product discovery, categories, search, and filtering — admin category management (parent/child, translated names) on top of Medusa's native `product-category` module plus a new `category-translation` module; a public `SearchService`-backed discovery API (`/categories`, `/products`, `/brands`); a storefront homepage, category pages, and a search/filter/sort page with a mobile filter drawer and cursor-based "Load more" pagination; new `ProductCard`/`ProductGrid` components in `packages/ui`.
 
-All are built, tested (unit, integration, E2E), and passing. Seller-application and product-listing approve/reject both run as Medusa workflows with compensating rollback (see `docs/DECISIONS.md`) rather than sequential writes. Every session-scoped page across all three frontends exports `dynamic = "force-dynamic"` (see `docs/DECISIONS.md` for why). The rest of `docs/PRD.md`'s first-release feature list is not yet built — implement one vertical slice at a time, per `docs/IMPLEMENTATION-PLAN.md`.
+All are built, tested (unit, integration, component, E2E), and passing. Seller-application/product-listing approve-reject and category create/update/delete all run as Medusa workflows with compensating rollback (see `docs/DECISIONS.md`) rather than sequential writes. Every session-scoped page across all three frontends exports `dynamic = "force-dynamic"` (see `docs/DECISIONS.md` for why). The rest of `docs/PRD.md`'s first-release feature list is not yet built — implement one vertical slice at a time, per `docs/IMPLEMENTATION-PLAN.md`.
 
 **Approved but not yet built:** private vendor fulfillment (Bawi-controlled listings/pricing/customer-service/tracking/returns/receipts/vendor-communication; separate temporary fulfillment/pickup/tracking codes per order; pickup codes single-use and expire on collection; vendors see only product/size/quantity/prep-deadline/pickup-instructions, never customer PII; couriers see only their assigned delivery; architecture must support either direct vendor pickup or a future Bawi sorting hub — never hard-coded to one), a `courier` role. **Permanent product codes and private vendor SKUs are already implemented** (product-catalog slice, above) - they were built ahead of the rest of private fulfillment specifically to avoid a schema rework later. **Merchant-of-record is an explicitly unresolved legal/business decision that must be finalized before payments are implemented.** See `docs/DECISIONS.md` for the full decision and what it means for current work.
 
@@ -63,7 +64,7 @@ These rules constrain every future change, not just the initial build:
 - **Background jobs:** dedicated worker process (Medusa subscribers/workflows + queue), separate from the API process — not yet built
 - **Payments:** Stripe Connect (Express accounts), Stripe Payment Element on the storefront — not yet built
 - **Media:** object storage (S3-compatible) for product images — not yet built
-- **Search:** Postgres full-text search behind a swappable `SearchService` interface, with an Algolia adapter planned for a later phase — not yet built
+- **Search:** live-query Postgres adapter (no index table, see `docs/DECISIONS.md`) behind a swappable `SearchService` interface (`packages/search-contract`), with a ranked/indexed Postgres or Algolia adapter planned for a later phase — v1 implemented
 - **Monorepo:** npm workspaces + Turborepo (see `docs/DECISIONS.md` for why npm rather than the originally-planned pnpm)
 - **Testing:** Vitest + React Testing Library + Playwright for both Next.js apps; Medusa's own Jest-based tooling for the backend (unit, module-integration, HTTP-integration) — see `docs/DECISIONS.md`
 - **Local dev database:** Postgres.app (PG16) on port `5544` — see `docs/DECISIONS.md` for why not Homebrew

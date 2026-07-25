@@ -58,6 +58,25 @@ Per [`PRD.md`](PRD.md) §9.24 and [`ARCHITECTURE.md`](ARCHITECTURE.md) §12 - re
   - **Translated product content** - once `product_translation` exists, a product page under a non-English locale renders the matching translation row when `approved`, and falls back to the English base record when no approved translation exists for that locale.
 - **E2E:** a mobile-viewport pass through at least one page with the longest-known translated strings (per [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) §12) confirming no overflow/clipping of buttons, menus, or form fields.
 
+## 4.2 Product discovery, categories, and search test requirements
+
+Per [`PRD.md`](PRD.md) §9.5/§9.9 - implemented this slice, tested at every level rather than deferred:
+
+- **Unit:** category cycle-detection (`wouldCreateCycle` - self-parent, direct child, grandchild, and unrelated-move cases) and tree-building (`buildCategoryTree` - nesting, multi-level, orphaned-parent handling); category create/update schema validation (translatable-locale restriction, empty-name rejection); search cursor encode/decode (round-trip, `undefined`, malformed input, negative offset).
+- **Integration (real HTTP server, real Postgres):**
+  - **Approved-only visibility** - draft/pending_review/rejected listings never appear in `/products` results, even when queried by their own exact title; an approved listing does; the full response never contains the strings `vendor_id` or `"sku"`.
+  - **Category management** - unauthenticated create is rejected; parent/child creation and the resulting tree shape; self-parent and descendant-cycle rejection (422); translation set + read-back + English fallback; an out-of-locale-set translation key rejected (400); delete refused (409) while a category has a child or a product assigned; delete succeeds once empty.
+  - **Filtering** - category, brand (seller slug), size, color, price range, and availability each independently narrow results to the expected set.
+  - **Sorting** - `price_asc`/`price_desc` return items in the expected order for a controlled fixture.
+  - **Pagination** - repeatedly following `next_cursor` until exhausted returns every seeded item exactly once, no duplicates or gaps.
+  - **Localization** - `/categories?locale=X` returns the translated name when a translation row exists, and falls back to the category's own (English) name when it doesn't.
+  - **Brands** - only sellers with at least one `approved` listing appear.
+- **Component:** filter form renders category/brand/size/color/price/availability controls and omits size/color when there are no facet values; submitting updates the URL query string and clears any existing pagination cursor; "Clear all" removes filter params but preserves sort; the mobile trigger opens a drawer with a close control; sort-select updates the URL's `sort` param and clears the cursor; the search box sets/clears the `q` param on submit; product card renders title/brand/price (including a price range when min ≠ max) and a sold-out badge only when unavailable; admin's category form pre-fills correctly in edit mode (name, parent, active flag, translations) and defaults sensibly in create mode.
+- **E2E:**
+  - Storefront: homepage's new-arrivals rail, a category page, and search all show an approved product and never a draft one seeded moments earlier via the API; selecting a size facet narrows results to the matching product and back; changing sort updates the URL; a mobile viewport exposes the filter drawer.
+  - Admin: create a parent category, create a nested child under it, edit the child's translation and confirm it persisted *without* silently detaching the parent link (the specific regression caught during this slice - see `docs/DECISIONS.md`); confirm delete is blocked while a child exists and succeeds once it's removed.
+- A live-browser walkthrough (not just automated E2E) of the admin category edit flow is worth doing by hand once when this area next changes materially - the parent-link regression this slice found was only visible by watching the actual pre-filled form state, not by asserting on API JSON shape alone.
+
 ## 5. CI gates
 
 - Every pull request runs: lint, type-check, unit tests, and integration tests against a fresh disposable database — all required to pass before merge.
