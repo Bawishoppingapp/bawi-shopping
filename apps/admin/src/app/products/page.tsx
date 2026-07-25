@@ -34,6 +34,9 @@ export default async function ProductsPage({
           Applications
         </Link>
         <span className="font-medium text-neutral-900">Products</span>
+        <Link href="/categories" className="text-neutral-500 hover:underline">
+          Categories
+        </Link>
       </nav>
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold text-neutral-900">Products</h1>
