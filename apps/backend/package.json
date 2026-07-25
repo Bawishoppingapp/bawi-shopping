@@ -25,6 +25,7 @@
     "test:integration:modules": "TEST_TYPE=integration:modules NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit --passWithNoTests"
   },
   "dependencies": {
+    "@bawi/search-contract": "*",
     "@medusajs/admin-sdk": "2.17.2",
     "@medusajs/admin-shared": "2.17.2",
     "@medusajs/caching": "2.17.2",

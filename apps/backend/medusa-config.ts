@@ -26,5 +26,8 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/product-listing",
     },
+    {
+      resolve: "./src/modules/category-translation",
+    },
   ],
 })

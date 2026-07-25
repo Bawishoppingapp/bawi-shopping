@@ -13,7 +13,7 @@ export async function GET(
   const productModuleService = req.scope.resolve(Modules.PRODUCT)
   const categories = await productModuleService.listProductCategories(
     { is_active: true },
-    { select: ["id", "name"] }
+    { select: ["id", "name", "parent_category_id"], order: { rank: "ASC" } }
   )
   res.json({ categories })
 }

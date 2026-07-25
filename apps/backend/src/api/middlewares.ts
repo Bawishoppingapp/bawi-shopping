@@ -22,5 +22,9 @@ export default defineMiddlewares({
       matcher: "/admin/product-listings*",
       middlewares: [authenticate("user", ["bearer", "session"])],
     },
+    {
+      matcher: "/admin/categories*",
+      middlewares: [authenticate("user", ["bearer", "session"])],
+    },
   ],
 })
