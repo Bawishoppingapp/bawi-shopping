@@ -1,0 +1,15 @@
+{
+  "common.appName": "Bawi Shopping",
+  "common.language": "语言",
+  "nav.home": "首页",
+  "nav.account": "账户",
+  "register.title": "创建您的账户",
+  "register.firstName": "名字",
+  "register.lastName": "姓氏",
+  "register.email": "电子邮箱",
+  "register.password": "密码",
+  "register.submit": "创建账户",
+  "register.submitting": "正在创建账户...",
+  "validation.required": "此项为必填项",
+  "validation.invalidEmail": "请输入有效的电子邮箱地址"
+}

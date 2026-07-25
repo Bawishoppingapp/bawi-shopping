@@ -1,8 +1,17 @@
 import { describe, expect, test, vi } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { LocaleProvider } from "@bawi/i18n"
 import { RegisterForm } from "../components/register-form"
 import * as registerAction from "../actions/register"
+
+function renderForm() {
+  return render(
+    <LocaleProvider locale="en-US">
+      <RegisterForm />
+    </LocaleProvider>
+  )
+}
 
 // Does not import the actual module: it transitively pulls in
 // medusa-auth-client.ts, which is guarded by "server-only" and throws in
@@ -14,7 +23,7 @@ vi.mock("../actions/register", () => ({
 
 describe("RegisterForm", () => {
   test("renders all fields and the submit button", () => {
-    render(<RegisterForm />)
+    renderForm()
 
     expect(screen.getByLabelText("First name")).toBeInTheDocument()
     expect(screen.getByLabelText("Last name")).toBeInTheDocument()
@@ -29,7 +38,7 @@ describe("RegisterForm", () => {
       fieldErrors: { email: "Enter a valid email address" },
     })
 
-    render(<RegisterForm />)
+    renderForm()
     await userEvent.click(screen.getByRole("button", { name: "Create account" }))
 
     await waitFor(() => {
@@ -44,7 +53,7 @@ describe("RegisterForm", () => {
       formError: "An account with this email already exists.",
     })
 
-    render(<RegisterForm />)
+    renderForm()
     await userEvent.click(screen.getByRole("button", { name: "Create account" }))
 
     await waitFor(() => {

@@ -1,0 +1,15 @@
+{
+  "common.appName": "Bawi Shopping",
+  "common.language": "Language",
+  "nav.home": "Home",
+  "nav.account": "Account",
+  "register.title": "Create your account",
+  "register.firstName": "First name",
+  "register.lastName": "Last name",
+  "register.email": "Email",
+  "register.password": "Password",
+  "register.submit": "Create account",
+  "register.submitting": "Creating account...",
+  "validation.required": "This field is required",
+  "validation.invalidEmail": "Enter a valid email address"
+}

@@ -1,0 +1,15 @@
+{
+  "common.appName": "Bawi Shopping",
+  "common.language": "Afaan",
+  "nav.home": "Mana",
+  "nav.account": "Akkaawuntii",
+  "register.title": "Akkaawuntii kee uumi",
+  "register.firstName": "Maqaa",
+  "register.lastName": "Maqaa Abbaa",
+  "register.email": "Imeelii",
+  "register.password": "Jecha Iccitii",
+  "register.submit": "Akkaawuntii Uumi",
+  "register.submitting": "Akkaawuntii uumaa jira...",
+  "validation.required": "Iddoon kun barbaachisaa dha",
+  "validation.invalidEmail": "Imeelii sirrii galchi"
+}

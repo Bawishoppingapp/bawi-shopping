@@ -1,0 +1,15 @@
+{
+  "common.appName": "ባዊ ሽርፒንግ",
+  "common.language": "ቋንቋ",
+  "nav.home": "መበገሲ",
+  "nav.account": "ሕሳብ",
+  "register.title": "ሕሳብ ፍጠር",
+  "register.firstName": "ስም",
+  "register.lastName": "ናይ ኣቦ ስም",
+  "register.email": "ኢመይል",
+  "register.password": "መሕለፊ ቃል",
+  "register.submit": "ሕሳብ ፍጠር",
+  "register.submitting": "ሕሳብ ኣብ ምፍጣር...",
+  "validation.required": "እዚ ቦታ እዚ ግድን እዩ",
+  "validation.invalidEmail": "ቅኑዕ ኢመይል ኣእቱ"
+}

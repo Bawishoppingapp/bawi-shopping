@@ -1,0 +1,15 @@
+{
+  "common.appName": "ባዊ ሽርፒንግ",
+  "common.language": "ቋንቋ",
+  "nav.home": "መነሻ",
+  "nav.account": "አካውንት",
+  "register.title": "አካውንትዎን ይፍጠሩ",
+  "register.firstName": "ስም",
+  "register.lastName": "የአባት ስም",
+  "register.email": "ኢሜይል",
+  "register.password": "የይለፍ ቃል",
+  "register.submit": "አካውንት ፍጠር",
+  "register.submitting": "አካውንት በመፍጠር ላይ...",
+  "validation.required": "ይህ መስክ የግድ ነው",
+  "validation.invalidEmail": "ትክክለኛ ኢሜይል ያስገቡ"
+}
