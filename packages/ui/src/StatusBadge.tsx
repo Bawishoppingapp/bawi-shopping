@@ -18,6 +18,14 @@ const STYLES: Record<string, string> = {
   delivered: "bg-green-50 text-green-700",
   cancelled: "bg-red-50 text-red-700",
   returned: "bg-neutral-100 text-neutral-500",
+  requested: "bg-blue-50 text-blue-700",
+  denied: "bg-red-50 text-red-700",
+  refunded: "bg-green-50 text-green-700",
+  paid: "bg-green-50 text-green-700",
+  failed: "bg-red-50 text-red-700",
+  open: "bg-amber-50 text-amber-700",
+  won: "bg-green-50 text-green-700",
+  lost: "bg-red-50 text-red-700",
 }
 
 const LABELS: Record<string, string> = {
@@ -40,6 +48,14 @@ const LABELS: Record<string, string> = {
   delivered: "Delivered",
   cancelled: "Cancelled",
   returned: "Returned",
+  requested: "Requested",
+  denied: "Denied",
+  refunded: "Refunded",
+  paid: "Paid",
+  failed: "Failed",
+  open: "Open",
+  won: "Won",
+  lost: "Lost",
 }
 
 export function StatusBadge({ status }: { status: string }) {

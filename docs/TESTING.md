@@ -146,6 +146,23 @@ Per `docs/SECURITY.md` §11/§14 and `docs/DECISIONS.md` - every code is unguess
   - **Deferred:** this file could not be run to completion in this session due to the same development-machine memory pressure documented for `checkout.spec.ts` (see `docs/DECISIONS.md`); it passed lint/typecheck and should be re-run once the machine has more available memory or in CI.
 - **E2E:** not yet added in this batch - same reasoning as checkout's E2E deferral; the integration coverage above already exercises the full lifecycle across all three actor types (seller, admin, courier) plus the customer-facing read path.
 
+## 4.7 Commission ledger, payouts, returns, refunds, and disputes test requirements
+
+Per `docs/PAYMENTS.md` §4-7 and `docs/DECISIONS.md` - refund/reversal amounts are always server-computed, ledger buckets are derived (never stored), and every financial mutation is audit-logged:
+
+- **Unit** (`src/finance/__tests__/balance.unit.spec.ts`, `refund-calculation.unit.spec.ts`, 16 tests): `deriveLedgerBucket()` - paid beats disputed beats available beats pending, an entry with a future `available_at` stays pending, an entry with no timestamps at all is pending; `summarizeSellerBalance()` - sums entries into their derived buckets, `refund_reversal` entries accumulate separately into `reversed` on top of their own bucket, an empty list produces an all-zero summary; `calculateRefund()` - defaults to a full refund, a partial refund reverses commission proportionally, round-half-up rounding, a requested amount above the line_total is capped there, a negative requested amount floors at zero, a zero line_total never divides by zero, `net_reversal_amount` is always `refund_amount - commission_reversal_amount`.
+- **Integration (real HTTP server, real Postgres, fake Stripe client)** - written in `integration-tests/http/seller-finance.spec.ts`:
+  - Checkout capture creates a pending `CommissionLedgerEntry` reflected in the seller's `/seller/finance/balance` response (net of commission, before any hold period has passed).
+  - A payout batch (`POST /admin/finance/payouts`) transfers every "available" entry, marks them paid, and is idempotent - re-running the batch after a full payout finds nothing left eligible (`payout: null`).
+  - An approved, customer_remorse-reason return refunds the customer (`OrderRefund` row, `stripe_refund_id` matching the fake client's `re_test_*` pattern), reverses commission proportionally (`CommissionLedgerEntry` with `reason: refund_reversal`), and restocks inventory.
+  - A denied return leaves the ledger and seller balance completely untouched.
+  - A pre-preparation cancellation (`POST /store/vendor-orders/:id/cancel`) issues a full refund with `return_request_id: null` and a full ledger reversal; the same action after the seller marks the order preparing is rejected (422).
+  - A `charge.dispute.created`/`charge.dispute.closed` webhook pair freezes the seller's balance (moves it into the `disputed` bucket) and, on a `won` outcome, releases it back to `pending`.
+  - A seller cannot see another seller's balance, payouts, or return requests (tenant-isolation negative test).
+  - **A real bug was found and fixed via this test, on its first run:** nesting a `when(...).then(...)` block inside another one's callback (`apply-stripe-dispute-webhook.ts`'s two dispute-event branches) fails at workflow-definition time - fixed by flattening to two sibling top-level `when()` blocks (see `docs/DECISIONS.md`). This is exactly what this integration-test layer is for; it caught the bug lint and typecheck could not.
+  - **Deferred (after the fix above):** this file could not be run to completion in this session due to the same development-machine memory pressure documented for `checkout.spec.ts`/`fulfillment.spec.ts` (see `docs/DECISIONS.md`); it passes lint/typecheck and should be re-run once the machine has more available memory or in CI.
+- **E2E:** not yet added in this batch - same reasoning as checkout's/fulfillment's E2E deferral; the integration coverage above already exercises the full financial lifecycle across all three portals' API surfaces.
+
 ## 5. CI gates
 
 - Every pull request runs: lint, type-check, unit tests, and integration tests against a fresh disposable database — all required to pass before merge.

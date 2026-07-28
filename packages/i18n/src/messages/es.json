@@ -126,5 +126,16 @@
   "order.total": "Total",
   "order.continueShopping": "Seguir comprando",
   "order.deliveryCode": "Código de entrega",
-  "order.deliveryCodeHint": "Comparte este código con el repartidor cuando llegue tu pedido"
+  "order.deliveryCodeHint": "Comparte este código con el repartidor cuando llegue tu pedido",
+  "order.cancelOrder": "Cancelar este pedido",
+  "order.cancelHint": "Puedes cancelar mientras el vendedor aún no haya comenzado a preparar tu pedido.",
+  "order.requestReturn": "Solicitar una devolución",
+  "order.returnReasonLabel": "Motivo de la devolución",
+  "order.returnReasonDamaged": "El artículo llegó dañado",
+  "order.returnReasonDefective": "El artículo es defectuoso",
+  "order.returnReasonIncorrect": "Recibí el artículo equivocado",
+  "order.returnReasonCustomerRemorse": "Ya no lo necesito",
+  "order.returnCommentLabel": "Detalles adicionales (opcional)",
+  "order.submitReturn": "Enviar solicitud de devolución",
+  "order.returnRequestSent": "Tu solicitud de devolución ha sido enviada."
 }

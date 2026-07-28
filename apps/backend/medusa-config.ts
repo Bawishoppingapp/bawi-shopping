@@ -44,5 +44,8 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/fulfillment-privacy",
     },
+    {
+      resolve: "./src/modules/seller-finance",
+    },
   ],
 })

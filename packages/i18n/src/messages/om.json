@@ -126,5 +126,16 @@
   "order.total": "Walii galaa",
   "order.continueShopping": "Bittaa itti fufi",
   "order.deliveryCode": "Koodii ergaa",
-  "order.deliveryCodeHint": "Yeroo ajajni kee ga'u koodii kana geggeessaa waliin qooddadhu"
+  "order.deliveryCodeHint": "Yeroo ajajni kee ga'u koodii kana geggeessaa waliin qooddadhu",
+  "order.cancelOrder": "Ajaja kana haqi",
+  "order.cancelHint": "Gurgurtaan qopheessuu utuu hin jalqabin dursitee haquu ni dandeessa.",
+  "order.requestReturn": "Deebisuu gaafadhu",
+  "order.returnReasonLabel": "Sababa deebisuu",
+  "order.returnReasonDamaged": "Meeshichi miidhamee ga'eera",
+  "order.returnReasonDefective": "Meeshichi hir'ina qaba",
+  "order.returnReasonIncorrect": "Meeshaa dogongoraa argame",
+  "order.returnReasonCustomerRemorse": "Siif hin barbaachisu",
+  "order.returnCommentLabel": "Ibsa dabalataa (filannoo)",
+  "order.submitReturn": "Gaaffii deebisuu ergi",
+  "order.returnRequestSent": "Gaaffiin deebisuu kee ergameera."
 }

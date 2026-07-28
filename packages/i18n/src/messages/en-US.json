@@ -126,5 +126,16 @@
   "order.total": "Total",
   "order.continueShopping": "Continue shopping",
   "order.deliveryCode": "Delivery code",
-  "order.deliveryCodeHint": "Share this code with the courier when your order arrives"
+  "order.deliveryCodeHint": "Share this code with the courier when your order arrives",
+  "order.cancelOrder": "Cancel this order",
+  "order.cancelHint": "You can cancel while the seller hasn't started preparing your order yet.",
+  "order.requestReturn": "Request a return",
+  "order.returnReasonLabel": "Reason for return",
+  "order.returnReasonDamaged": "Item arrived damaged",
+  "order.returnReasonDefective": "Item is defective",
+  "order.returnReasonIncorrect": "Wrong item received",
+  "order.returnReasonCustomerRemorse": "No longer needed",
+  "order.returnCommentLabel": "Additional details (optional)",
+  "order.submitReturn": "Submit return request",
+  "order.returnRequestSent": "Your return request has been submitted."
 }

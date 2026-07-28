@@ -95,8 +95,10 @@ A limited-access role for completing pickup/delivery handoffs under the platform
 | Set platform default commission rate | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Set category commission override | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | Approve/reject product or review (moderation) | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Request return | ❌ | ✅ (own order) | ❌ | ❌ | ✅ (escalation) | ✅ |
-| Approve/deny return | ❌ | ❌ | ✅ (own vendor_order) | ✅ (own vendor_order) | ✅ (escalation) | ✅ |
+| Cancel own order (pre-preparation) | ❌ | ✅ (own order) | ❌ | ❌ | ❌ | ❌ |
+| Request return | ❌ | ✅ (own order) | ❌ | ❌ | ❌ (v1: read-only oversight, no admin-initiated request) | ✅ (read-only oversight) |
+| Approve/deny return | ❌ | ❌ | ✅ (own vendor_order) | ✅ (own vendor_order) | ❌ (v1: no admin override/escalation path built) | ✅ (read-only oversight) |
+| Trigger a seller payout batch | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | View seller payouts | ❌ | ❌ | ❌ (unless Analyst, read-only) | ✅ (own seller) | ✅ (read, support) | ✅ |
 | Manage admin users | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Read audit logs | ❌ | ❌ | ✅ (own account's entries only) | ✅ (own account's entries only) | ✅ (scoped) | ✅ (full) |

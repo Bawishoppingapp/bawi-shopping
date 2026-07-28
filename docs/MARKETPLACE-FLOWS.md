@@ -2,7 +2,7 @@
 
 This document walks the four flows that define the marketplace: customer purchase, seller onboarding, multi-vendor payment/order-splitting, and returns/refunds. Each includes a sequence diagram and the failure/edge cases the implementation must handle.
 
-**Note on fulfillment and identity separation:** private fulfillment/delivery is now implemented (`apps/backend/src/modules/fulfillment-privacy/`, `apps/backend/src/fulfillment/`, `apps/admin/src/app/courier/`) - see §5 below for the real lifecycle. The returns flow (§4) still predates that slice and doesn't yet reflect it; treat any step there that implies direct seller-to-customer shipping/tracking contact as provisional until the returns batch updates it.
+**Note on fulfillment and identity separation:** private fulfillment/delivery is now implemented (`apps/backend/src/modules/fulfillment-privacy/`, `apps/backend/src/fulfillment/`, `apps/admin/src/app/courier/`) - see §5 below for the real lifecycle. The returns/cancellations/refunds flow (§4) is also implemented (`apps/backend/src/modules/seller-finance/`) and reflects the real lifecycle - no direct seller-to-customer contact occurs anywhere in it, matching the identity-separation rule.
 
 ## 1. Customer purchase flow (multi-vendor cart → single checkout)
 
@@ -191,46 +191,48 @@ Payout timing is deliberately decoupled from checkout: checkout only needs to au
 - **A `VendorOrder` fails to create after capture succeeded** (should be effectively impossible given pre-capture reservation, but must be handled): the workflow retries the split step; if it cannot succeed, the event is surfaced to Admin as a manual-intervention case rather than silently losing the seller's portion of a captured payment.
 - **Order contains only one seller:** the same code path runs (one `VendorOrder`, one commission entry) — there is no special-cased "single seller" shortcut, so behavior stays consistent as sellers are added or removed from a cart during checkout iteration.
 
-## 4. Returns and refunds flow
+## 4. Returns, cancellations, and refunds flow (implemented, financial-operations slice)
 
 ```mermaid
 sequenceDiagram
     participant C as Customer
     participant SF as Storefront
     participant API as Backend API
-    participant RET as Returns module
+    participant FIN as seller-finance module
     participant S as Seller
     participant SP as Seller portal
-    participant PAY as Payment module
-    participant COMM as Commission module
-    participant STRIPE as Stripe
-    participant NOTIF as Notifications
+    participant PAY as Stripe payment client
+    participant STRIPE as Stripe (test mode)
 
     C->>SF: Request return on a delivered vendor_order_item
-    SF->>API: Create ReturnRequest
-    API->>RET: Validate return window, item status
-    RET-->>S: Notify seller (or admin if escalated) of pending return
-    S->>SP: Approve or deny (with reason)
+    SF->>API: POST /store/return-requests (reason, optional comment)
+    API->>FIN: Validate delivered status, return window, no existing request; create ReturnRequest (status=requested)
+    S->>SP: GET /seller/returns, approve or deny
     alt Denied
-        API->>RET: status = denied
-        API->>NOTIF: Notify customer with reason
+        SP->>API: POST /seller/returns/:id/deny (seller_response)
+        API->>FIN: status = denied
     else Approved
-        API->>RET: status = approved
-        API->>PAY: Create refund for the original PaymentIntent (bounded by item amount)
-        PAY->>STRIPE: Refund
-        STRIPE-->>API: Webhook: charge.refunded (idempotency-checked)
-        API->>COMM: Record proportional CommissionLedgerEntry reversal
-        API->>RET: status = refunded
-        API->>NOTIF: Notify customer refund complete
+        SP->>API: POST /seller/returns/:id/approve (optional partial amount)
+        API->>FIN: calculateRefund() from stored item data (never client-supplied)
+        API->>PAY: Create refund against the order's PaymentIntent
+        PAY->>STRIPE: Refund (test mode)
+        API->>FIN: Create OrderRefund row + proportional refund_reversal CommissionLedgerEntry
+        API->>FIN: Restock inventory if reason is incorrect/customer_remorse (not damaged/defective)
+        API->>FIN: status = refunded
     end
 ```
 
-### Edge cases
+A **cancellation** (`POST /store/vendor-orders/:id/cancel`) is a separate, simpler path: allowed only while the vendor_order is still `awaiting_preparation` (per `business-config` `cancellation.cancellation_cutoff`), and always issues a **full** refund, a **full** ledger reversal, and a full inventory restock — no `ReturnRequest` is created (the resulting `OrderRefund.return_request_id` is `null`).
 
-- **Return window expired:** request is rejected server-side at creation time with a clear message; window length is configurable (platform default, optionally overridden per seller/category — decision tracked in [`IMPLEMENTATION-PLAN.md`](IMPLEMENTATION-PLAN.md)).
-- **Refund requested twice for the same item:** second request is rejected idempotently once a refund exists/is in-flight for that item.
-- **Stripe refund fails** (e.g., insufficient available balance on the platform account): the return stays in an `approved-pending-refund` state, surfaced to Admin, rather than being marked `refunded` before Stripe confirms it.
-- **Escalation:** if a seller doesn't act within an SLA window, Admin can approve/deny on the seller's behalf; this path is explicitly logged as an admin override in the audit log, distinct from a normal seller decision.
+### Edge cases (implemented)
+
+- **Return window expired / item not yet delivered:** request is rejected server-side at creation time (422) with a clear message; window length reads live from `business-config` `returns.return_window_days` (development default 14 days).
+- **Return requested twice for the same item:** rejected (422) once a `requested`/`approved`/`refunded` request already exists for that item.
+- **Cancellation attempted after the seller starts preparing:** rejected (422) — the cutoff is checked against the vendor_order's live status, never a client-supplied claim about its state.
+- **Refund amount is never trusted from the client:** it's always computed server-side from the item's stored `line_total_amount`, capped there, defaulting to a full refund unless a seller supplies a smaller partial amount.
+- **No notification service exists yet** (see `docs/PRD.md` §8 deferred features) — a customer sees their return/refund status by re-visiting the order page (revalidated after every seller action), not via an email/SMS push; this is the same documented stand-in as seller-application approval and courier activation links.
+- **Escalation / seller inaction:** not yet built — there is no SLA timer or admin-override-approval path for returns in v1; only the seller who owns the vendor_order can approve/deny it (admin has read-only oversight at `/admin/finance/returns`).
+- **A Stripe dispute (chargeback)** freezes the affected ledger entry(ies) via the `charge.dispute.created`/`charge.dispute.closed` webhook, independent of this return flow — see `docs/PAYMENTS.md` §7.
 
 ## 5. Private fulfillment and delivery flow (implemented)
 

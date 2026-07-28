@@ -72,12 +72,10 @@ erDiagram
 | `pricing` (native Medusa) | `price`, `price_set` | No native column - same indirect scoping as inventory |
 | `search` | (index only, no owned source-of-truth table) | n/a |
 | `cart` (native Medusa, implemented) | `cart`, `cart_line_item` (unmodified schema) | No (customer/session-owned) - vendor ownership per line item lives only in `cart_line_item.metadata.vendor_id`, not a column, and is never selected into any response (see `apps/backend/src/cart/cart-response.ts`, [`DECISIONS.md`](DECISIONS.md)) |
-| `commission` | `commission_rule`, `commission_ledger_entry` | **Yes** (ledger entries) - not yet built, see below |
-| `payout` | `payout`, `payout_line_item` | **Yes** - not yet built |
+| `seller-finance` (implemented) | `commission_ledger_entry`, `payout`, `payout_line_item`, `return_request`, `order_refund`, `dispute` | **Yes** on all six (plain `vendor_id`/`vendor_order_id` reference, not a Medusa DML relation - separate module from `marketplace-order`/`seller`, see [`DECISIONS.md`](DECISIONS.md)); `dispute.vendor_order_id` is nullable since one dispute can span multiple vendor_orders |
 | `marketplace-order` (implemented) | `marketplace_order`, `vendor_order`, `vendor_order_item` | `marketplace_order`: no (customer-owned, cross-vendor group). `vendor_order`/`vendor_order_item`: **yes** (plain `vendor_id` reference, not a Medusa DML relation - the module and `seller` are separate modules, see [`DECISIONS.md`](DECISIONS.md)). Combines what was originally sketched as three separate modules (`order`, `vendor-order`, `payment`) into one - same one-module-multiple-models precedent as `seller`/`seller_user`, see [`DECISIONS.md`](DECISIONS.md) |
 | `fulfillment` (shipping) | `shipping_option`, `shipment` | **Yes** - not yet built |
 | `fulfillment-privacy` (implemented) | `courier`, `pickup_code`, `tracking_code`, `fulfillment_code_redemption` | `courier`: no (platform-owned, its own actor type). `pickup_code`/`tracking_code`: no (order-scoped by `vendor_order_id`, a plain reference - vendor identity is never exposed through either). `fulfillment_code_redemption`: no (platform-owned idempotency/claim ledger, same shape as `webhook_event`/`cart_merge_claim`) |
-| `order` returns/refunds | `return_request`, `refund` | **Yes** (via vendor_order) |
 | `review` | `review`, `review_response` | **Yes** (via product) |
 | `moderation` | `moderation_item`, `moderation_flag` | No (platform-owned, references seller-owned content) |
 | `notification` | `notification_template`, `notification_log` | Nullable — set when the notification concerns a specific seller |
@@ -144,19 +142,23 @@ Payment lives directly on this row rather than a separate `payment` table as ori
 **`fulfillment_code_redemption`** *(migrated, same module)*
 `id, code_type (pickup|tracking), code_id (text, unique among non-deleted rows — a plain reference to either `pickup_code.id` or `tracking_code.id`, both globally-unique ULIDs so one column safely covers both), courier_id (text), redeemed_at (timestamptz), created_at, updated_at, deleted_at`. The atomic single-use claim: a courier's redemption attempt tries to `INSERT` a row keyed by `code_id`; a unique-constraint violation means the code was already redeemed (replay) - same proven pattern as `webhook_event`/`cart_merge_claim`, not an `UPDATE ... WHERE status = 'active'` conditional (see docs/DECISIONS.md for why that isn't safe under concurrency in this codebase).
 
-**Not yet built** (a later batch — commission ledger/payouts):
+**`commission_ledger_entry`** *(migrated — `apps/backend/src/modules/seller-finance/migrations`)*
+`id, vendor_order_id (text, NOT NULL), vendor_id (text, NOT NULL), reason (order|refund_reversal), commission_rate_basis_points, commission_amount, net_amount (subtotal minus commission - the seller-balance-affecting figure; shipping/tax are Bawi's own revenue, see docs/DECISIONS.md), transfer_hold_days_snapshot (integer - snapshotted from business-config `transfer_timing` at capture time, same snapshotting principle as commission rate), available_at (timestamptz, nullable), paid_at (timestamptz, nullable), disputed_at (timestamptz, nullable), dispute_resolved_at (timestamptz, nullable), reverses_entry_id (text, nullable - the original entry a `refund_reversal` row reverses), created_at, updated_at, deleted_at`. **No stored status column** - pending/available/paid/disputed is derived at read time from the timestamp fields (`src/finance/balance.ts`'s `deriveLedgerBucket()`), since this project has no background job scheduler to keep a stored status in sync (see docs/DECISIONS.md).
 
-**`commission_ledger_entry`**
-`id, vendor_order_id (FK, NOT NULL), vendor_id (FK, NOT NULL), rate_applied, amount (signed integer cents; negative = reversal), reason (order|refund_reversal), created_at`
+**`payout`** *(migrated, same module)*
+`id, vendor_id (text, NOT NULL), idempotency_key (text, unique, NOT NULL - derived from the exact sorted set of ledger-entry ids being paid), amount, status (pending|paid|failed, default 'pending'), stripe_transfer_id (text, unique, nullable), reconciled_at (timestamptz, nullable), created_at, updated_at, deleted_at`
 
-**`payout`**
-`id, vendor_id (FK, NOT NULL), stripe_transfer_id, amount, status (pending|paid|failed), created_at, updated_at`
+**`payout_line_item`** *(migrated, same module)*
+`id, payout_id (FK → payout.id, NOT NULL), commission_ledger_entry_id (text, unique - a ledger entry can be claimed by at most one payout, ever, enforced by this unique constraint rather than an application-level check), amount, created_at, updated_at, deleted_at`
 
-**`payout_line_item`**
-`id, payout_id (FK, NOT NULL), commission_ledger_entry_id (FK, NOT NULL), amount, created_at`
+**`return_request`** *(migrated, same module)*
+`id, vendor_order_item_id (text, NOT NULL), vendor_order_id (text, NOT NULL), vendor_id (text, NOT NULL, denormalized), order_id (text, NOT NULL), customer_id (text, NOT NULL), reason (damaged|defective|incorrect|customer_remorse), customer_comment (text, nullable), status (requested|approved|denied|refunded, default 'requested'), seller_response (text, nullable, PRIVATE - never returned from a customer-facing endpoint, same tier as `seller_application.rejection_reason`), reviewed_by (text, nullable), reviewed_at (timestamptz, nullable), created_at, updated_at, deleted_at`
 
-**`return_request`**
-`id, vendor_order_item_id (FK, NOT NULL), vendor_id (FK, NOT NULL, denormalized), customer_id (FK, NOT NULL), status (requested|approved|denied|refunded), reason, created_at, updated_at`
+**`order_refund`** *(migrated, same module - named `OrderRefund`/`order_refund`, not `Refund`/`refund`: Medusa's native order/payment modules already define a "Refund" GraphQL type, and reusing that exact name fails schema merging - a second, distinct class of Medusa naming collision from the module-key collision found in Batch 1, see docs/DECISIONS.md)*
+`id, return_request_id (text, unique, nullable - nullable because a pre-preparation cancellation also produces a refund with no return request behind it; Postgres doesn't count NULLs against a unique constraint, so "at most one refund per return request" still holds for the rows that do have one), order_id (text, NOT NULL), vendor_order_id (text, NOT NULL), amount (always server-computed from stored item/order data, capped at the item's line_total - never client-supplied), is_partial (boolean), stripe_refund_id (text, unique, nullable), status (pending|succeeded|failed, default 'pending'), created_at, updated_at, deleted_at`
+
+**`dispute`** *(migrated, same module)*
+`id, order_id (text, NOT NULL), vendor_order_id (text, nullable - set only when exactly one vendor_order exists on the order; a Stripe dispute is against the whole marketplace-order charge, which can span multiple vendor_orders), stripe_dispute_id (text, unique), amount, reason (text, nullable), status (open|won|lost, default 'open'), resolved_at (timestamptz, nullable), created_at, updated_at, deleted_at`. Created/updated only from the `charge.dispute.created`/`charge.dispute.closed` Stripe webhook events, never client-initiated.
 
 **`audit_log`** *(migrated — `apps/backend/src/modules/audit-log/migrations`)*
 `id, actor_type (customer|seller_user|user|system|courier — `courier` added in the private-fulfillment slice), actor_id (nullable), action, entity_type, entity_id, vendor_id (nullable), before_state (jsonb, nullable), after_state (jsonb, nullable), ip_address (nullable), created_at, updated_at, deleted_at` — append-only *by convention* today: no application code path issues UPDATE/DELETE against it, but the DB role's grants aren't yet restricted to enforce this at the database level (still a documented future hardening step, see `docs/SECURITY.md` §6). Note the actor_type value is `user` (matching Medusa's actual native admin actor type name), not `admin_user` as originally sketched.

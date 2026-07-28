@@ -16,6 +16,8 @@ import { AUDIT_LOG_MODULE } from "../modules/audit-log"
 import type AuditLogModuleService from "../modules/audit-log/service"
 import { resolveCommission } from "../orders/commission"
 import { generateFulfillmentCode } from "../orders/fulfillment-code"
+import { SELLER_FINANCE_MODULE } from "../modules/seller-finance"
+import type SellerFinanceModuleService from "../modules/seller-finance/service"
 import type { CheckoutLineItemSnapshot } from "./start-checkout"
 
 /**
@@ -83,7 +85,7 @@ const markOrderPaidStep = createStep(
 )
 
 type SplitVendorOrdersInput = { orderId: string }
-type SplitVendorOrdersCompensation = { vendorOrderIds: string[] }
+type SplitVendorOrdersCompensation = { vendorOrderIds: string[]; ledgerEntryIds: string[] }
 
 function groupByVendor(
   items: CheckoutLineItemSnapshot[]
@@ -129,6 +131,9 @@ const splitIntoVendorOrdersStep = createStep(
     const businessConfigModuleService: BusinessConfigModuleService = container.resolve(
       BUSINESS_CONFIG_MODULE
     )
+    const sellerFinanceModuleService: SellerFinanceModuleService = container.resolve(
+      SELLER_FINANCE_MODULE
+    )
 
     const order = await orderModuleService.retrieveMarketplaceOrder(input.orderId)
     const items = order.line_items_snapshot as unknown as CheckoutLineItemSnapshot[]
@@ -140,9 +145,10 @@ const splitIntoVendorOrdersStep = createStep(
         .reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0)
     )
 
-    const [commissionConfig, preparationConfig] = await Promise.all([
+    const [commissionConfig, preparationConfig, transferTimingConfig] = await Promise.all([
       businessConfigModuleService.getCategoryValues("commission"),
       businessConfigModuleService.getCategoryValues("preparation"),
+      businessConfigModuleService.getCategoryValues("transfer_timing"),
     ])
     const platformDefaultRate = Number(
       commissionConfig.platform_default_rate_basis_points ?? 1500
@@ -151,6 +157,10 @@ const splitIntoVendorOrdersStep = createStep(
       preparationConfig.seller_preparation_deadline_hours ?? 48
     )
     const fulfillmentDeadlineAt = new Date(Date.now() + prepDeadlineHours * 60 * 60 * 1000)
+    // Snapshotted now, at order-creation time, so a later change to this
+    // business-config value never retroactively alters an order already
+    // in flight (see docs/PAYMENTS.md §5, docs/DECISIONS.md).
+    const transferHoldDaysSnapshot = Number(transferTimingConfig.transfer_hold_days ?? 7)
 
     const shippingAllocations = allocateProportionally(
       order.shipping_amount,
@@ -164,6 +174,7 @@ const splitIntoVendorOrdersStep = createStep(
     )
 
     const vendorOrderIds: string[] = []
+    const ledgerEntryIds: string[] = []
 
     for (let i = 0; i < vendorIds.length; i++) {
       const vendorId = vendorIds[i]
@@ -207,9 +218,24 @@ const splitIntoVendorOrdersStep = createStep(
           line_total_amount: item.unitPriceCents * item.quantity,
         }))
       )
+
+      // Shipping/tax are Bawi's own revenue (Bawi operates fulfillment
+      // and delivery, not the seller) - only the item subtotal, net of
+      // commission, moves the seller's balance. See docs/DECISIONS.md.
+      const netAmount = subtotal - commission_amount
+      const ledgerEntry = await sellerFinanceModuleService.createCommissionLedgerEntries({
+        vendor_order_id: vendorOrder.id,
+        vendor_id: vendorId,
+        reason: "order",
+        commission_rate_basis_points,
+        commission_amount,
+        net_amount: netAmount,
+        transfer_hold_days_snapshot: transferHoldDaysSnapshot,
+      })
+      ledgerEntryIds.push(ledgerEntry.id)
     }
 
-    const compensation: SplitVendorOrdersCompensation = { vendorOrderIds }
+    const compensation: SplitVendorOrdersCompensation = { vendorOrderIds, ledgerEntryIds }
     return new StepResponse(vendorOrderIds, compensation)
   },
   async (compensationInput, { container }) => {
@@ -217,11 +243,19 @@ const splitIntoVendorOrdersStep = createStep(
       return
     }
     const orderModuleService: OrderModuleService = container.resolve(MARKETPLACE_ORDER_MODULE)
+    const sellerFinanceModuleService: SellerFinanceModuleService = container.resolve(
+      SELLER_FINANCE_MODULE
+    )
     const items = await orderModuleService.listVendorOrderItems({
       vendor_order_id: compensationInput.vendorOrderIds,
     })
     if (items.length) {
       await orderModuleService.deleteVendorOrderItems(items.map((item) => item.id))
+    }
+    if (compensationInput.ledgerEntryIds.length) {
+      await sellerFinanceModuleService.deleteCommissionLedgerEntries(
+        compensationInput.ledgerEntryIds
+      )
     }
     await orderModuleService.deleteVendorOrders(compensationInput.vendorOrderIds)
   }

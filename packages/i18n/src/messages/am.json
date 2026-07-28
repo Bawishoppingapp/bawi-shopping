@@ -126,5 +126,16 @@
   "order.total": "ጠቅላላ",
   "order.continueShopping": "ግዢ ይቀጥሉ",
   "order.deliveryCode": "የመላኪያ ኮድ",
-  "order.deliveryCodeHint": "ትዕዛዝዎ ሲደርስ ይህን ኮድ ለላኪው ያጋሩ"
+  "order.deliveryCodeHint": "ትዕዛዝዎ ሲደርስ ይህን ኮድ ለላኪው ያጋሩ",
+  "order.cancelOrder": "ይህን ትዕዛዝ ሰርዝ",
+  "order.cancelHint": "ሻጭ ትዕዛዝዎን ማዘጋጀት ከመጀመሩ በፊት መሰረዝ ይችላሉ።",
+  "order.requestReturn": "መመለሻ ይጠይቁ",
+  "order.returnReasonLabel": "የመመለሻ ምክንያት",
+  "order.returnReasonDamaged": "እቃው ተጎድቶ ደርሷል",
+  "order.returnReasonDefective": "እቃው ጉድለት አለበት",
+  "order.returnReasonIncorrect": "የተሳሳተ እቃ ደርሷል",
+  "order.returnReasonCustomerRemorse": "ከእንግዲህ አያስፈልገኝም",
+  "order.returnCommentLabel": "ተጨማሪ ዝርዝሮች (አማራጭ)",
+  "order.submitReturn": "የመመለሻ ጥያቄ አስገባ",
+  "order.returnRequestSent": "የመመለሻ ጥያቄዎ ገብቷል።"
 }

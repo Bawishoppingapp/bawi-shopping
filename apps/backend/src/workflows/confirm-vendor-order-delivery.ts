@@ -11,6 +11,8 @@ import { FULFILLMENT_PRIVACY_MODULE } from "../modules/fulfillment-privacy"
 import type FulfillmentPrivacyModuleService from "../modules/fulfillment-privacy/service"
 import { AUDIT_LOG_MODULE } from "../modules/audit-log"
 import type AuditLogModuleService from "../modules/audit-log/service"
+import { SELLER_FINANCE_MODULE } from "../modules/seller-finance"
+import type SellerFinanceModuleService from "../modules/seller-finance/service"
 
 /**
  * Proof of delivery: the courier submits the tracking/delivery code the
@@ -96,6 +98,55 @@ const markDeliveredStep = createStep(
   }
 )
 
+type MakeLedgerEntryAvailableInput = { vendorOrderId: string }
+type MakeLedgerEntryAvailableCompensation = { ledgerEntryId: string }
+
+/**
+ * Delivery is what starts the transfer-hold clock - `available_at` is
+ * computed here (delivered_at + the entry's own *snapshotted*
+ * transfer_hold_days, never re-read live from business-config) rather
+ * than at ledger-entry-creation time, since delivery hadn't happened yet
+ * back then. See docs/PAYMENTS.md §5, docs/DECISIONS.md.
+ */
+const makeLedgerEntryAvailableStep = createStep(
+  "make-ledger-entry-available",
+  async (input: MakeLedgerEntryAvailableInput, { container }) => {
+    const sellerFinanceModuleService: SellerFinanceModuleService = container.resolve(
+      SELLER_FINANCE_MODULE
+    )
+    const [entry] = await sellerFinanceModuleService.listCommissionLedgerEntries({
+      vendor_order_id: input.vendorOrderId,
+      reason: "order",
+    })
+    if (!entry) {
+      return new StepResponse(null, null)
+    }
+
+    const availableAt = new Date(
+      Date.now() + entry.transfer_hold_days_snapshot * 24 * 60 * 60 * 1000
+    )
+    await sellerFinanceModuleService.updateCommissionLedgerEntries({
+      id: entry.id,
+      available_at: availableAt,
+    })
+
+    const compensation: MakeLedgerEntryAvailableCompensation = { ledgerEntryId: entry.id }
+    return new StepResponse(entry, compensation)
+  },
+  async (compensationInput, { container }) => {
+    if (!compensationInput) {
+      return
+    }
+    const sellerFinanceModuleService: SellerFinanceModuleService = container.resolve(
+      SELLER_FINANCE_MODULE
+    )
+    await sellerFinanceModuleService.updateCommissionLedgerEntries({
+      id: compensationInput.ledgerEntryId,
+      available_at: null,
+    })
+  }
+)
+
 const recordDeliveredAuditLogStep = createStep(
   "record-delivered-audit-log",
   async (input: { vendorOrderId: string; courierId: string }, { container }) => {
@@ -121,6 +172,7 @@ export const confirmVendorOrderDeliveryWorkflow = createWorkflow(
   (input: ConfirmVendorOrderDeliveryWorkflowInput) => {
     redeemTrackingCodeStep(input)
     const vendorOrder = markDeliveredStep({ vendorOrderId: input.vendorOrderId })
+    makeLedgerEntryAvailableStep({ vendorOrderId: input.vendorOrderId })
     recordDeliveredAuditLogStep({ vendorOrderId: input.vendorOrderId, courierId: input.courierId })
     return new WorkflowResponse(vendorOrder)
   }

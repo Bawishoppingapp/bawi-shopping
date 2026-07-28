@@ -7,6 +7,8 @@ import { Button, StatusBadge } from "@bawi/ui"
 import { CUSTOMER_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentCustomer } from "@/features/auth/services/medusa-auth-client"
 import { getOrder } from "@/features/orders/services/orders-client"
+import { CancelOrderButton } from "@/features/returns/components/cancel-order-button"
+import { ReturnRequestForm } from "@/features/returns/components/return-request-form"
 
 export const dynamic = "force-dynamic"
 
@@ -76,16 +78,37 @@ export default async function OrderDetailPage({
           </div>
           <ul className="flex flex-col gap-3">
             {vendorOrder.items.map((item) => (
-              <li key={item.id} className="flex justify-between text-sm">
-                <span className="text-neutral-700">
-                  {item.title}
-                  {item.color ? ` - ${item.color}` : ""}
-                  {item.size ? ` / ${item.size}` : ""} × {item.quantity}
-                </span>
-                <span className="font-medium text-neutral-900">{formatUsd(item.line_total)}</span>
+              <li key={item.id} className="flex flex-col gap-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-700">
+                    {item.title}
+                    {item.color ? ` - ${item.color}` : ""}
+                    {item.size ? ` / ${item.size}` : ""} × {item.quantity}
+                  </span>
+                  <span className="font-medium text-neutral-900">
+                    {formatUsd(item.line_total)}
+                  </span>
+                </div>
+                {vendorOrder.status === "delivered" && (
+                  <details>
+                    <summary className="cursor-pointer text-xs text-neutral-500 hover:underline">
+                      {t("order.requestReturn")}
+                    </summary>
+                    <div className="mt-2">
+                      <ReturnRequestForm orderId={order.id} vendorOrderItemId={item.id} />
+                    </div>
+                  </details>
+                )}
               </li>
             ))}
           </ul>
+
+          {vendorOrder.status === "awaiting_preparation" && (
+            <div className="mt-4">
+              <p className="mb-2 text-xs text-neutral-500">{t("order.cancelHint")}</p>
+              <CancelOrderButton orderId={order.id} vendorOrderId={vendorOrder.id} />
+            </div>
+          )}
 
           {vendorOrder.delivery_confirmation_code && (
             <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3">

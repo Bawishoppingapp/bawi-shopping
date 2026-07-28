@@ -5,6 +5,7 @@ import { MARKETPLACE_ORDER_MODULE } from "../../../modules/marketplace-order"
 import type OrderModuleService from "../../../modules/marketplace-order/service"
 import { createStripeConnectClient } from "../../../payments/stripe-client"
 import { applyStripeAccountUpdatedWebhookWorkflow } from "../../../workflows/apply-stripe-account-updated-webhook"
+import { applyStripeDisputeWebhookWorkflow } from "../../../workflows/apply-stripe-dispute-webhook"
 import { captureCheckoutPaymentWorkflow } from "../../../workflows/capture-checkout-payment"
 import { failCheckoutPaymentWorkflow } from "../../../workflows/fail-checkout-payment"
 import { getOrCreateDefaultStockLocationId } from "../../../workflows/shared/default-stock-location"
@@ -51,6 +52,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<voi
       break
     case "payment_intent.payment_failed":
       await handlePaymentIntentFailed(req, event)
+      break
+    case "charge.dispute.created":
+      await handleDisputeCreated(req, event)
+      break
+    case "charge.dispute.closed":
+      await handleDisputeClosed(req, event)
       break
     default:
       // Every other event type is acknowledged (2xx) so Stripe doesn't keep
@@ -143,6 +150,53 @@ async function handlePaymentIntentFailed(
       orderId: order.id,
       customerId: order.customer_id,
       reservationItemIds: (order.reservation_item_ids as unknown as string[]) ?? [],
+    },
+  })
+}
+
+async function handleDisputeCreated(req: MedusaRequest, event: StripeConnectEvent): Promise<void> {
+  const dispute = event.data.object as {
+    id: string
+    payment_intent?: string
+    amount?: number
+    reason?: string
+  }
+  if (!dispute.payment_intent) {
+    return
+  }
+  const order = await findOrderForPaymentIntent(req, dispute.payment_intent)
+
+  await applyStripeDisputeWebhookWorkflow(req.scope).run({
+    input: {
+      eventId: event.id,
+      eventType: event.type,
+      orderId: order?.id ?? null,
+      stripeDisputeId: dispute.id,
+      amount: dispute.amount ?? 0,
+      reason: dispute.reason ?? null,
+      isClosedEvent: false,
+      won: false,
+    },
+  })
+}
+
+async function handleDisputeClosed(req: MedusaRequest, event: StripeConnectEvent): Promise<void> {
+  const dispute = event.data.object as {
+    id: string
+    payment_intent?: string
+    status?: string
+  }
+
+  await applyStripeDisputeWebhookWorkflow(req.scope).run({
+    input: {
+      eventId: event.id,
+      eventType: event.type,
+      orderId: null,
+      stripeDisputeId: dispute.id,
+      amount: 0,
+      reason: null,
+      isClosedEvent: true,
+      won: dispute.status === "won",
     },
   })
 }

@@ -15,6 +15,31 @@ export interface PaymentIntentResult {
   status: string
 }
 
+export interface CreateTransferInput {
+  amountCents: number
+  currency: string
+  destinationAccountId: string
+  idempotencyKey: string
+  metadata: Record<string, string>
+}
+
+export interface TransferResult {
+  id: string
+  status: string
+}
+
+export interface CreateRefundInput {
+  paymentIntentId: string
+  amountCents: number
+  idempotencyKey: string
+  metadata: Record<string, string>
+}
+
+export interface RefundResult {
+  id: string
+  status: string
+}
+
 /**
  * The platform-account PaymentIntent surface (Separate Charges and
  * Transfers - see docs/PAYMENTS.md §3) - deliberately a separate interface
@@ -29,6 +54,14 @@ export interface StripePaymentClient {
   createPaymentIntent(input: CreatePaymentIntentInput): Promise<PaymentIntentResult>
   retrievePaymentIntent(paymentIntentId: string): Promise<PaymentIntentResult>
   cancelPaymentIntent(paymentIntentId: string): Promise<void>
+  /** Separate Charges and Transfers (docs/PAYMENTS.md §3) - a seller
+   * payout, decoupled from the original charge. Test mode only until an
+   * explicit production-launch approval (real_transfers_enabled stays
+   * false - see docs/DECISIONS.md). */
+  createTransfer(input: CreateTransferInput): Promise<TransferResult>
+  /** Always computed server-side, capped by stored order/item data -
+   * never a client-supplied amount (docs/PAYMENTS.md). */
+  createRefund(input: CreateRefundInput): Promise<RefundResult>
 }
 
 class RealStripePaymentClient implements StripePaymentClient {
@@ -62,6 +95,31 @@ class RealStripePaymentClient implements StripePaymentClient {
 
   async cancelPaymentIntent(paymentIntentId: string): Promise<void> {
     await this.stripe.paymentIntents.cancel(paymentIntentId)
+  }
+
+  async createTransfer(input: CreateTransferInput): Promise<TransferResult> {
+    const transfer = await this.stripe.transfers.create(
+      {
+        amount: input.amountCents,
+        currency: input.currency,
+        destination: input.destinationAccountId,
+        metadata: input.metadata,
+      },
+      { idempotencyKey: input.idempotencyKey }
+    )
+    return { id: transfer.id, status: "paid" }
+  }
+
+  async createRefund(input: CreateRefundInput): Promise<RefundResult> {
+    const refund = await this.stripe.refunds.create(
+      {
+        payment_intent: input.paymentIntentId,
+        amount: input.amountCents,
+        metadata: input.metadata,
+      },
+      { idempotencyKey: input.idempotencyKey }
+    )
+    return { id: refund.id, status: refund.status ?? "pending" }
   }
 }
 
@@ -102,6 +160,16 @@ class FakeStripePaymentClient implements StripePaymentClient {
     if (intent) {
       intent.status = "canceled"
     }
+  }
+
+  async createTransfer(input: CreateTransferInput): Promise<TransferResult> {
+    void input
+    return { id: `tr_test_${crypto.randomBytes(8).toString("hex")}`, status: "paid" }
+  }
+
+  async createRefund(input: CreateRefundInput): Promise<RefundResult> {
+    void input
+    return { id: `re_test_${crypto.randomBytes(8).toString("hex")}`, status: "succeeded" }
   }
 }
 

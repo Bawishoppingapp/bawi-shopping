@@ -39,6 +39,9 @@ export default async function CouriersPage() {
           Fulfillment
         </Link>
         <span className="font-medium text-neutral-900">Couriers</span>
+        <Link href="/finance" className="text-neutral-500 hover:underline">
+          Finance
+        </Link>
         <Link href="/config" className="text-neutral-500 hover:underline">
           Configuration
         </Link>

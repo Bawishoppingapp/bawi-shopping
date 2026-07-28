@@ -1,0 +1,131 @@
+import Link from "next/link"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
+import { ADMIN_SESSION_COOKIE } from "@/features/auth/constants"
+import { getCurrentAdmin } from "@/features/auth/services/medusa-auth-client"
+import { getFinanceOverview } from "@/features/finance/services/finance-client"
+import { TriggerPayoutForm } from "@/features/finance/components/trigger-payout-form"
+
+export const dynamic = "force-dynamic"
+
+function formatUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`
+}
+
+export default async function FinancePage() {
+  const cookieStore = await cookies()
+  const sessionToken = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
+
+  const admin = sessionToken ? await getCurrentAdmin(sessionToken) : null
+  if (!admin || !sessionToken) {
+    redirect("/login")
+  }
+
+  const overview = await getFinanceOverview(sessionToken)
+
+  const totalsBuckets: Array<{ label: string; value: number }> = [
+    { label: "Pending", value: overview.platform_totals.pending },
+    { label: "Available", value: overview.platform_totals.available },
+    { label: "Paid out", value: overview.platform_totals.paid },
+    { label: "Disputed", value: overview.platform_totals.disputed },
+  ]
+
+  return (
+    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-12">
+      <nav className="flex gap-4 text-sm">
+        <Link href="/applications" className="text-neutral-500 hover:underline">
+          Applications
+        </Link>
+        <Link href="/products" className="text-neutral-500 hover:underline">
+          Products
+        </Link>
+        <Link href="/categories" className="text-neutral-500 hover:underline">
+          Categories
+        </Link>
+        <Link href="/sellers" className="text-neutral-500 hover:underline">
+          Sellers
+        </Link>
+        <Link href="/fulfillment" className="text-neutral-500 hover:underline">
+          Fulfillment
+        </Link>
+        <Link href="/couriers" className="text-neutral-500 hover:underline">
+          Couriers
+        </Link>
+        <span className="font-medium text-neutral-900">Finance</span>
+        <Link href="/config" className="text-neutral-500 hover:underline">
+          Configuration
+        </Link>
+      </nav>
+
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold text-neutral-900">Finance</h1>
+        <div className="flex gap-2 text-sm">
+          <Link href="/finance/returns" className="text-neutral-500 hover:underline">
+            Returns
+          </Link>
+          <span className="text-neutral-300">·</span>
+          <Link href="/finance/disputes" className="text-neutral-500 hover:underline">
+            Disputes
+          </Link>
+        </div>
+      </div>
+
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {totalsBuckets.map((bucket) => (
+          <div key={bucket.label} className="rounded-md border border-neutral-200 p-4">
+            <p className="text-xs text-neutral-500">{bucket.label}</p>
+            <p className="mt-1 text-lg font-semibold text-neutral-900">
+              {formatUsd(bucket.value)}
+            </p>
+          </div>
+        ))}
+      </section>
+
+      {overview.sellers.length === 0 ? (
+        <p className="rounded-md border border-neutral-200 bg-neutral-50 p-8 text-center text-sm text-neutral-500">
+          No seller balances yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-md border border-neutral-200">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
+              <tr>
+                <th className="px-4 py-2 font-medium">Seller</th>
+                <th className="px-4 py-2 font-medium">Pending</th>
+                <th className="px-4 py-2 font-medium">Available</th>
+                <th className="px-4 py-2 font-medium">Paid</th>
+                <th className="px-4 py-2 font-medium">Disputed</th>
+                <th className="px-4 py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.sellers.map((row) => (
+                <tr key={row.vendor_id} className="border-b border-neutral-100 last:border-0">
+                  <td className="px-4 py-3 font-medium text-neutral-900">
+                    {row.vendor_name ?? row.vendor_id}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">
+                    {formatUsd(row.balance.pending)}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">
+                    {formatUsd(row.balance.available)}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">{formatUsd(row.balance.paid)}</td>
+                  <td className="px-4 py-3 text-neutral-700">
+                    {formatUsd(row.balance.disputed)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <TriggerPayoutForm
+                      vendorId={row.vendor_id}
+                      disabled={!row.payouts_enabled || row.balance.available <= 0}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </main>
+  )
+}

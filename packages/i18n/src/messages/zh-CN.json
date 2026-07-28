@@ -126,5 +126,16 @@
   "order.total": "总计",
   "order.continueShopping": "继续购物",
   "order.deliveryCode": "配送码",
-  "order.deliveryCodeHint": "订单送达时，请向配送员出示此码"
+  "order.deliveryCodeHint": "订单送达时，请向配送员出示此码",
+  "order.cancelOrder": "取消此订单",
+  "order.cancelHint": "在卖家开始备货前，您可以取消订单。",
+  "order.requestReturn": "申请退货",
+  "order.returnReasonLabel": "退货原因",
+  "order.returnReasonDamaged": "商品到货时已损坏",
+  "order.returnReasonDefective": "商品有缺陷",
+  "order.returnReasonIncorrect": "收到错误的商品",
+  "order.returnReasonCustomerRemorse": "不再需要",
+  "order.returnCommentLabel": "补充说明（可选）",
+  "order.submitReturn": "提交退货申请",
+  "order.returnRequestSent": "您的退货申请已提交。"
 }

@@ -126,5 +126,16 @@
   "order.total": "ጠቕላላ",
   "order.continueShopping": "ዕድጊት ቀጽል",
   "order.deliveryCode": "ናይ መልእኽቲ ኮድ",
-  "order.deliveryCodeHint": "ትእዛዝኩም ምስ በጽሐ ነዚ ኮድ ንመልእኽተኛ ኣካፍልዎ"
+  "order.deliveryCodeHint": "ትእዛዝኩም ምስ በጽሐ ነዚ ኮድ ንመልእኽተኛ ኣካፍልዎ",
+  "order.cancelOrder": "ነዚ ትእዛዝ ሰርዝ",
+  "order.cancelHint": "ሻጣይ ትእዛዝኩም ከየዳሉ ቅድሚ ምስራዙ ይክእሉ።",
+  "order.requestReturn": "ምምላስ ሕተት",
+  "order.returnReasonLabel": "ምኽንያት ምምላስ",
+  "order.returnReasonDamaged": "እቲ ኣቕሓ ተበላሽዩ በጺሑ",
+  "order.returnReasonDefective": "እቲ ኣቕሓ ጉድለት ኣለዎ",
+  "order.returnReasonIncorrect": "ግጉይ ኣቕሓ በጺሑ",
+  "order.returnReasonCustomerRemorse": "ድሕሪ ሕጂ ኣየድልየንን",
+  "order.returnCommentLabel": "ተወሳኺ ዝርዝር (ኣማራጺ)",
+  "order.submitReturn": "ናይ ምምላስ ሕቶ ኣቕርብ",
+  "order.returnRequestSent": "ናይ ምምላስ ሕቶኹም ቀሪቡ ኣሎ።"
 }
