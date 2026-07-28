@@ -13,6 +13,8 @@ import { AUDIT_LOG_MODULE } from "../modules/audit-log"
 import type AuditLogModuleService from "../modules/audit-log/service"
 import { createStripePaymentClient } from "../payments/stripe-payment-client"
 import { getOrCreateDefaultStockLocationId } from "./shared/default-stock-location"
+import { recordNotification } from "../notifications/record-notification"
+import { refundProcessedTemplate } from "../notifications/templates"
 
 /**
  * A customer cancels a vendor_order still in awaiting_preparation (the
@@ -172,6 +174,38 @@ const recordCancelledAuditLogStep = createStep(
   }
 )
 
+const sendCancellationRefundNotificationStep = createStep(
+  "send-cancellation-refund-notification",
+  async (input: { vendorOrderId: string; customerId: string }, { container }) => {
+    const sellerFinanceModuleService: SellerFinanceModuleService = container.resolve(
+      SELLER_FINANCE_MODULE
+    )
+    const customerModuleService = container.resolve(Modules.CUSTOMER)
+
+    const [orderRefund] = await sellerFinanceModuleService.listOrderRefunds({
+      vendor_order_id: input.vendorOrderId,
+    })
+    const customer = await customerModuleService.retrieveCustomer(input.customerId)
+    if (!orderRefund || !customer.email) {
+      return new StepResponse(null)
+    }
+
+    const { subject, body } = refundProcessedTemplate({ amount: orderRefund.amount })
+    await recordNotification(container, {
+      idempotencyKey: `refund_processed:${orderRefund.id}`,
+      eventType: "refund_processed",
+      to: customer.email,
+      subject,
+      body,
+      recipientType: "customer",
+      recipientId: input.customerId,
+      resourceId: input.vendorOrderId,
+      resourceType: "vendor_order",
+    })
+    return new StepResponse(null)
+  }
+)
+
 export type CancelVendorOrderWorkflowInput = CancelVendorOrderInput
 
 export const cancelVendorOrderWorkflowId = "cancel-vendor-order"
@@ -182,6 +216,10 @@ export const cancelVendorOrderWorkflow = createWorkflow(
     restockVendorOrderStep(input)
     const refund = refundCancelledVendorOrderStep({ vendorOrderId: input.vendorOrderId })
     recordCancelledAuditLogStep(input)
+    sendCancellationRefundNotificationStep({
+      vendorOrderId: input.vendorOrderId,
+      customerId: input.customerId,
+    })
     return new WorkflowResponse(refund)
   }
 )

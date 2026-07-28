@@ -14,6 +14,8 @@ import type AuditLogModuleService from "../modules/audit-log/service"
 import { createStripePaymentClient } from "../payments/stripe-payment-client"
 import { calculateRefund } from "../finance/refund-calculation"
 import { getOrCreateDefaultStockLocationId } from "./shared/default-stock-location"
+import { recordNotification } from "../notifications/record-notification"
+import { returnStatusChangedTemplate } from "../notifications/templates"
 
 /**
  * Approving a return request is what triggers the actual refund: a Stripe
@@ -225,6 +227,42 @@ const recordApprovedAuditLogStep = createStep(
   }
 )
 
+const sendReturnRefundedNotificationStep = createStep(
+  "send-return-refunded-notification",
+  async (input: { returnRequestId: string }, { container }) => {
+    const sellerFinanceModuleService: SellerFinanceModuleService = container.resolve(
+      SELLER_FINANCE_MODULE
+    )
+    const orderModuleService: OrderModuleService = container.resolve(MARKETPLACE_ORDER_MODULE)
+    const customerModuleService = container.resolve(Modules.CUSTOMER)
+
+    const returnRequest = await sellerFinanceModuleService.retrieveReturnRequest(
+      input.returnRequestId
+    )
+    const customer = await customerModuleService.retrieveCustomer(returnRequest.customer_id)
+    if (!customer.email) {
+      return new StepResponse(null)
+    }
+
+    const { subject, body } = returnStatusChangedTemplate({
+      status: "refunded",
+      reason: returnRequest.reason,
+    })
+    await recordNotification(container, {
+      idempotencyKey: `return_status_changed:${input.returnRequestId}:refunded`,
+      eventType: "return_status_changed",
+      to: customer.email,
+      subject,
+      body,
+      recipientType: "customer",
+      recipientId: returnRequest.customer_id,
+      resourceId: input.returnRequestId,
+      resourceType: "return_request",
+    })
+    return new StepResponse(null)
+  }
+)
+
 export type ApproveReturnRequestWorkflowInput = MarkApprovedInput & { requestedAmount?: number }
 
 export const approveReturnRequestWorkflowId = "approve-return-request"
@@ -245,6 +283,8 @@ export const approveReturnRequestWorkflow = createWorkflow(
       reviewerType: input.reviewerType,
       refundAmount: result.orderRefund.amount,
     })
+
+    sendReturnRefundedNotificationStep({ returnRequestId: input.returnRequestId })
 
     return new WorkflowResponse(result)
   }

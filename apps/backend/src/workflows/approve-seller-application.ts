@@ -15,6 +15,8 @@ import {
 } from "../modules/seller-application/utils"
 import { AUDIT_LOG_MODULE } from "../modules/audit-log"
 import type AuditLogModuleService from "../modules/audit-log/service"
+import { recordNotification } from "../notifications/record-notification"
+import { sellerApplicationApprovedTemplate } from "../notifications/templates"
 
 /**
  * Approving an application touches four records across three modules
@@ -142,6 +144,34 @@ const recordApprovalAuditLogStep = createStep(
   }
 )
 
+type SendApprovalNotificationInput = {
+  businessEmail: string
+  storeName: string
+  sellerId: string
+  sellerUserId: string
+  applicationId: string
+}
+
+const sendApplicationApprovedNotificationStep = createStep(
+  "send-application-approved-notification",
+  async (input: SendApprovalNotificationInput, { container }) => {
+    const { subject, body } = sellerApplicationApprovedTemplate({ storeName: input.storeName })
+    await recordNotification(container, {
+      idempotencyKey: `seller_application_approved:${input.applicationId}`,
+      eventType: "seller_application_approved",
+      to: input.businessEmail,
+      subject,
+      body,
+      recipientType: "seller_user",
+      recipientId: input.sellerUserId,
+      vendorId: input.sellerId,
+      resourceId: input.applicationId,
+      resourceType: "seller_application",
+    })
+    return new StepResponse(null)
+  }
+)
+
 export type ApproveSellerApplicationWorkflowInput = {
   applicationId: string
   storeName: string
@@ -178,6 +208,14 @@ export const approveSellerApplicationWorkflow = createWorkflow(
       applicationId: input.applicationId,
       sellerId: seller.id,
       previousStatus: input.previousStatus,
+    })
+
+    sendApplicationApprovedNotificationStep({
+      businessEmail: input.businessEmail,
+      storeName: input.storeName,
+      sellerId: seller.id,
+      sellerUserId: sellerUser.id,
+      applicationId: input.applicationId,
     })
 
     return new WorkflowResponse({ application, seller, sellerUser })

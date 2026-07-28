@@ -64,6 +64,9 @@ export default async function BusinessConfigPage() {
         <Link href="/finance" className="text-neutral-500 hover:underline">
           Finance
         </Link>
+        <Link href="/team" className="text-neutral-500 hover:underline">
+          Team
+        </Link>
         <span className="font-medium text-neutral-900">Configuration</span>
       </nav>
 

@@ -6,6 +6,7 @@ import {
   WorkflowResponse,
   when,
 } from "@medusajs/framework/workflows-sdk"
+import type { MedusaContainer } from "@medusajs/framework/types"
 import { MARKETPLACE_ORDER_MODULE } from "../modules/marketplace-order"
 import type OrderModuleService from "../modules/marketplace-order/service"
 import { SELLER_FINANCE_MODULE } from "../modules/seller-finance"
@@ -210,18 +211,34 @@ type RecordDisputeAuditLogInput = {
   afterState: Record<string, unknown>
 }
 
-const recordDisputeAuditLogStep = createStep(
-  "record-dispute-audit-log",
+async function recordDisputeAuditLog(container: MedusaContainer, input: RecordDisputeAuditLogInput) {
+  const auditLogModuleService: AuditLogModuleService = container.resolve(AUDIT_LOG_MODULE)
+  return auditLogModuleService.record({
+    actorType: "system",
+    actorId: null,
+    action: input.action,
+    entityType: "dispute",
+    entityId: input.stripeDisputeId,
+    afterState: input.afterState,
+  })
+}
+
+// Two distinct steps (not one shared step called twice) - Medusa's workflow
+// orchestrator rejects invoking the same step definition at two call sites
+// within one workflow ("Step ... is already defined in workflow"), caught
+// by `db:migrate` loading this file (see docs/DECISIONS.md).
+const recordDisputeOpenedAuditLogStep = createStep(
+  "record-dispute-opened-audit-log",
   async (input: RecordDisputeAuditLogInput, { container }) => {
-    const auditLogModuleService: AuditLogModuleService = container.resolve(AUDIT_LOG_MODULE)
-    const auditLog = await auditLogModuleService.record({
-      actorType: "system",
-      actorId: null,
-      action: input.action,
-      entityType: "dispute",
-      entityId: input.stripeDisputeId,
-      afterState: input.afterState,
-    })
+    const auditLog = await recordDisputeAuditLog(container, input)
+    return new StepResponse(auditLog)
+  }
+)
+
+const recordDisputeClosedAuditLogStep = createStep(
+  "record-dispute-closed-audit-log",
+  async (input: RecordDisputeAuditLogInput, { container }) => {
+    const auditLog = await recordDisputeAuditLog(container, input)
     return new StepResponse(auditLog)
   }
 )
@@ -262,7 +279,7 @@ export const applyStripeDisputeWebhookWorkflow = createWorkflow(
         amount: input.amount,
         reason: input.reason,
       })
-      recordDisputeAuditLogStep({
+      recordDisputeOpenedAuditLogStep({
         action: "dispute.opened",
         orderId: input.orderId,
         stripeDisputeId: input.stripeDisputeId,
@@ -276,7 +293,7 @@ export const applyStripeDisputeWebhookWorkflow = createWorkflow(
     ).then(() => {
       applyDisputeClosedStep({ stripeDisputeId: input.stripeDisputeId, won: input.won })
       const closedStatus = transform({ input }, ({ input }) => (input.won ? "won" : "lost"))
-      recordDisputeAuditLogStep({
+      recordDisputeClosedAuditLogStep({
         action: "dispute.closed",
         orderId: input.orderId,
         stripeDisputeId: input.stripeDisputeId,

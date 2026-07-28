@@ -9,6 +9,8 @@ import type SellerApplicationModuleService from "../modules/seller-application/s
 import type { SellerApplicationStatus } from "../modules/seller-application/state-machine"
 import { AUDIT_LOG_MODULE } from "../modules/audit-log"
 import type AuditLogModuleService from "../modules/audit-log/service"
+import { recordNotification } from "../notifications/record-notification"
+import { sellerApplicationRejectedTemplate } from "../notifications/templates"
 
 /**
  * Same atomicity concern as approve-seller-application.ts, on a smaller
@@ -84,6 +86,33 @@ const recordRejectionAuditLogStep = createStep(
   }
 )
 
+const sendApplicationRejectedNotificationStep = createStep(
+  "send-application-rejected-notification",
+  async (input: { applicationId: string }, { container }) => {
+    const sellerApplicationModuleService: SellerApplicationModuleService = container.resolve(
+      SELLER_APPLICATION_MODULE
+    )
+    const application = await sellerApplicationModuleService.retrieveSellerApplication(
+      input.applicationId
+    )
+
+    const { subject, body } = sellerApplicationRejectedTemplate()
+    // No recipientType/recipientId: a rejected application never creates a
+    // seller_user, so there's no in-app account to index this against -
+    // see src/notifications/record-notification.ts.
+    await recordNotification(container, {
+      idempotencyKey: `seller_application_rejected:${input.applicationId}`,
+      eventType: "seller_application_rejected",
+      to: application.business_email,
+      subject,
+      body,
+      resourceId: input.applicationId,
+      resourceType: "seller_application",
+    })
+    return new StepResponse(null)
+  }
+)
+
 export type RejectSellerApplicationWorkflowInput = {
   applicationId: string
   reason: string
@@ -109,6 +138,8 @@ export const rejectSellerApplicationWorkflow = createWorkflow(
       reason: input.reason,
       previousStatus: input.previousStatus,
     })
+
+    sendApplicationRejectedNotificationStep({ applicationId: input.applicationId })
 
     return new WorkflowResponse({ application })
   }

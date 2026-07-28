@@ -52,6 +52,9 @@ export default async function FinancePage() {
           Couriers
         </Link>
         <span className="font-medium text-neutral-900">Finance</span>
+        <Link href="/team" className="text-neutral-500 hover:underline">
+          Team
+        </Link>
         <Link href="/config" className="text-neutral-500 hover:underline">
           Configuration
         </Link>

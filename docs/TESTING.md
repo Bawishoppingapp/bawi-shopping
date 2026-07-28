@@ -163,6 +163,13 @@ Per `docs/PAYMENTS.md` §4-7 and `docs/DECISIONS.md` - refund/reversal amounts a
   - **Deferred (after the fix above):** this file could not be run to completion in this session due to the same development-machine memory pressure documented for `checkout.spec.ts`/`fulfillment.spec.ts` (see `docs/DECISIONS.md`); it passes lint/typecheck and should be re-run once the machine has more available memory or in CI.
 - **E2E:** not yet added in this batch - same reasoning as checkout's/fulfillment's E2E deferral; the integration coverage above already exercises the full financial lifecycle across all three portals' API surfaces.
 
+## 4.8 Notifications and account-completion test coverage
+
+This batch's new logic is thin by design (see `docs/DECISIONS.md`): notifications call Medusa's own native, already-battle-tested `notification` module and a two-field dedup/inbox insert; saved addresses and admin user/invite management are pure frontend wrappers around native Medusa routes with their own existing test coverage upstream; seller-staff invites reuse the seller-application activation-token workflow pattern verified in that slice's own tests. No new pure-function module was added that would warrant a dedicated unit-test file (the templates in `src/notifications/templates.ts` are plain string interpolation, not business logic).
+
+- **Verified this batch:** full monorepo lint (0 errors), full backend + all three frontend typechecks (clean), the full existing backend unit suite (188 tests, all passing, unaffected by this batch's changes), and production builds for all three frontends (`apps/storefront`, `apps/seller-portal`, `apps/admin`) plus the backend (`npx medusa db:migrate`, which loads every workflow file and is what caught this batch's one real bug - see `docs/DECISIONS.md`).
+- **Not added this batch:** a dedicated integration-test file exercising the new notification-triggering workflow steps end-to-end, or component/E2E tests for the new `/account`, `/staff`, `/team` pages. Flagged here explicitly as a gap to close in a later hardening pass rather than silently omitted - the individual pieces are exercised by the existing checkout/return/payout/seller-application integration tests indirectly (since those workflows now also call `recordNotification()`), but there's no assertion yet that a `NotificationInboxEntry` row actually appears with the right recipient scoping.
+
 ## 5. CI gates
 
 - Every pull request runs: lint, type-check, unit tests, and integration tests against a fresh disposable database — all required to pass before merge.

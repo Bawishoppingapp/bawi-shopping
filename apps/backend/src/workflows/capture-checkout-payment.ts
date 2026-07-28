@@ -18,6 +18,8 @@ import { resolveCommission } from "../orders/commission"
 import { generateFulfillmentCode } from "../orders/fulfillment-code"
 import { SELLER_FINANCE_MODULE } from "../modules/seller-finance"
 import type SellerFinanceModuleService from "../modules/seller-finance/service"
+import { recordNotification } from "../notifications/record-notification"
+import { orderConfirmationTemplate } from "../notifications/templates"
 import type { CheckoutLineItemSnapshot } from "./start-checkout"
 
 /**
@@ -344,6 +346,38 @@ const recordOrderPaidAuditLogStep = createStep(
   }
 )
 
+type SendOrderConfirmationInput = { orderId: string; customerId: string }
+
+const sendOrderConfirmationStep = createStep(
+  "send-order-confirmation",
+  async (input: SendOrderConfirmationInput, { container }) => {
+    const orderModuleService: OrderModuleService = container.resolve(MARKETPLACE_ORDER_MODULE)
+    const customerModuleService = container.resolve(Modules.CUSTOMER)
+    const order = await orderModuleService.retrieveMarketplaceOrder(input.orderId)
+    const customer = await customerModuleService.retrieveCustomer(input.customerId)
+    if (!customer.email) {
+      return new StepResponse(null)
+    }
+
+    const { subject, body } = orderConfirmationTemplate({
+      displayId: order.display_id,
+      total: order.total_amount,
+    })
+    await recordNotification(container, {
+      idempotencyKey: `order_confirmation:${input.orderId}`,
+      eventType: "order_confirmation",
+      to: customer.email,
+      subject,
+      body,
+      recipientType: "customer",
+      recipientId: input.customerId,
+      resourceId: input.orderId,
+      resourceType: "order",
+    })
+    return new StepResponse(null)
+  }
+)
+
 export type CaptureCheckoutPaymentWorkflowInput = {
   eventId: string
   eventType: string
@@ -378,6 +412,11 @@ export const captureCheckoutPaymentWorkflow = createWorkflow(
       clearCustomerCartStep({ customerId: input.customerId })
 
       recordOrderPaidAuditLogStep({
+        orderId: input.orderId,
+        customerId: input.customerId,
+      })
+
+      sendOrderConfirmationStep({
         orderId: input.orderId,
         customerId: input.customerId,
       })

@@ -78,7 +78,8 @@ erDiagram
 | `fulfillment-privacy` (implemented) | `courier`, `pickup_code`, `tracking_code`, `fulfillment_code_redemption` | `courier`: no (platform-owned, its own actor type). `pickup_code`/`tracking_code`: no (order-scoped by `vendor_order_id`, a plain reference - vendor identity is never exposed through either). `fulfillment_code_redemption`: no (platform-owned idempotency/claim ledger, same shape as `webhook_event`/`cart_merge_claim`) |
 | `review` | `review`, `review_response` | **Yes** (via product) |
 | `moderation` | `moderation_item`, `moderation_flag` | No (platform-owned, references seller-owned content) |
-| `notification` | `notification_template`, `notification_log` | Nullable — set when the notification concerns a specific seller |
+| `notification` (native Medusa, implemented) | `notification` | No (platform-owned; native `NotificationDTO.receiver_id`/`resource_id` reference the recipient/subject) |
+| `notification_inbox` (implemented) | `notification_inbox_entry` | Nullable — set when the notification concerns a specific seller (`payout_sent`, `seller_application_approved`) |
 | `reporting` | (no owned tables — aggregation views/queries only) | n/a |
 | `audit-log` (implemented) | `audit_log` | Nullable — set when the logged action is seller-scoped |
 
@@ -159,6 +160,9 @@ Payment lives directly on this row rather than a separate `payment` table as ori
 
 **`dispute`** *(migrated, same module)*
 `id, order_id (text, NOT NULL), vendor_order_id (text, nullable - set only when exactly one vendor_order exists on the order; a Stripe dispute is against the whole marketplace-order charge, which can span multiple vendor_orders), stripe_dispute_id (text, unique), amount, reason (text, nullable), status (open|won|lost, default 'open'), resolved_at (timestamptz, nullable), created_at, updated_at, deleted_at`. Created/updated only from the `charge.dispute.created`/`charge.dispute.closed` Stripe webhook events, never client-initiated.
+
+**`notification_inbox_entry`** *(migrated — `apps/backend/src/modules/notification-inbox/migrations`)*
+`id, notification_id (text, unique - plain reference to the native `notification.id`, same loose-coupling pattern as vendor_id elsewhere), event_type (text), recipient_type (customer|seller_user|user), recipient_id (text), vendor_id (text, nullable), subject (text), body (text), read_at (timestamptz, nullable), created_at, updated_at, deleted_at`. Not the notification's own storage - Medusa's native `notification` table already holds that; this is a thin, receiver-queryable index over it, since the native module exposes no receiver-scoped store/seller API and no read/unread state.
 
 **`audit_log`** *(migrated — `apps/backend/src/modules/audit-log/migrations`)*
 `id, actor_type (customer|seller_user|user|system|courier — `courier` added in the private-fulfillment slice), actor_id (nullable), action, entity_type, entity_id, vendor_id (nullable), before_state (jsonb, nullable), after_state (jsonb, nullable), ip_address (nullable), created_at, updated_at, deleted_at` — append-only *by convention* today: no application code path issues UPDATE/DELETE against it, but the DB role's grants aren't yet restricted to enforce this at the database level (still a documented future hardening step, see `docs/SECURITY.md` §6). Note the actor_type value is `user` (matching Medusa's actual native admin actor type name), not `admin_user` as originally sketched.

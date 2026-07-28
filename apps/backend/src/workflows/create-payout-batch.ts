@@ -3,6 +3,7 @@ import {
   createWorkflow,
   StepResponse,
   transform,
+  when,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { MedusaError } from "@medusajs/framework/utils"
@@ -14,6 +15,8 @@ import { AUDIT_LOG_MODULE } from "../modules/audit-log"
 import type AuditLogModuleService from "../modules/audit-log/service"
 import { createStripePaymentClient } from "../payments/stripe-payment-client"
 import { deriveLedgerBucket } from "../finance/balance"
+import { recordNotification } from "../notifications/record-notification"
+import { payoutSentTemplate } from "../notifications/templates"
 
 /**
  * Admin-triggered payout batch for one seller - there's no background job
@@ -185,6 +188,37 @@ const recordPayoutAuditLogStep = createStep(
   }
 )
 
+type SendPayoutNotificationInput = { vendorId: string; payoutId: string; amount: number }
+
+const sendPayoutSentNotificationStep = createStep(
+  "send-payout-sent-notification",
+  async (input: SendPayoutNotificationInput, { container }) => {
+    const sellerModuleService: SellerModuleService = container.resolve(SELLER_MODULE)
+    const [ownerSellerUser] = await sellerModuleService.listSellerUsers({
+      seller_id: input.vendorId,
+      role: "owner",
+    })
+    if (!ownerSellerUser) {
+      return new StepResponse(null)
+    }
+
+    const { subject, body } = payoutSentTemplate({ amount: input.amount })
+    await recordNotification(container, {
+      idempotencyKey: `payout_sent:${input.payoutId}`,
+      eventType: "payout_sent",
+      to: ownerSellerUser.email,
+      subject,
+      body,
+      recipientType: "seller_user",
+      recipientId: ownerSellerUser.id,
+      vendorId: input.vendorId,
+      resourceId: input.payoutId,
+      resourceType: "payout",
+    })
+    return new StepResponse(null)
+  }
+)
+
 export type CreatePayoutBatchWorkflowInput = { vendorId: string; adminUserId: string }
 
 export const createPayoutBatchWorkflowId = "create-payout-batch"
@@ -223,6 +257,14 @@ export const createPayoutBatchWorkflow = createWorkflow(
       vendorId: input.vendorId,
       adminUserId: input.adminUserId,
       amount: totalAmount,
+    })
+
+    when({ payout }, ({ payout }) => Boolean(payout)).then(() => {
+      sendPayoutSentNotificationStep({
+        vendorId: input.vendorId,
+        payoutId: payout.id,
+        amount: totalAmount,
+      })
     })
 
     return new WorkflowResponse(payout)

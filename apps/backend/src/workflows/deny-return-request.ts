@@ -4,10 +4,13 @@ import {
   StepResponse,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
+import { Modules } from "@medusajs/framework/utils"
 import { SELLER_FINANCE_MODULE } from "../modules/seller-finance"
 import type SellerFinanceModuleService from "../modules/seller-finance/service"
 import { AUDIT_LOG_MODULE } from "../modules/audit-log"
 import type AuditLogModuleService from "../modules/audit-log/service"
+import { recordNotification } from "../notifications/record-notification"
+import { returnStatusChangedTemplate } from "../notifications/templates"
 
 type DenyInput = {
   returnRequestId: string
@@ -64,6 +67,41 @@ const recordDeniedAuditLogStep = createStep(
   }
 )
 
+const sendReturnDeniedNotificationStep = createStep(
+  "send-return-denied-notification",
+  async (input: { returnRequestId: string }, { container }) => {
+    const sellerFinanceModuleService: SellerFinanceModuleService = container.resolve(
+      SELLER_FINANCE_MODULE
+    )
+    const customerModuleService = container.resolve(Modules.CUSTOMER)
+
+    const returnRequest = await sellerFinanceModuleService.retrieveReturnRequest(
+      input.returnRequestId
+    )
+    const customer = await customerModuleService.retrieveCustomer(returnRequest.customer_id)
+    if (!customer.email) {
+      return new StepResponse(null)
+    }
+
+    const { subject, body } = returnStatusChangedTemplate({
+      status: "denied",
+      reason: returnRequest.reason,
+    })
+    await recordNotification(container, {
+      idempotencyKey: `return_status_changed:${input.returnRequestId}:denied`,
+      eventType: "return_status_changed",
+      to: customer.email,
+      subject,
+      body,
+      recipientType: "customer",
+      recipientId: returnRequest.customer_id,
+      resourceId: input.returnRequestId,
+      resourceType: "return_request",
+    })
+    return new StepResponse(null)
+  }
+)
+
 export type DenyReturnRequestWorkflowInput = DenyInput
 
 export const denyReturnRequestWorkflowId = "deny-return-request"
@@ -73,6 +111,7 @@ export const denyReturnRequestWorkflow = createWorkflow(
   (input: DenyReturnRequestWorkflowInput) => {
     const returnRequest = markDeniedStep(input)
     recordDeniedAuditLogStep(input)
+    sendReturnDeniedNotificationStep({ returnRequestId: input.returnRequestId })
     return new WorkflowResponse(returnRequest)
   }
 )

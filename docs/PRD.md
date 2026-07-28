@@ -435,9 +435,9 @@ Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-paym
 
 ---
 
-### 9.20 Notifications
+### 9.20 Notifications *(implemented)*
 
-**Domain module:** `notifications`
+**Domain module:** native Medusa `notification` module + custom `notification_inbox` (see `docs/DECISIONS.md`)
 
 - **User story:** As a customer or seller, I want timely emails about my orders, shipments, returns, and payouts so I stay informed without checking the portal constantly.
 - **Acceptance criteria:** Transactional emails for: order confirmation, shipment/tracking update, return status change, refund processed, seller payout sent, seller application approved/rejected. Templated, branded consistently with the design system.
@@ -489,7 +489,7 @@ Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-paym
 
 ---
 
-### 9.23 Private Fulfillment & Delivery *(decided, not yet built)*
+### 9.23 Private Fulfillment & Delivery *(implemented)*
 
 **Domain modules:** `fulfillment-privacy` (implemented), `courier` role (implemented)
 

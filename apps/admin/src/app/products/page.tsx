@@ -49,6 +49,9 @@ export default async function ProductsPage({
         <Link href="/finance" className="text-neutral-500 hover:underline">
           Finance
         </Link>
+        <Link href="/team" className="text-neutral-500 hover:underline">
+          Team
+        </Link>
         <Link href="/config" className="text-neutral-500 hover:underline">
           Configuration
         </Link>

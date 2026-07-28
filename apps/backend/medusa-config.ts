@@ -47,5 +47,20 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/seller-finance",
     },
+    {
+      resolve: "./src/modules/notification-inbox",
+    },
+    {
+      resolve: "@medusajs/medusa/notification",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/notification-local",
+            id: "local",
+            options: { channels: ["email"] },
+          },
+        ],
+      },
+    },
   ],
 })

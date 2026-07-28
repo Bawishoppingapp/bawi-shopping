@@ -44,6 +44,9 @@ export default async function RootLayout({
               <Link href="/search" className="hover:text-neutral-900">
                 {translate(locale, "nav.search")}
               </Link>
+              <Link href="/account" className="hover:text-neutral-900">
+                {translate(locale, "nav.account")}
+              </Link>
             </nav>
             <div className="flex items-center gap-4">
               <Suspense fallback={<CartIconSkeleton />}>
