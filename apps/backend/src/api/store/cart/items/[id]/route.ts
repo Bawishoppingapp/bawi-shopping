@@ -1,5 +1,5 @@
 import type { MedusaStoreRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { Modules } from "@medusajs/framework/utils"
 import { updateCartItemSchema } from "../../../../../cart/schemas"
 import { CART_ID_HEADER, findActiveCart } from "../../../../../cart/cart-session"
 import { refreshAndShapeCart, type RawCart } from "../../../../../cart/cart-response"
@@ -44,25 +44,26 @@ async function resolveOwnedCart(req: MedusaStoreRequest) {
 export async function PATCH(req: MedusaStoreRequest, res: MedusaResponse): Promise<void> {
   const parsed = updateCartItemSchema.safeParse(req.body)
   if (!parsed.success) {
-    throw new MedusaError(MedusaError.Types.INVALID_DATA, parsed.error.issues[0]?.message ?? "Invalid input")
+    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid input" })
+    return
   }
 
   const { cart, maxQuantityPerLineItem } = await resolveOwnedCart(req)
   const lineItemId = req.params.id
   const item = cart?.items.find((i) => i.id === lineItemId)
   if (!cart || !item) {
-    throw new MedusaError(MedusaError.Types.NOT_FOUND, "Cart item not found")
+    res.status(404).json({ message: "Cart item not found" })
+    return
   }
 
   if (!item.variant_id) {
-    throw new MedusaError(MedusaError.Types.NOT_FOUND, "This item is no longer available")
+    res.status(404).json({ message: "This item is no longer available" })
+    return
   }
   const resolved = await resolveCartVariant(req.scope, item.variant_id)
   if (!resolved) {
-    throw new MedusaError(
-      MedusaError.Types.NOT_FOUND,
-      "This item is no longer available - remove it to continue"
-    )
+    res.status(404).json({ message: "This item is no longer available - remove it to continue" })
+    return
   }
 
   const validation = validateRequestedQuantity(parsed.data.quantity, {
@@ -70,7 +71,8 @@ export async function PATCH(req: MedusaStoreRequest, res: MedusaResponse): Promi
     maxQuantityPerLineItem,
   })
   if (!validation.ok) {
-    throw new MedusaError(MedusaError.Types.INVALID_DATA, QUANTITY_ERROR_MESSAGES[validation.reason])
+    res.status(400).json({ message: QUANTITY_ERROR_MESSAGES[validation.reason] })
+    return
   }
 
   await updateCartItemQuantityWorkflow(req.scope).run({
@@ -91,7 +93,8 @@ export async function DELETE(req: MedusaStoreRequest, res: MedusaResponse): Prom
   const lineItemId = req.params.id
   const item = cart?.items.find((i) => i.id === lineItemId)
   if (!cart || !item) {
-    throw new MedusaError(MedusaError.Types.NOT_FOUND, "Cart item not found")
+    res.status(404).json({ message: "Cart item not found" })
+    return
   }
 
   await removeCartItemWorkflow(req.scope).run({ input: { lineItemId: item.id } })

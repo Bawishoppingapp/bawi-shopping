@@ -1,6 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
-import { resolveCartVariant } from "./cart-catalog"
+import { resolveCartVariants } from "./cart-catalog"
 import { calculateShippingEstimate } from "./shipping-estimate"
 import { BUSINESS_CONFIG_MODULE } from "../modules/business-config"
 import type BusinessConfigModuleService from "../modules/business-config/service"
@@ -126,8 +126,19 @@ export async function refreshAndShapeCart(
     : []
   const sellerById = new Map(sellers.map((seller) => [seller.id, seller]))
 
+  // One batched resolution for every line item's variant instead of N
+  // sequential round-trips - see resolveCartVariants()'s docs. This is the
+  // hot path (every cart read and mutation runs it), so it's the one place
+  // in this module where per-item sequential resolution would actually
+  // matter at scale.
+  const variantIds = cart.items
+    .map((item) => item.variant_id)
+    .filter((id): id is string => !!id)
+  const resolvedByVariantId = await resolveCartVariants(container, variantIds)
+
   const warnings: CartWarning[] = []
   const items: PublicCartItem[] = []
+  const priceUpdates: Array<{ id: string; unit_price: number }> = []
   let subtotal = 0
 
   for (const item of cart.items) {
@@ -135,9 +146,7 @@ export async function refreshAndShapeCart(
     const fallbackColor = typeof metadata.color === "string" ? metadata.color : null
     const fallbackSize = typeof metadata.size === "string" ? metadata.size : null
 
-    const resolved = item.variant_id
-      ? await resolveCartVariant(container, item.variant_id)
-      : null
+    const resolved = item.variant_id ? resolvedByVariantId.get(item.variant_id) ?? null : null
 
     if (!resolved) {
       warnings.push({
@@ -165,7 +174,7 @@ export async function refreshAndShapeCart(
     }
 
     if (resolved.unitPriceCents !== null && resolved.unitPriceCents !== item.unit_price) {
-      await cartModuleService.updateLineItems(item.id, { unit_price: resolved.unitPriceCents })
+      priceUpdates.push({ id: item.id, unit_price: resolved.unitPriceCents })
       warnings.push({
         line_item_id: item.id,
         code: "price_changed",
@@ -205,6 +214,10 @@ export async function refreshAndShapeCart(
     if (isAvailable && item.quantity <= resolved.availableQuantity) {
       subtotal += currentUnitPrice * item.quantity
     }
+  }
+
+  if (priceUpdates.length) {
+    await cartModuleService.updateLineItems(priceUpdates)
   }
 
   const checkoutBlocked = warnings.some(

@@ -583,6 +583,71 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
       expect(merged.data.cart.items[0].quantity).toBe(4)
     })
 
+    test("after merging into an existing customer cart, a fresh GET still resolves to the same cart (not the now-empty former guest cart)", async () => {
+      // Regression test: findActiveCart() picks a customer's cart by "most
+      // recently updated." The drained guest cart must never end up
+      // looking more recently updated than the real cart with the
+      // customer's items, or a subsequent GET would resolve to the wrong
+      // (empty) cart.
+      const seller = await provisionSeller("merge-refetch-seller")
+      const admin = await createAdmin()
+      const { variantId } = await createApprovedProductWithVariant(seller.token, admin, {
+        variants: [{ color: "Maroon", size: "M", inventory_quantity: 5 }],
+      })
+      const customer = await createCustomer()
+
+      await post(
+        "/store/cart/items",
+        { variant_id: variantId, quantity: 1 },
+        { token: customer.token }
+      )
+
+      const otherProduct = await createApprovedProductWithVariant(seller.token, admin, {
+        title: `Merge Refetch Other ${Date.now()}`,
+        variants: [{ color: "Gold", size: "S", inventory_quantity: 5 }],
+      })
+      const guestAdd = await post("/store/cart/items", {
+        variant_id: otherProduct.variantId,
+        quantity: 1,
+      })
+      const guestCartId = guestAdd.data.cart.id as string
+
+      const merged = await post(
+        "/store/cart/merge",
+        { guest_cart_id: guestCartId },
+        { token: customer.token }
+      )
+      expect(merged.data.cart.items).toHaveLength(2)
+
+      const fetched = await get("/store/cart", { token: customer.token })
+      expect(fetched.data.cart.id).toBe(merged.data.cart.id)
+      expect(fetched.data.cart.items).toHaveLength(2)
+    })
+
+    test("two concurrent merge requests for the same guest cart never duplicate line items", async () => {
+      const seller = await provisionSeller("merge-concurrent-seller")
+      const admin = await createAdmin()
+      const { variantId } = await createApprovedProductWithVariant(seller.token, admin, {
+        variants: [{ color: "Silver", size: "L", inventory_quantity: 5 }],
+      })
+      const customer = await createCustomer()
+
+      const guestAdd = await post("/store/cart/items", { variant_id: variantId, quantity: 1 })
+      const guestCartId = guestAdd.data.cart.id as string
+
+      const [first, second] = await Promise.all([
+        post("/store/cart/merge", { guest_cart_id: guestCartId }, { token: customer.token }),
+        post("/store/cart/merge", { guest_cart_id: guestCartId }, { token: customer.token }),
+      ])
+
+      expect(first.status).toBe(200)
+      expect(second.status).toBe(200)
+
+      const fetched = await get("/store/cart", { token: customer.token })
+      expect(fetched.data.cart.items).toHaveLength(1)
+      expect(fetched.data.cart.items[0].quantity).toBe(1)
+    })
+
     test("repeated merge requests for the same guest cart are idempotent", async () => {
       const seller = await provisionSeller("merge-idempotent-seller")
       const admin = await createAdmin()

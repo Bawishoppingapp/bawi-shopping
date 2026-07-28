@@ -74,7 +74,12 @@ export function CartItemRow({
                 defaultValue={item.quantity}
                 className="w-16"
               />
-              <Button type="submit" variant="secondary" loading={pending}>
+              <Button
+                type="submit"
+                variant="secondary"
+                loading={pending}
+                aria-label={`${t("cart.update")} - ${item.title}`}
+              >
                 {t("cart.update")}
               </Button>
             </form>
@@ -85,7 +90,11 @@ export function CartItemRow({
           )}
 
           <form action={removeItem.bind(null, item.id)}>
-            <Button type="submit" variant="destructive">
+            <Button
+              type="submit"
+              variant="destructive"
+              aria-label={`${t("cart.remove")} - ${item.title}`}
+            >
               {t("cart.remove")}
             </Button>
           </form>

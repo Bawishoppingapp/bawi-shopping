@@ -1,5 +1,5 @@
 import type { MedusaStoreRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { Modules } from "@medusajs/framework/utils"
 import { addCartItemSchema } from "../../../../cart/schemas"
 import { CART_ID_HEADER, resolveOrCreateCart } from "../../../../cart/cart-session"
 import { refreshAndShapeCart, type RawCart } from "../../../../cart/cart-response"
@@ -25,16 +25,15 @@ const QUANTITY_ERROR_MESSAGES: Record<string, string> = {
 export async function POST(req: MedusaStoreRequest, res: MedusaResponse): Promise<void> {
   const parsed = addCartItemSchema.safeParse(req.body)
   if (!parsed.success) {
-    throw new MedusaError(MedusaError.Types.INVALID_DATA, parsed.error.issues[0]?.message ?? "Invalid input")
+    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid input" })
+    return
   }
   const { variant_id, quantity } = parsed.data
 
   const resolved = await resolveCartVariant(req.scope, variant_id)
   if (!resolved) {
-    throw new MedusaError(
-      MedusaError.Types.NOT_FOUND,
-      "This product is not currently available for purchase."
-    )
+    res.status(404).json({ message: "This product is not currently available for purchase." })
+    return
   }
 
   const businessConfigModuleService: BusinessConfigModuleService = req.scope.resolve(
@@ -59,7 +58,8 @@ export async function POST(req: MedusaStoreRequest, res: MedusaResponse): Promis
     maxQuantityPerLineItem,
   })
   if (!validation.ok) {
-    throw new MedusaError(MedusaError.Types.INVALID_DATA, QUANTITY_ERROR_MESSAGES[validation.reason])
+    res.status(400).json({ message: QUANTITY_ERROR_MESSAGES[validation.reason] })
+    return
   }
 
   await addCartItemWorkflow(req.scope).run({

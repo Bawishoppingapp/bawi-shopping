@@ -1,5 +1,5 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { Modules } from "@medusajs/framework/utils"
 import { mergeCartSchema } from "../../../../cart/schemas"
 import { mergeGuestCartIntoCustomerCart } from "../../../../cart/merge-guest-cart"
 import { refreshAndShapeCart, emptyPublicCart, type RawCart } from "../../../../cart/cart-response"
@@ -19,7 +19,8 @@ export async function POST(
 ): Promise<void> {
   const parsed = mergeCartSchema.safeParse(req.body)
   if (!parsed.success) {
-    throw new MedusaError(MedusaError.Types.INVALID_DATA, parsed.error.issues[0]?.message ?? "Invalid input")
+    res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid input" })
+    return
   }
 
   const customerId = req.auth_context.actor_id

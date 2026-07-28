@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { LocaleProvider } from "@bawi/i18n"
 import { AddToCartForm } from "../components/add-to-cart-form"
@@ -51,7 +51,12 @@ describe("AddToCartForm", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Add to cart" }))
 
-    expect(screen.getByText("Added to cart")).toBeInTheDocument()
+    // useActionState resolves asynchronously - assert via waitFor (same
+    // reasoning as register-form.test.tsx/login-form.test.tsx) rather than
+    // immediately after the click, which was flaky under load.
+    await waitFor(() => {
+      expect(screen.getByText("Added to cart")).toBeInTheDocument()
+    })
   })
 
   test("shows a form-level error returned by the action", async () => {
@@ -63,6 +68,8 @@ describe("AddToCartForm", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Add to cart" }))
 
-    expect(screen.getByText("Only a limited quantity is available.")).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText("Only a limited quantity is available.")).toBeInTheDocument()
+    })
   })
 })

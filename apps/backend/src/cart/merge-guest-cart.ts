@@ -1,8 +1,10 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
-import { resolveCartVariant } from "./cart-catalog"
+import { resolveCartVariants } from "./cart-catalog"
 import { BUSINESS_CONFIG_MODULE } from "../modules/business-config"
 import type BusinessConfigModuleService from "../modules/business-config/service"
+import { CART_MERGE_MODULE } from "../modules/cart-merge"
+import type CartMergeModuleService from "../modules/cart-merge/service"
 
 interface RawLineItem {
   id: string
@@ -19,13 +21,21 @@ interface RawCartRow {
 
 /**
  * Merges a guest cart into the authenticated customer's cart on login.
- * Idempotent: a guest cart already claimed by this same customer (a
- * repeated call, e.g. a retried request) is a no-op; a guest cart claimed
- * by a *different* customer (or missing entirely) is ignored rather than
- * merged. Quantity conflicts are resolved by summing and capping to live
- * inventory and the configurable per-line-item maximum - never rejected,
- * since a login flow shouldn't fail over a stock conflict (see
- * docs/PRD.md §9.10).
+ * Idempotent under true concurrency, not just sequential replay: before
+ * touching any line item, this claims the guest cart id via
+ * CartMergeModuleService.claim(), which is backed by a unique-index
+ * INSERT (same pattern as WebhookEventModuleService.markProcessed - see
+ * docs/DECISIONS.md). Medusa's cartModuleService.updateCarts(selector,
+ * data) is a SELECT-then-UPDATE-by-id under the hood, not an atomic
+ * conditional UPDATE, so it cannot be used as the concurrency guard here -
+ * two simultaneous callers would both pass the "not yet claimed" read and
+ * both proceed to merge, duplicating line items. The claim table's unique
+ * constraint closes that race at the database level: only one concurrent
+ * caller's INSERT succeeds, the other gets `false` back and returns
+ * immediately without touching any cart. Quantity conflicts are resolved
+ * by summing and capping to live inventory and the configurable
+ * per-line-item maximum - never rejected, since a login flow shouldn't
+ * fail over a stock conflict (see docs/PRD.md §9.10).
  */
 export async function mergeGuestCartIntoCustomerCart(
   container: MedusaContainer,
@@ -54,11 +64,19 @@ export async function mergeGuestCartIntoCustomerCart(
   }
 
   if (guestCart.customer_id && guestCart.customer_id !== customerId) {
+    // Not actually a guest cart - either never one, or already claimed by
+    // a different customer entirely. Never merge it.
     return customerCart?.id ?? null
   }
 
-  if (guestCart.customer_id === customerId) {
-    return customerCart?.id ?? guestCart.id
+  const cartMergeModuleService: CartMergeModuleService = container.resolve(CART_MERGE_MODULE)
+  const claimed = await cartMergeModuleService.claim(guestCartId, customerId)
+  if (!claimed) {
+    // Either this exact merge already ran to completion (sequential
+    // replay - idempotent no-op) or a concurrent call is doing it right
+    // now (true-concurrency guard - this call yields rather than racing
+    // it). Either way there is nothing left for this call to do.
+    return customerCart?.id ?? (guestCart.customer_id === customerId ? guestCart.id : null)
   }
 
   if (!customerCart) {
@@ -72,11 +90,29 @@ export async function mergeGuestCartIntoCustomerCart(
   const cartConfig = await businessConfigModuleService.getCategoryValues("cart")
   const maxQuantityPerLineItem = Number(cartConfig.max_quantity_per_line_item ?? 10)
 
+  // One batched resolution for every guest line item's variant instead of
+  // 2N sequential round-trips - see resolveCartVariants()'s docs.
+  const guestVariantIds = guestCart.items
+    .map((item) => item.variant_id)
+    .filter((id): id is string => !!id)
+  const resolvedByVariantId = await resolveCartVariants(container, guestVariantIds)
+
+  const quantityUpdates: Array<{ id: string; quantity: number; unit_price: number }> = []
+  const newLineItems: Array<{
+    title: string
+    thumbnail?: string
+    product_id: string
+    variant_id: string
+    quantity: number
+    unit_price: number
+    metadata: Record<string, unknown>
+  }> = []
+
   for (const guestItem of guestCart.items) {
     if (!guestItem.variant_id) {
       continue
     }
-    const resolved = await resolveCartVariant(container, guestItem.variant_id)
+    const resolved = resolvedByVariantId.get(guestItem.variant_id)
     if (!resolved) {
       continue
     }
@@ -93,36 +129,49 @@ export async function mergeGuestCartIntoCustomerCart(
     }
 
     if (existingItem) {
-      await cartModuleService.updateLineItems(existingItem.id, {
+      quantityUpdates.push({
+        id: existingItem.id,
         quantity: cappedQuantity,
         unit_price: resolved.unitPriceCents ?? existingItem.unit_price,
       })
     } else {
-      await cartModuleService.addLineItems(customerCart.id, [
-        {
-          title: resolved.title,
-          thumbnail: resolved.thumbnail ?? undefined,
-          product_id: resolved.productId,
-          variant_id: resolved.variantId,
-          quantity: cappedQuantity,
-          unit_price: resolved.unitPriceCents ?? 0,
-          metadata: {
-            vendor_id: resolved.vendorId,
-            color: resolved.color,
-            size: resolved.size,
-          },
+      newLineItems.push({
+        title: resolved.title,
+        thumbnail: resolved.thumbnail ?? undefined,
+        product_id: resolved.productId,
+        variant_id: resolved.variantId,
+        quantity: cappedQuantity,
+        unit_price: resolved.unitPriceCents ?? 0,
+        metadata: {
+          vendor_id: resolved.vendorId,
+          color: resolved.color,
+          size: resolved.size,
         },
-      ])
+      })
     }
+  }
+
+  if (quantityUpdates.length) {
+    await cartModuleService.updateLineItems(quantityUpdates)
+  }
+  if (newLineItems.length) {
+    await cartModuleService.addLineItems(customerCart.id, newLineItems)
   }
 
   const guestItemIds = guestCart.items.map((item) => item.id)
   if (guestItemIds.length) {
     await cartModuleService.deleteLineItems(guestItemIds)
   }
-  // Claim the now-empty guest cart under the customer so a repeated merge
-  // call for the same guest_cart_id short-circuits above as already-merged.
-  await cartModuleService.updateCarts(guestCart.id, { customer_id: customerId })
-
+  // Deliberately NOT attributing the now-empty guest cart to the customer
+  // here (unlike the promote-in-place branch above): findActiveCart()
+  // picks a customer's cart by "most recently updated," and this cart's
+  // own updated_at would otherwise become more recent than the real
+  // customerCart's (whose items were just written a moment earlier in the
+  // loop above) - the very next GET /store/cart would then resolve to
+  // this now-empty, defunct cart instead of the one that actually has the
+  // customer's items. The cart_merge_claim row from earlier already makes
+  // this guest_cart_id permanently non-reusable, so leaving customer_id
+  // untouched here is safe: at worst a stale guest-cart-id cookie resolves
+  // to a harmless empty cart, never to someone else's data.
   return customerCart.id
 }

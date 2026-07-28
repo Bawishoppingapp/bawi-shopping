@@ -62,6 +62,7 @@ erDiagram
 | `seller` (implemented) | `seller`, `seller_user` | `seller.id` is the vendor key itself. `role` is a plain enum column on `seller_user`, not a separate table (simpler than originally sketched — no need for a join table at this scale). |
 | `business-config` (implemented) | `business_config_entry` | No (platform-owned) |
 | `webhook-event` (implemented) | `processed_webhook_event` | No (platform-owned; idempotency ledger for external-provider webhooks, e.g. Stripe) |
+| `cart-merge` (implemented) | `cart_merge_claim` | No (platform-owned; idempotency/concurrency ledger for guest-to-customer cart merges - same shape and purpose as `webhook-event`, see [`DECISIONS.md`](DECISIONS.md)) |
 | `seller-application` (implemented) | `seller_application` | No (platform-owned; references `seller.id` via a plain `seller_id` column once approved — not a formal Medusa module-link, see [`DECISIONS.md`](DECISIONS.md)) |
 | `product` (native Medusa) | `product`, `product_variant`, `product_option`, `product_image` | No native column - ownership is layered on via `product-listing` below, not a native Medusa field |
 | `product-listing` (implemented) | `product_listing` | **Yes** — this is the actual vendor-ownership anchor for products; `product_listing.product_id` is a plain reference to the native `product.id` (same loose-coupling pattern as `seller_application.seller_id`, see [`DECISIONS.md`](DECISIONS.md)) |
@@ -96,6 +97,9 @@ erDiagram
 
 **`processed_webhook_event`** *(migrated — `apps/backend/src/modules/webhook-event/migrations`)*
 `id, provider (text, e.g. 'stripe'), event_id (text, unique per provider), event_type (text), processed_at (timestamptz), created_at`. The idempotency mechanism required by `docs/PAYMENTS.md` §7 and CLAUDE.md's payment-webhook rule: a handler checks this table for `(provider, event_id)` before applying any side effect, and inserts a row atomically with that side effect so a Stripe redelivery of the same event can never double-apply it.
+
+**`cart_merge_claim`** *(migrated — `apps/backend/src/modules/cart-merge/migrations`)*
+`id, guest_cart_id (text, unique), customer_id (text), claimed_at (timestamptz), created_at`. Same mechanism as `processed_webhook_event`, applied to a different problem: a unique-index `INSERT` that atomically claims a guest cart id before any cart-merge side effect runs, so two truly concurrent merge requests for the same guest cart (not just sequential replays) can never both proceed and duplicate line items — see `docs/DECISIONS.md`.
 
 **`seller_user`** *(migrated — same module)*
 `id, email (text, NOT NULL - the login identity, set at creation time independent of activation), auth_identity_id (text, nullable - links to Medusa's auth_identity via app_metadata.seller_user_id once activated, see ARCHITECTURE.md §4.1), role (owner|catalog_manager|order_fulfiller|analyst, default 'owner'), activation_token (text, nullable, unique), activation_token_expires_at (timestamptz, nullable), seller_id (FK → seller.id, NOT NULL, indexed), created_at, updated_at, deleted_at`

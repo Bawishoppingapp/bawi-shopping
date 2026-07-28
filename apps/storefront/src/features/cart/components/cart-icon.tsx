@@ -16,7 +16,11 @@ export async function CartIcon() {
     <Link
       href="/cart"
       aria-label={`${translate(locale, "cart.viewCart")} (${cart.item_count})`}
-      className="relative flex items-center text-neutral-700 hover:text-neutral-900"
+      // Extra padding widens the tappable area to the WCAG-recommended
+      // ~44x44px minimum touch target without visually enlarging the
+      // icon itself; the negative margin cancels it out for surrounding
+      // header spacing.
+      className="relative -m-3 flex items-center p-3 text-neutral-700 hover:text-neutral-900"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

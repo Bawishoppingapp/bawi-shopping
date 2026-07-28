@@ -60,12 +60,15 @@ describe("CartItemRow", () => {
   test("shows a quantity input and update control for an available item", () => {
     renderRow()
     expect(screen.getByLabelText("Quantity")).toHaveValue(2)
-    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument()
+    // The accessible name includes the item title (not just "Update") so
+    // a screen reader user tabbing through several rows can tell them
+    // apart - see cart-item-row.tsx.
+    expect(screen.getByRole("button", { name: /^Update - Denim Jacket$/ })).toBeInTheDocument()
   })
 
-  test("shows a remove control", () => {
+  test("shows a remove control with an item-specific accessible name", () => {
     renderRow()
-    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Remove - Denim Jacket$/ })).toBeInTheDocument()
   })
 
   test("hides the quantity control for an unavailable item and shows the warning", () => {
