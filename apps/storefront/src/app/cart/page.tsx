@@ -71,6 +71,12 @@ export default async function CartPage() {
             {t("cart.checkoutBlocked")}
           </p>
         )}
+
+        {!cart.checkout_blocked && (
+          <Link href="/checkout">
+            <Button className="w-full">{t("checkout.title")}</Button>
+          </Link>
+        )}
       </aside>
     </main>
   )

@@ -49,6 +49,17 @@ export default defineMiddlewares({
       middlewares: [authenticate("customer", ["bearer", "session"])],
     },
     {
+      // No guest checkout in v1 - order.customer_id is NOT NULL by design
+      // (see docs/DATABASE.md), so a customer must be authenticated before
+      // starting checkout or reading their own order history.
+      matcher: "/store/checkout*",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      matcher: "/store/orders*",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
       method: ["POST"],
       matcher: "/webhooks/stripe",
       // Stripe signature verification needs the exact raw request body -

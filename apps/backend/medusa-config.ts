@@ -38,5 +38,8 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/cart-merge",
     },
+    {
+      resolve: "./src/modules/marketplace-order",
+    },
   ],
 })

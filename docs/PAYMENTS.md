@@ -21,22 +21,22 @@ Sellers onboard as **Stripe Connect Express** accounts:
 - The platform retains control over branding/UX for everything except the onboarding and payout-dashboard steps Stripe hosts, which fits "professional, clean, platform-branded" while keeping compliance burden on Stripe.
 - Alternative considered: **Standard** accounts (seller manages their own full Stripe dashboard/relationship — too much control ceded, weaker platform branding) and **Custom** accounts (fully white-labeled, but shifts significant compliance/liability onto the platform, unnecessary for v1). Express is the right default for an Amazon-Marketplace-style model where the platform, not the seller, is the customer-facing brand.
 
-## 3. Payment pattern: Separate Charges and Transfers
+## 3. Payment pattern: Separate Charges and Transfers *(steps 1-3 implemented, checkout slice)*
 
 For a cart spanning multiple sellers, the customer must pay once. Stripe Connect's **Separate Charges and Transfers** pattern fits this exactly:
 
-1. At checkout, the backend creates one `PaymentIntent` **on the platform's own Stripe account** for the full cart total (all sellers combined).
-2. The customer confirms payment once via Stripe Payment Element.
-3. On successful capture, the checkout workflow splits the order into per-seller `VendorOrder`s (see [`MARKETPLACE-FLOWS.md`](MARKETPLACE-FLOWS.md)) and records a `CommissionLedgerEntry` per vendor order.
-4. Later, on the payout schedule, the platform creates a Stripe **Transfer** to each seller's connected Express account for their net amount (their subtotal minus their commission). Transfers are decoupled from the initial charge — they don't need to happen synchronously with checkout.
+1. **Implemented.** At checkout, the backend creates one `PaymentIntent` **on the platform's own Stripe account** for the full cart total (all sellers combined) — `POST /store/checkout`, `src/workflows/start-checkout.ts`.
+2. **Implemented.** The customer confirms payment once via Stripe Payment Element (storefront, `@stripe/react-stripe-js`).
+3. **Implemented.** On successful capture (`payment_intent.succeeded` webhook), the checkout workflow splits the order into per-seller `VendorOrder`s (see [`MARKETPLACE-FLOWS.md`](MARKETPLACE-FLOWS.md)) and snapshots a commission rate/amount directly on each `VendorOrder` — not yet a separate `CommissionLedgerEntry` ledger table; that's the payouts slice's job, reading from these snapshots (see [`DECISIONS.md`](DECISIONS.md)).
+4. **Not yet built.** Later, on the payout schedule, the platform creates a Stripe **Transfer** to each seller's connected Express account for their net amount (their subtotal minus their commission). Transfers are decoupled from the initial charge — they don't need to happen synchronously with checkout.
 
 This is preferred over the alternative **Destination Charges** pattern (one `PaymentIntent` per seller, each with a `transfer_data.destination`) because destination charges require either multiple customer-facing PaymentIntents for a multi-seller cart (bad UX — the explicit thing this platform is designed to avoid) or complex on-behalf-of logic to fake a single charge across destinations. Separate Charges and Transfers naturally supports "one payment, N sellers" and gives the platform a natural point to hold funds through the return window before paying out.
 
-## 4. Commission calculation
+## 4. Commission calculation *(implemented, checkout slice)*
 
-- Effective commission rate resolution order: **seller-specific override → category default → platform default**. Exactly one of these always resolves; there is no code path that leaves the rate undefined. The platform default reads from `business-config` (`category: commission`), development default 15.00% (1500 basis points), flagged `is_placeholder: true` until replaced with a real approved rate (see [`DECISIONS.md`](DECISIONS.md)).
+- Effective commission rate resolution order: **seller-specific override → category default → platform default**. Exactly one of these always resolves; there is no code path that leaves the rate undefined. The platform default reads from `business-config` (`category: commission`), development default 15.00% (1500 basis points), flagged `is_placeholder: true` until replaced with a real approved rate (see [`DECISIONS.md`](DECISIONS.md)). Implemented today: `src/orders/commission.ts`'s `resolveCommission()` supports seller-specific override → platform default (the parameter for it exists); category-level defaults and the actual `seller.commission_rate_override` column are not built yet, since no seller has one to resolve — added when the payouts slice needs them.
 - Commission applies to the item subtotal by default; shipping is excluded from commission by default (configurable per category in a later phase, not v1).
-- Commission is computed and recorded as a `CommissionLedgerEntry` at `VendorOrder` creation time (i.e., right after successful capture), not at payout time — so seller-facing "amount owed" figures are accurate immediately, even before the next payout cycle runs.
+- Commission is computed and snapshotted directly on the `VendorOrder` row (`commission_rate_basis_points`, `commission_amount`) at creation time (i.e., right after successful capture) — not yet a separate `CommissionLedgerEntry` ledger table, which a later payouts/balance-tracking batch will read these snapshots into (see [`DECISIONS.md`](DECISIONS.md)).
 - All amounts are integer cents; rate is stored as a basis-points integer (e.g., 1500 = 15.00%) to avoid floating-point rate multiplication — the multiply-then-round step happens once, server-side, using a documented rounding rule (round-half-up to the nearest cent).
 
 ## 5. Payout cadence
@@ -60,11 +60,11 @@ All Stripe webhook events are handled by a single receiver in `apps/backend`, ve
 
 - **Idempotency:** every incoming event's `event.id` is checked against a `processed_webhook_event` record before any side effect runs; if already processed, the handler returns success immediately without reapplying effects. This covers Stripe's at-least-once redelivery guarantee.
 - **Events consumed (v1):**
-  - `payment_intent.succeeded` → resume checkout workflow to capture confirmation and trigger vendor-order splitting.
-  - `payment_intent.payment_failed` → release inventory reservation, surface failure to customer.
-  - `charge.refunded` → confirm refund completion, finalize commission reversal.
-  - `account.updated` → update seller's `stripe_charges_enabled`/`stripe_payouts_enabled` (source of truth for onboarding/go-live status).
-  - `transfer.failed` / `transfer.reversed` → mark payout `failed`, alert Admin, retry per backoff policy.
+  - `payment_intent.succeeded` **(implemented)** → `capture-checkout-payment` workflow: marks the order paid, splits it into per-vendor orders, finalizes the inventory deduction, clears the cart.
+  - `payment_intent.payment_failed` **(implemented)** → `fail-checkout-payment` workflow: releases the inventory reservation, marks the order `payment_failed`, leaves the cart intact for retry.
+  - `charge.refunded` **(not yet built)** → confirm refund completion, finalize commission reversal.
+  - `account.updated` **(implemented)** → update seller's `stripe_charges_enabled`/`stripe_payouts_enabled` (source of truth for onboarding/go-live status).
+  - `transfer.failed` / `transfer.reversed` **(not yet built)** → mark payout `failed`, alert Admin, retry per backoff policy.
 - **Delivery reliability:** webhook processing failures are retried by Stripe automatically (per its redelivery schedule); the platform also runs a periodic reconciliation job in `apps/workers` that cross-checks recent PaymentIntents/Transfers against local state to catch any webhook that was never delivered.
 - **Security:** webhook signature verification is mandatory before any parsing of the payload; requests failing verification are rejected with no processing and logged as a potential integrity issue.
 

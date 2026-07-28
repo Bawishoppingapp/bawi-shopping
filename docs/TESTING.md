@@ -114,6 +114,22 @@ Per `docs/PRD.md` §9.10 and `docs/DECISIONS.md` - the cart never trusts a clien
 - **Component:** `AddToCartForm` narrows size options to the selected color, disables submission for an out-of-stock variant, and shows the resolved success/error state from the action; `CartItemRow` renders title/brand/color-size/product-code/line-total, never a `vendor_id`/`seller_id` substring anywhere in its rendered HTML, hides the quantity control and shows the right warning text for an unavailable/over-quantity/price-changed line item, and scopes a warning to its own line item id.
 - **E2E:** a guest adds products from two different vendors and sees one unified Bawi cart; a guest updates a quantity and removes an item; registering with items already in the guest cart merges them into the new account without duplicates; a returning customer's authenticated cart is still there after a fresh login (cookies cleared in between, to prove it's resolved by `customer_id` and not a leftover cart-id cookie); an item that becomes unavailable after being added is clearly flagged in the UI; no vendor identity or private SKU appears anywhere in the cart UI or in a captured `/store/cart` network response body.
 
+## 4.5 Checkout and multi-vendor order-splitting test requirements
+
+Per `docs/PAYMENTS.md` and `docs/DECISIONS.md` - checkout never trusts a client-supplied price/amount, every Stripe operation is idempotent, and a `VendorOrder` is created only after payment capture succeeds:
+
+- **Unit:** commission-rate resolution and round-half-up rounding (`resolveCommission` - seller override vs. platform default, zero-subtotal edge case); the mock tax adapter's flat-rate calculation and rounding (`calculateMockTax`); fulfillment-code shape/uniqueness (`generateFulfillmentCode`); the checkout request schema (`startCheckoutSchema` - required address fields, 2-letter country code, required idempotency key).
+- **Integration (real HTTP server, real Postgres, fake Stripe client)** - written in `integration-tests/http/checkout.spec.ts`:
+  - A cart spanning two vendors checks out into one `MarketplaceOrder` with a `PaymentIntent`; a `payment_intent.succeeded` webhook splits it into one `VendorOrder` per seller (subtotals summing back to the order total), decrements each purchased variant's live inventory by the ordered quantity, and clears the customer's cart.
+  - The order-detail response never includes `vendor_id`/seller id - only the resolved public brand (verified by serializing the response and asserting the substring's absence, same discipline as the cart/Stripe-onboarding tests).
+  - A duplicate `payment_intent.succeeded` delivery for the same event id does not create a second set of `VendorOrder`s or double-deduct inventory (webhook idempotency).
+  - Calling `POST /store/checkout` twice with the same client-generated `idempotency_key` returns the same order rather than creating a second one/a second PaymentIntent.
+  - `POST /store/checkout` and `GET /store/orders*` require an authenticated customer (401 without one - no guest checkout in v1).
+  - A customer cannot read another customer's order (404, not another customer's data) - authorization/privacy.
+  - A `payment_intent.payment_failed` webhook releases the inventory reservation (availability returns to its pre-checkout level) and leaves the cart intact for the customer to retry, rather than clearing it.
+  - **Deferred:** this file could not be run to completion in this session due to development-machine memory pressure (confirmed unrelated to the code - see `docs/DECISIONS.md`); it passed lint/typecheck and should be re-run once the machine has more available memory or in CI.
+- **E2E:** not yet added in this batch - a full storefront checkout journey (address entry through Stripe test-card confirmation to the order-confirmation page) is a natural addition once Batch 2 (fulfillment) gives the confirmation page more to show; the integration-test coverage above already exercises the same server-side paths a Playwright spec would drive through the UI.
+
 ## 5. CI gates
 
 - Every pull request runs: lint, type-check, unit tests, and integration tests against a fresh disposable database — all required to pass before merge.

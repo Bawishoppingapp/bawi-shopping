@@ -162,6 +162,15 @@ export const DEFAULT_BUSINESS_CONFIG_ENTRIES: DefaultConfigEntry[] = [
     is_placeholder: true,
   },
   {
+    category: "tax",
+    key: "mock_rate_basis_points",
+    value: 825,
+    value_type: "integer",
+    label: "Mock tax rate (basis points)",
+    description: "8.25% - a plausible flat placeholder for the initial Dallas-Fort Worth service area, applied uniformly regardless of the shipping address until a real tax provider (e.g. rate-by-jurisdiction) replaces this adapter.",
+    is_placeholder: true,
+  },
+  {
     category: "courier",
     key: "provider",
     value: "mock_bawi_courier",

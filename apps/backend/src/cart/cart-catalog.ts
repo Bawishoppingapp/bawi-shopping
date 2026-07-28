@@ -14,6 +14,11 @@ export interface CartVariantInfo {
   size: string | null
   unitPriceCents: number | null
   availableQuantity: number
+  // The variant's underlying inventory_item id - checkout's inventory
+  // reservation step needs this (see src/orders/); null if the variant
+  // has no inventory item at all (shouldn't happen for a purchasable
+  // variant, but the type stays honest about it).
+  inventoryItemId: string | null
 }
 
 const VARIANT_FIELDS = [
@@ -23,6 +28,7 @@ const VARIANT_FIELDS = [
   "product.thumbnail",
   "options.value",
   "options.option.title",
+  "inventory_items.inventory.id",
   "inventory_items.inventory.location_levels.available_quantity",
   "prices.amount",
   "prices.currency_code",
@@ -34,12 +40,13 @@ function toCartVariantInfo(
   productCode: string
 ): CartVariantInfo {
   const inventoryItems = (variant.inventory_items ?? []) as Array<{
-    inventory?: { location_levels?: Array<{ available_quantity?: number }> }
+    inventory?: { id?: string; location_levels?: Array<{ available_quantity?: number }> }
   }>
   const availableQuantity = inventoryItems.reduce((sum, item) => {
     const levels = item.inventory?.location_levels ?? []
     return sum + levels.reduce((s, l) => s + (l.available_quantity ?? 0), 0)
   }, 0)
+  const inventoryItemId = inventoryItems[0]?.inventory?.id ?? null
 
   const prices = (variant.prices ?? []) as Array<{ amount: number; currency_code: string }>
   const usdPrice = prices.find((price) => price.currency_code === "usd")
@@ -64,6 +71,7 @@ function toCartVariantInfo(
     size,
     unitPriceCents: usdPrice ? usdPrice.amount : null,
     availableQuantity,
+    inventoryItemId,
   }
 }
 
