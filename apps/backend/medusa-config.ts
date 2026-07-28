@@ -41,5 +41,8 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/marketplace-order",
     },
+    {
+      resolve: "./src/modules/fulfillment-privacy",
+    },
   ],
 })

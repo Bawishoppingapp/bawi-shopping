@@ -35,6 +35,12 @@ export default async function SellersPage() {
           Categories
         </Link>
         <span className="font-medium text-neutral-900">Sellers</span>
+        <Link href="/fulfillment" className="text-neutral-500 hover:underline">
+          Fulfillment
+        </Link>
+        <Link href="/couriers" className="text-neutral-500 hover:underline">
+          Couriers
+        </Link>
         <Link href="/config" className="text-neutral-500 hover:underline">
           Configuration
         </Link>

@@ -124,5 +124,7 @@
   "order.soldBy": "የተሸጠው በ",
   "order.status": "ሁኔታ",
   "order.total": "ጠቅላላ",
-  "order.continueShopping": "ግዢ ይቀጥሉ"
+  "order.continueShopping": "ግዢ ይቀጥሉ",
+  "order.deliveryCode": "የመላኪያ ኮድ",
+  "order.deliveryCodeHint": "ትዕዛዝዎ ሲደርስ ይህን ኮድ ለላኪው ያጋሩ"
 }

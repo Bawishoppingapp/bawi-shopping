@@ -124,5 +124,7 @@
   "order.soldBy": "卖家",
   "order.status": "状态",
   "order.total": "总计",
-  "order.continueShopping": "继续购物"
+  "order.continueShopping": "继续购物",
+  "order.deliveryCode": "配送码",
+  "order.deliveryCodeHint": "订单送达时，请向配送员出示此码"
 }

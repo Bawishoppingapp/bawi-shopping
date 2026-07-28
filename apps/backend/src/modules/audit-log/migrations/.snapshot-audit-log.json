@@ -39,7 +39,8 @@
             "customer",
             "seller_user",
             "user",
-            "system"
+            "system",
+            "courier"
           ],
           "mappedType": "enum"
         },

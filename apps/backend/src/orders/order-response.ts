@@ -4,6 +4,8 @@ import type OrderModuleService from "../modules/marketplace-order/service"
 import { SELLER_MODULE } from "../modules/seller"
 import type SellerModuleService from "../modules/seller/service"
 import { resolvePublicBrand } from "../modules/seller/public-brand"
+import { FULFILLMENT_PRIVACY_MODULE } from "../modules/fulfillment-privacy"
+import type FulfillmentPrivacyModuleService from "../modules/fulfillment-privacy/service"
 
 export interface PublicOrderItem {
   id: string
@@ -27,6 +29,17 @@ export interface PublicVendorOrder {
   tax: number
   total: number
   items: PublicOrderItem[]
+  timeline: {
+    preparing_at: string | null
+    ready_for_pickup_at: string | null
+    picked_up_at: string | null
+    out_for_delivery_at: string | null
+    delivered_at: string | null
+  }
+  // The customer's own delivery-confirmation code (proof of delivery) -
+  // share this with the courier at the door. Never the pickup_code, which
+  // is seller/courier-facing only (see docs/DECISIONS.md).
+  delivery_confirmation_code: string | null
 }
 
 export interface PublicOrder {
@@ -71,6 +84,17 @@ export async function shapeOrderForCustomer(
     : []
   const sellerById = new Map(sellers.map((seller) => [seller.id, seller]))
 
+  const fulfillmentPrivacyModuleService: FulfillmentPrivacyModuleService = container.resolve(
+    FULFILLMENT_PRIVACY_MODULE
+  )
+  const vendorOrderIds = order.vendor_orders.map((vo) => vo.id)
+  const trackingCodes = vendorOrderIds.length
+    ? await fulfillmentPrivacyModuleService.listTrackingCodes({ vendor_order_id: vendorOrderIds })
+    : []
+  const trackingCodeByVendorOrderId = new Map(
+    trackingCodes.map((code) => [code.vendor_order_id, code.code])
+  )
+
   return {
     id: order.id,
     display_id: order.display_id,
@@ -107,6 +131,14 @@ export async function shapeOrderForCustomer(
           quantity: item.quantity,
           line_total: item.line_total_amount,
         })),
+        timeline: {
+          preparing_at: vendorOrder.preparing_at as unknown as string | null,
+          ready_for_pickup_at: vendorOrder.ready_for_pickup_at as unknown as string | null,
+          picked_up_at: vendorOrder.picked_up_at as unknown as string | null,
+          out_for_delivery_at: vendorOrder.out_for_delivery_at as unknown as string | null,
+          delivered_at: vendorOrder.delivered_at as unknown as string | null,
+        },
+        delivery_confirmation_code: trackingCodeByVendorOrderId.get(vendorOrder.id) ?? null,
       }
     }),
   }

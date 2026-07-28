@@ -10,6 +10,14 @@ const STYLES: Record<string, string> = {
   "Not connected": "bg-neutral-100 text-neutral-500",
   Pending: "bg-amber-50 text-amber-700",
   Live: "bg-green-50 text-green-700",
+  awaiting_preparation: "bg-neutral-100 text-neutral-600",
+  preparing: "bg-amber-50 text-amber-700",
+  ready_for_pickup: "bg-blue-50 text-blue-700",
+  picked_up: "bg-blue-50 text-blue-700",
+  out_for_delivery: "bg-amber-50 text-amber-700",
+  delivered: "bg-green-50 text-green-700",
+  cancelled: "bg-red-50 text-red-700",
+  returned: "bg-neutral-100 text-neutral-500",
 }
 
 const LABELS: Record<string, string> = {
@@ -24,6 +32,14 @@ const LABELS: Record<string, string> = {
   "Not connected": "Not connected",
   Pending: "Pending",
   Live: "Live",
+  awaiting_preparation: "Awaiting preparation",
+  preparing: "Preparing",
+  ready_for_pickup: "Ready for pickup",
+  picked_up: "Picked up",
+  out_for_delivery: "Out for delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  returned: "Returned",
 }
 
 export function StatusBadge({ status }: { status: string }) {

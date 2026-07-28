@@ -124,5 +124,7 @@
   "order.soldBy": "Kan gurgurameef",
   "order.status": "Haala",
   "order.total": "Walii galaa",
-  "order.continueShopping": "Bittaa itti fufi"
+  "order.continueShopping": "Bittaa itti fufi",
+  "order.deliveryCode": "Koodii ergaa",
+  "order.deliveryCodeHint": "Yeroo ajajni kee ga'u koodii kana geggeessaa waliin qooddadhu"
 }

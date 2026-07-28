@@ -86,6 +86,16 @@ export default async function OrderDetailPage({
               </li>
             ))}
           </ul>
+
+          {vendorOrder.delivery_confirmation_code && (
+            <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+              <p className="text-xs font-medium text-blue-900">{t("order.deliveryCode")}</p>
+              <p className="text-xs text-blue-700">{t("order.deliveryCodeHint")}</p>
+              <p className="mt-1 font-mono text-lg font-semibold text-blue-900">
+                {vendorOrder.delivery_confirmation_code}
+              </p>
+            </div>
+          )}
         </section>
       ))}
 

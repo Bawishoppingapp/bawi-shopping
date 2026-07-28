@@ -130,6 +130,22 @@ Per `docs/PAYMENTS.md` and `docs/DECISIONS.md` - checkout never trusts a client-
   - **Deferred:** this file could not be run to completion in this session due to development-machine memory pressure (confirmed unrelated to the code - see `docs/DECISIONS.md`); it passed lint/typecheck and should be re-run once the machine has more available memory or in CI.
 - **E2E:** not yet added in this batch - a full storefront checkout journey (address entry through Stripe test-card confirmation to the order-confirmation page) is a natural addition once Batch 2 (fulfillment) gives the confirmation page more to show; the integration-test coverage above already exercises the same server-side paths a Playwright spec would drive through the UI.
 
+## 4.6 Private fulfillment and delivery test requirements
+
+Per `docs/SECURITY.md` §11/§14 and `docs/DECISIONS.md` - every code is unguessable and single-use via an atomic claim (not a status flag), and every response shaper excludes the other parties' data by construction:
+
+- **Unit:** pickup/tracking-code shape and uniqueness (`generatePrivacyCode` - matches its expected alphabet/format, produces distinct codes across many calls).
+- **Integration (real HTTP server, real Postgres)** - written in `integration-tests/http/fulfillment.spec.ts`:
+  - A fulfillment order moves through the full lifecycle (preparing → ready for pickup → assigned → picked up → out for delivery → delivered), with the pickup code redeemed by the assigned courier and the delivery-confirmation code redeemed as proof of delivery.
+  - A redeemed pickup code cannot be used a second time (single-use, replay protection) - the second attempt is rejected (422), not silently accepted.
+  - The seller's fulfillment-order view never includes the customer's identity, shipping address, or phone number (serialize-and-assert-absence).
+  - A courier cannot access an assignment belonging to a different courier (404, not another courier's data).
+  - A courier's assignment view never includes the seller's real identity or the substring `customer`.
+  - The customer's own order response never includes the seller-facing pickup code's value.
+  - Reading an assignment's detail writes an audit-log entry (`vendor_order.assignment_viewed`, `actor_type: "courier"`) - "audit logs for sensitive access," not only for mutations.
+  - **Deferred:** this file could not be run to completion in this session due to the same development-machine memory pressure documented for `checkout.spec.ts` (see `docs/DECISIONS.md`); it passed lint/typecheck and should be re-run once the machine has more available memory or in CI.
+- **E2E:** not yet added in this batch - same reasoning as checkout's E2E deferral; the integration coverage above already exercises the full lifecycle across all three actor types (seller, admin, courier) plus the customer-facing read path.
+
 ## 5. CI gates
 
 - Every pull request runs: lint, type-check, unit tests, and integration tests against a fresh disposable database — all required to pass before merge.

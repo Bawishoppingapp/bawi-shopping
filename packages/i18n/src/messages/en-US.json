@@ -124,5 +124,7 @@
   "order.soldBy": "Sold by",
   "order.status": "Status",
   "order.total": "Total",
-  "order.continueShopping": "Continue shopping"
+  "order.continueShopping": "Continue shopping",
+  "order.deliveryCode": "Delivery code",
+  "order.deliveryCodeHint": "Share this code with the courier when your order arrives"
 }

@@ -35,6 +35,23 @@ export default defineMiddlewares({
       middlewares: [authenticate("user", ["bearer", "session"])],
     },
     {
+      matcher: "/admin/couriers*",
+      middlewares: [authenticate("user", ["bearer", "session"])],
+    },
+    {
+      matcher: "/admin/fulfillment-orders*",
+      middlewares: [authenticate("user", ["bearer", "session"])],
+    },
+    {
+      // Own actor type, scoped strictly to its one assigned delivery at a
+      // time (see docs/USER-ROLES.md §2.7) - not the seller_user or user
+      // actor type. /courier-activation/complete is deliberately NOT
+      // matched here (same public-but-token-gated pattern as
+      // /seller-activation/complete).
+      matcher: "/courier/*",
+      middlewares: [authenticate("courier", ["bearer", "session"])],
+    },
+    {
       // Optional auth: a valid customer bearer token identifies an
       // authenticated customer's cart, but guests (no token) are not
       // rejected - they're identified by the opaque x-cart-id header

@@ -124,5 +124,7 @@
   "order.soldBy": "ብ ዝተሸጠ",
   "order.status": "ኩነታት",
   "order.total": "ጠቕላላ",
-  "order.continueShopping": "ዕድጊት ቀጽል"
+  "order.continueShopping": "ዕድጊት ቀጽል",
+  "order.deliveryCode": "ናይ መልእኽቲ ኮድ",
+  "order.deliveryCodeHint": "ትእዛዝኩም ምስ በጽሐ ነዚ ኮድ ንመልእኽተኛ ኣካፍልዎ"
 }

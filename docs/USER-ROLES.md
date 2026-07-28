@@ -9,7 +9,7 @@ Authentication (see [`ARCHITECTURE.md`](ARCHITECTURE.md) §4) recognizes three i
 | Customer | Storefront | `customer` |
 | Seller user | Seller portal | `seller_user` (belongs to exactly one `seller`) |
 | Admin user | Admin portal | `admin_user` |
-| Courier *(planned, not yet built)* | Undecided — likely a scoped view, not a full app (see [`ARCHITECTURE.md`](ARCHITECTURE.md)) | `courier` — access limited to assigned pickup/delivery tasks only |
+| Courier *(implemented)* | A scoped view inside `apps/admin` (`/courier/*`), not a full app (see [`ARCHITECTURE.md`](ARCHITECTURE.md)) | `courier` — access limited to assigned pickup/delivery tasks only |
 
 ## 2. Roles
 
@@ -73,14 +73,14 @@ Everything Admin can do, plus:
 - Hard-delete a seller (irreversible; requires a distinct confirmation step and is always audit-logged with full before-state).
 - Full, unfiltered audit log read access.
 
-### 2.7 Courier *(decided, not yet built — see `docs/PRD.md` §9.23)*
+### 2.7 Courier *(implemented — see `docs/PRD.md` §9.23)*
 
-A limited-access role for completing pickup/delivery handoffs under the platform's private-fulfillment model (see `docs/DECISIONS.md`). Not a seller-side or customer-side actor — its own actor type.
+A limited-access role for completing pickup/delivery handoffs under the platform's private-fulfillment model (see `docs/DECISIONS.md`). Not a seller-side or customer-side actor — its own actor type (`courier`), same custom-actor-type mechanism as `seller_user`.
 
-- Can see only the pickup/delivery tasks assigned to it, and only the fields a handoff requires (a pickup code/QR to validate, a drop-off location, a task status to update).
-- Cannot see the customer's full identity/contact details, the seller's identity, order financials (price, commission), or any product/catalog data beyond what identifies the parcel for handoff.
+- Can see only the pickup/delivery tasks assigned to it (`vendor_order.assigned_courier_id`), and only the fields a handoff requires: a pickup code to validate, a delivery/tracking code to validate, the pickup location, an item summary, a fulfillment deadline, and a status to advance.
+- Cannot see the customer's full identity/contact details, the seller's identity, order financials (price, commission), or any product/catalog data beyond what identifies the parcel for handoff - enforced by construction in `shapeVendorOrderForCourier()` (`apps/backend/src/fulfillment/courier-assignment-response.ts`), which never fetches those fields at all, not by filtering a fuller response.
 - Cannot message the customer or seller directly — any communication need routes through Bawi, per the identity-separation rule (see [`SECURITY.md`](SECURITY.md) §11).
-- Session model, portal, and authorization implementation are undecided (see [`ARCHITECTURE.md`](ARCHITECTURE.md)) — this section defines *scope*, not yet mechanism.
+- **Session model, portal, and authorization implementation:** a courier logs in via `POST /auth/courier/emailpass` (Medusa's generic emailpass provider, same mechanism as `seller_user`); the courier portal is a thin route group inside `apps/admin` (`/courier/*`), not a sixth full app, with its own session cookie (`bawi_courier_session`) entirely separate from the admin `user` session that also lives in that app. Couriers are provisioned directly by an Admin (not self-service, unlike sellers) via the same activation-token pattern as `seller_user`. Every read of an assignment's detail, plus every status change and code issuance/consumption, is audit-logged (`actor_type: "courier"`).
 
 ## 3. Permission matrix (representative actions)
 

@@ -26,6 +26,14 @@ export interface OrderItem {
   line_total: number
 }
 
+export interface OrderVendorOrderTimeline {
+  preparing_at: string | null
+  ready_for_pickup_at: string | null
+  picked_up_at: string | null
+  out_for_delivery_at: string | null
+  delivered_at: string | null
+}
+
 export interface OrderVendorOrder {
   id: string
   brand: string
@@ -36,6 +44,8 @@ export interface OrderVendorOrder {
   tax: number
   total: number
   items: OrderItem[]
+  timeline: OrderVendorOrderTimeline
+  delivery_confirmation_code: string | null
 }
 
 export interface OrderDetail {

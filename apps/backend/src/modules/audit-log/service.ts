@@ -10,7 +10,7 @@ class AuditLogModuleService extends MedusaService({
    * leaving each caller to assemble the record by hand.
    */
   async record(entry: {
-    actorType: "customer" | "seller_user" | "user" | "system"
+    actorType: "customer" | "seller_user" | "user" | "system" | "courier"
     actorId: string | null
     action: string
     entityType: string

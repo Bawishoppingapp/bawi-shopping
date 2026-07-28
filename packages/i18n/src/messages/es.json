@@ -124,5 +124,7 @@
   "order.soldBy": "Vendido por",
   "order.status": "Estado",
   "order.total": "Total",
-  "order.continueShopping": "Seguir comprando"
+  "order.continueShopping": "Seguir comprando",
+  "order.deliveryCode": "Código de entrega",
+  "order.deliveryCodeHint": "Comparte este código con el repartidor cuando llegue tu pedido"
 }

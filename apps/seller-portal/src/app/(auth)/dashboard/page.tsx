@@ -34,6 +34,9 @@ export default async function DashboardPage() {
       <Link href="/products">
         <Button>Manage products</Button>
       </Link>
+      <Link href="/fulfillment">
+        <Button variant="secondary">Fulfillment orders</Button>
+      </Link>
     </main>
   )
 }

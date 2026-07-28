@@ -2,7 +2,7 @@
 
 This document walks the four flows that define the marketplace: customer purchase, seller onboarding, multi-vendor payment/order-splitting, and returns/refunds. Each includes a sequence diagram and the failure/edge cases the implementation must handle.
 
-**Note on fulfillment/returns and identity separation:** the shipping and returns flows below predate the private-fulfillment decision in [`DECISIONS.md`](DECISIONS.md) and don't yet reflect it — they'll need a redesign pass once the fulfillment slice is actually built: separate temporary fulfillment/pickup/tracking codes per order (not one shared code), pickup codes single-use and expiring on collection, vendors seeing only product/size/quantity/prep-deadline/pickup-instructions per order, couriers scoped to their one assigned delivery, no direct seller↔customer shipping/tracking contact, and a pickup-location model that isn't hard-coded to "at the vendor's address" (must also support a future Bawi sorting hub — see `docs/ARCHITECTURE.md` §11). Until then, treat any step below that implies direct seller-to-customer shipping/tracking contact as provisional, not as contradicting the decided model.
+**Note on fulfillment and identity separation:** private fulfillment/delivery is now implemented (`apps/backend/src/modules/fulfillment-privacy/`, `apps/backend/src/fulfillment/`, `apps/admin/src/app/courier/`) - see §5 below for the real lifecycle. The returns flow (§4) still predates that slice and doesn't yet reflect it; treat any step there that implies direct seller-to-customer shipping/tracking contact as provisional until the returns batch updates it.
 
 ## 1. Customer purchase flow (multi-vendor cart → single checkout)
 
@@ -231,3 +231,60 @@ sequenceDiagram
 - **Refund requested twice for the same item:** second request is rejected idempotently once a refund exists/is in-flight for that item.
 - **Stripe refund fails** (e.g., insufficient available balance on the platform account): the return stays in an `approved-pending-refund` state, surfaced to Admin, rather than being marked `refunded` before Stripe confirms it.
 - **Escalation:** if a seller doesn't act within an SLA window, Admin can approve/deny on the seller's behalf; this path is explicitly logged as an admin override in the audit log, distinct from a normal seller decision.
+
+## 5. Private fulfillment and delivery flow (implemented)
+
+Picks up where §3 leaves off: a `VendorOrder` exists (`status: awaiting_preparation`) immediately after payment capture. Every step below is Bawi-mediated - the seller and customer never see each other's identity or contact details (`docs/SECURITY.md` §11/§14).
+
+```mermaid
+sequenceDiagram
+    participant S as Seller
+    participant SP as Seller portal
+    participant API as Backend API
+    participant FP as fulfillment-privacy module
+    participant A as Admin
+    participant AP as Admin portal
+    participant C as Courier
+    participant CU as Customer
+    participant SF as Storefront
+
+    S->>SP: Mark order preparing
+    SP->>API: POST /seller/fulfillment-orders/:id/mark-preparing
+    S->>SP: Mark order ready for pickup
+    SP->>API: POST /seller/fulfillment-orders/:id/mark-ready-for-pickup
+    API->>FP: Mint pickup_code (seller-facing) + tracking_code (customer-facing), atomically
+    SP-->>S: Shows pickup_code to print/display
+    CU->>SF: Views order tracking page
+    SF-->>CU: Shows delivery-confirmation code (the tracking_code) once minted
+
+    A->>AP: Assign a courier to the ready-for-pickup order
+    AP->>API: POST /admin/fulfillment-orders/:id/assign-courier
+    API->>FP: Set vendor_order.assigned_courier_id
+
+    C->>AP: Opens /courier/assignments/:id (own assignment only)
+    AP->>API: GET /courier/assignments/:id
+    API->>FP: Record "assignment_viewed" audit log (sensitive-access logging)
+    API-->>AP: Pickup location, item summary, deadline - no customer/seller identity
+    C->>AP: Submits the pickup_code shown by the seller
+    AP->>API: POST /courier/assignments/:id/confirm-pickup
+    API->>FP: Atomically redeem pickup_code (single-use claim)
+    API-->>AP: vendor_order.status = picked_up
+
+    C->>AP: Marks "start delivery"
+    AP->>API: POST /courier/assignments/:id/start-delivery
+    API-->>AP: vendor_order.status = out_for_delivery
+
+    C->>CU: Asks for the delivery-confirmation code at the door
+    C->>AP: Submits the code the customer gave them
+    AP->>API: POST /courier/assignments/:id/confirm-delivery
+    API->>FP: Atomically redeem tracking_code (single-use claim, proof of delivery)
+    API-->>AP: vendor_order.status = delivered
+    CU->>SF: Order tracking page now shows "Delivered"
+```
+
+### Edge cases
+
+- **A pickup or delivery code is submitted twice:** the second attempt is rejected (422) regardless of timing - redemption is an atomic unique-index claim, not a status flag checked-then-set, so there is no window where a race lets a code be used twice.
+- **A courier tries to view or act on an assignment not their own:** rejected (404) - `vendor_order.assigned_courier_id` scopes every courier-facing route, never a client-supplied id.
+- **A code expires unused:** rejected the same way as an invalid code (422); a new one would need a fresh `mark-ready-for-pickup` cycle (regeneration flow not yet built - see `docs/IMPLEMENTATION-PLAN.md`).
+- **The customer loses/forgets their delivery code:** it's always visible again on their order-tracking page (`GET /store/orders/:id`) for as long as it's unredeemed - no separate "resend" mechanism needed since nothing was ever emailed.

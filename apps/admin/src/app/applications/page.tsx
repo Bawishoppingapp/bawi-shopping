@@ -43,6 +43,12 @@ export default async function ApplicationsPage({
         <Link href="/sellers" className="text-neutral-500 hover:underline">
           Sellers
         </Link>
+        <Link href="/fulfillment" className="text-neutral-500 hover:underline">
+          Fulfillment
+        </Link>
+        <Link href="/couriers" className="text-neutral-500 hover:underline">
+          Couriers
+        </Link>
         <Link href="/config" className="text-neutral-500 hover:underline">
           Configuration
         </Link>

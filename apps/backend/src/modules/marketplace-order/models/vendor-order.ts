@@ -43,6 +43,18 @@ export const VendorOrder = model.define("vendor_order", {
   // fulfillment batch (see docs/DATABASE.md "planned" tables).
   fulfillment_code: model.text().unique(),
   fulfillment_deadline_at: model.dateTime(),
+  // Plain reference to fulfillment_privacy.courier.id - separate modules,
+  // same loose-coupling pattern as vendor_id above. Null until an admin
+  // assigns a courier (see docs/DECISIONS.md).
+  assigned_courier_id: model.text().nullable(),
+  // Lifecycle timestamps, one per status transition - power the customer
+  // tracking timeline and are set exactly once each, by the workflow that
+  // performs that transition (see docs/DECISIONS.md).
+  preparing_at: model.dateTime().nullable(),
+  ready_for_pickup_at: model.dateTime().nullable(),
+  picked_up_at: model.dateTime().nullable(),
+  out_for_delivery_at: model.dateTime().nullable(),
+  delivered_at: model.dateTime().nullable(),
   order: model.belongsTo(() => MarketplaceOrder, { mappedBy: "vendor_orders" }),
   items: model.hasMany(() => VendorOrderItem, { mappedBy: "vendor_order" }),
 })

@@ -8,7 +8,7 @@ import { model } from "@medusajs/framework/utils"
  */
 export const AuditLog = model.define("audit_log", {
   id: model.id().primaryKey(),
-  actor_type: model.enum(["customer", "seller_user", "user", "system"]),
+  actor_type: model.enum(["customer", "seller_user", "user", "system", "courier"]),
   actor_id: model.text().nullable(),
   action: model.text(),
   entity_type: model.text(),
