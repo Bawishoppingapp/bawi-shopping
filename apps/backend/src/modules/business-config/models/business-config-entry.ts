@@ -19,6 +19,7 @@ export const BusinessConfigEntry = model.define("business_config_entry", {
     "support",
     "cart",
     "feature_flag",
+    "legal",
   ]),
   key: model.text(),
   // Always JSON-encoded regardless of value_type, so one column holds every

@@ -45,6 +45,9 @@ All product, architecture, and process documentation is in [`docs/`](docs/):
 | [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) | Shared design tokens, components, states, accessibility, responsive rules |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test strategy and coverage expectations across unit/integration/E2E |
 | [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md) | Build phases, risks, first vertical slice |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Every environment variable, third-party service, production setting, feature flag, deployment step, backup strategy, monitoring setup, and the mock-to-live-values switchover process |
+| [`docs/LAUNCH-CHECKLIST.md`](docs/LAUNCH-CHECKLIST.md) | The single, ordered pre-launch checklist tying together infrastructure, integrations, security, business config, legal review, and the go-live sequence |
+| [`docs/legal/`](docs/legal/README.md) | Draft legal/policy documents (Terms, Privacy, Seller Agreement, Returns, Cookies, Acceptable Use, DMCA) — attorney review required before publication |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Technical decisions made during implementation and why — read this when something looks different from what an earlier doc describes |
 
 ## Non-negotiable architecture rules

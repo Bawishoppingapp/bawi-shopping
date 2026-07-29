@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+**/.next
+**/.medusa
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+.git
+.turbo
+**/.turbo
+*.log
+.env
+.env.*
+!.env.example
+!.env.*.example

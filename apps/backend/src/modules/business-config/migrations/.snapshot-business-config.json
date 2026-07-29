@@ -51,7 +51,8 @@
             "sms",
             "support",
             "cart",
-            "feature_flag"
+            "feature_flag",
+            "legal"
           ],
           "mappedType": "enum"
         },

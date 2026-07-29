@@ -1,10 +1,53 @@
 import { defineMiddlewares, authenticate } from "@medusajs/framework/http"
 import multer from "multer"
+import { rateLimit } from "../rate-limiting/rate-limiter"
 
 const upload = multer({ storage: multer.memoryStorage() })
 
 export default defineMiddlewares({
   routes: [
+    {
+      // Every login/register/reset-password endpoint across every actor
+      // type (customer, seller_user, user, courier) - credential
+      // stuffing / registration-spam protection. See docs/SECURITY.md's
+      // pre-launch hardening section.
+      method: ["POST"],
+      matcher: "/auth/*",
+      middlewares: [
+        rateLimit({
+          windowMs: 5 * 60 * 1000,
+          max: 20,
+          message: "Too many authentication attempts. Please wait a few minutes and try again.",
+        }),
+      ],
+    },
+    {
+      // Public, unauthenticated write endpoint - documented gap in
+      // docs/IMPLEMENTATION-PLAN.md ("no rate-limiting or CAPTCHA yet").
+      method: ["POST"],
+      matcher: "/seller-applications",
+      middlewares: [
+        rateLimit({
+          windowMs: 60 * 60 * 1000,
+          max: 5,
+          message: "Too many applications submitted from this address. Please try again later.",
+        }),
+      ],
+    },
+    {
+      // Token-exchange endpoint, public by design (the token itself is
+      // the credential) - rate-limited against brute-forcing the
+      // activation token.
+      method: ["POST"],
+      matcher: "/seller-activation/complete",
+      middlewares: [
+        rateLimit({
+          windowMs: 60 * 60 * 1000,
+          max: 10,
+          message: "Too many attempts. Please try again later.",
+        }),
+      ],
+    },
     {
       matcher: "/seller/*",
       middlewares: [authenticate("seller_user", ["bearer", "session"])],

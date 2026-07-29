@@ -47,7 +47,7 @@ describe("DEFAULT_BUSINESS_CONFIG_ENTRIES", () => {
     }
   })
 
-  test("known business-decision categories (commission, transfer_timing, returns, shipping, preparation, service_area, tax, courier, email, sms, support) are all flagged as placeholders", () => {
+  test("known business-decision categories (commission, transfer_timing, returns, shipping, preparation, service_area, tax, courier, email, sms, support, legal) are all flagged as placeholders", () => {
     const businessDecisionCategories = [
       "commission",
       "transfer_timing",
@@ -61,6 +61,7 @@ describe("DEFAULT_BUSINESS_CONFIG_ENTRIES", () => {
       "email",
       "sms",
       "support",
+      "legal",
     ]
     for (const entry of DEFAULT_BUSINESS_CONFIG_ENTRIES) {
       if (businessDecisionCategories.includes(entry.category)) {

@@ -38,6 +38,7 @@ export type BusinessConfigCategory =
   | "sms"
   | "support"
   | "cart"
+  | "legal"
   | "feature_flag"
 
 export type DefaultConfigEntry = {
@@ -230,6 +231,58 @@ export const DEFAULT_BUSINESS_CONFIG_ENTRIES: DefaultConfigEntry[] = [
     value_type: "integer",
     label: "Maximum quantity per cart line item",
     is_placeholder: false,
+  },
+  {
+    category: "legal",
+    key: "company_legal_name",
+    value: "Bawi Shopping, Inc. (placeholder - not a real registered entity)",
+    value_type: "string",
+    label: "Company legal name",
+    description: "The registered legal entity name used in Terms of Service, Privacy Policy, and every other legal document - see docs/legal/.",
+    is_placeholder: true,
+  },
+  {
+    category: "legal",
+    key: "company_address",
+    value: "123 Placeholder St, Suite 100, Dallas, TX 75201, USA",
+    value_type: "string",
+    label: "Company registered address",
+    description: "Used in legal documents and any required physical-address disclosure.",
+    is_placeholder: true,
+  },
+  {
+    category: "legal",
+    key: "registered_agent_state",
+    value: "Texas",
+    value_type: "string",
+    label: "State of incorporation / registered agent state",
+    is_placeholder: true,
+  },
+  {
+    category: "legal",
+    key: "dmca_agent_email",
+    value: "dmca@example.bawishopping.com",
+    value_type: "string",
+    label: "DMCA/copyright agent contact email",
+    description: "Used in docs/legal/DMCA-POLICY.md - a real DMCA agent should also be registered with the U.S. Copyright Office before launch.",
+    is_placeholder: true,
+  },
+  {
+    category: "legal",
+    key: "privacy_contact_email",
+    value: "privacy@example.bawishopping.com",
+    value_type: "string",
+    label: "Privacy/data-subject-request contact email",
+    is_placeholder: true,
+  },
+  {
+    category: "legal",
+    key: "terms_last_updated",
+    value: "2026-07-29",
+    value_type: "string",
+    label: "Terms of Service / Privacy Policy last-updated date",
+    description: "Must be updated every time docs/legal/TERMS-OF-SERVICE.md or PRIVACY-POLICY.md materially changes.",
+    is_placeholder: true,
   },
   ...FEATURE_FLAG_KEYS.map(
     (key): DefaultConfigEntry => ({

@@ -1,0 +1,48 @@
+# Bawi Shopping — backend (Medusa) production image.
+#
+# This is an npm-workspaces monorepo: apps/backend depends on the
+# workspace package @bawi/search-contract, which only resolves correctly
+# through the root lockfile/workspace install - so the build context for
+# this file MUST be the repository root, not apps/backend/.
+#
+#   docker build -f apps/backend/Dockerfile -t bawi-backend .
+#
+# See docs/DEPLOYMENT.md for full environment-variable and deployment
+# documentation - this file only builds and runs the process; it sets no
+# secrets and enables no live/production feature flags itself.
+
+FROM node:20-alpine AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json package-lock.json ./
+COPY apps/backend/package.json apps/backend/package.json
+COPY packages/search-contract/package.json packages/search-contract/package.json
+# Full install (including devDependencies) - the build step below needs
+# TypeScript and Medusa's build tooling. A smaller runtime-only image is a
+# legitimate future optimization; correctness of the workspace-linked
+# @bawi/search-contract dependency comes first (see header comment).
+RUN npm ci
+
+FROM base AS build
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY apps/backend apps/backend
+COPY packages/search-contract packages/search-contract
+RUN npm run build --workspace=@bawi/backend
+
+FROM base AS runner
+ENV NODE_ENV=production
+RUN addgroup -S bawi && adduser -S bawi -G bawi
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/apps/backend ./apps/backend
+COPY --from=build /app/packages/search-contract ./packages/search-contract
+WORKDIR /app/apps/backend
+USER bawi
+EXPOSE 9000
+# Runs `medusa start` against the .medusa/server output produced above -
+# migrations are NOT run automatically on container start (see
+# docs/DEPLOYMENT.md/docs/DATABASE.md §6: migrations run as their own
+# explicit step, staging before production, never implicitly on boot).
+CMD ["npm", "run", "start"]

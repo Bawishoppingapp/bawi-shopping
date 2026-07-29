@@ -56,6 +56,29 @@ export default async function RootLayout({
             </div>
           </header>
           {children}
+          <footer className="mt-auto border-t border-neutral-200 p-6 text-sm text-neutral-600">
+            <nav className="flex flex-wrap gap-x-6 gap-y-2">
+              <Link href="/legal/terms" className="hover:text-neutral-900">
+                {translate(locale, "footer.terms")}
+              </Link>
+              <Link href="/legal/privacy" className="hover:text-neutral-900">
+                {translate(locale, "footer.privacy")}
+              </Link>
+              <Link href="/legal/returns" className="hover:text-neutral-900">
+                {translate(locale, "footer.returns")}
+              </Link>
+              <Link href="/legal/cookies" className="hover:text-neutral-900">
+                {translate(locale, "footer.cookies")}
+              </Link>
+              <Link href="/legal/acceptable-use" className="hover:text-neutral-900">
+                {translate(locale, "footer.acceptableUse")}
+              </Link>
+              <Link href="/legal/dmca" className="hover:text-neutral-900">
+                {translate(locale, "footer.dmca")}
+              </Link>
+            </nav>
+            <p className="mt-3 text-xs text-neutral-400">{translate(locale, "footer.legalDraftNotice")}</p>
+          </footer>
         </LocaleProvider>
       </body>
     </html>

@@ -1,0 +1,110 @@
+# Local production-mode verification stack for Bawi Shopping - NOT a
+# hosting recommendation. Use this to build and run all four deployables
+# together against a real Postgres (and, optionally, Redis) the same way
+# a real environment would, before trusting any of the Dockerfiles in a
+# real deployment. See docs/DEPLOYMENT.md for what a real staging/
+# production environment additionally needs (a managed Postgres, a real
+# Redis if running >1 backend instance, real secrets never committed
+# here, a registered Stripe webhook endpoint, etc).
+#
+# Usage:
+#   cp apps/backend/.env.example apps/backend/.env
+#   # edit apps/backend/.env: DATABASE_URL below already points at the
+#   # `postgres` service; generate real JWT_SECRET/COOKIE_SECRET/
+#   # AUTH_MFA_ENCRYPTION_KEY values (see docs/DEPLOYMENT.md §2.1).
+#   docker compose up --build
+#
+# Every value below is a local/placeholder default - see
+# docs/DEPLOYMENT.md for what must change per real environment.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bawishopping
+      POSTGRES_PASSWORD: bawishopping
+      POSTGRES_DB: bawi_shopping
+    ports:
+      - "5544:5432"
+    volumes:
+      - bawi_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bawishopping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Optional - only needed once you run more than one backend instance
+  # (see docs/DEPLOYMENT.md §9). Included here so the same compose file
+  # can be used to verify the Redis-backed event-bus/locking/cache config
+  # path (medusa-config.ts) end to end before relying on it in a real
+  # multi-instance deployment.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9000:9000"
+    environment:
+      DATABASE_URL: postgresql://bawishopping:bawishopping@postgres:5432/bawi_shopping
+      STORE_CORS: http://localhost:3000
+      ADMIN_CORS: http://localhost:3002
+      AUTH_CORS: http://localhost:3000,http://localhost:3001,http://localhost:3002
+      # Placeholders - replace with real generated values, never reuse
+      # these across environments (see docs/DEPLOYMENT.md §2.1).
+      JWT_SECRET: replace-with-a-long-random-string
+      COOKIE_SECRET: replace-with-a-long-random-string
+      AUTH_MFA_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      SELLER_PORTAL_URL: http://localhost:3001
+      COURIER_PORTAL_URL: http://localhost:3002/courier
+      ENABLE_TEST_SUPPORT_ROUTES: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      # Uncomment to exercise the Redis-backed event-bus/locking/cache path:
+      # REDIS_URL: redis://redis:6379
+
+  storefront:
+    build:
+      context: .
+      dockerfile: apps/storefront/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      MEDUSA_BACKEND_URL: http://backend:9000
+      MEDUSA_PUBLISHABLE_KEY: ""
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+
+  seller-portal:
+    build:
+      context: .
+      dockerfile: apps/seller-portal/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "3001:3001"
+    environment:
+      MEDUSA_BACKEND_URL: http://backend:9000
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "3002:3002"
+    environment:
+      MEDUSA_BACKEND_URL: http://backend:9000
+
+volumes:
+  bawi_postgres_data:

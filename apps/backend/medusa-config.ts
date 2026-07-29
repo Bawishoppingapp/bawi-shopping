@@ -2,6 +2,86 @@ import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
+// Every conditional block below is config-only and additive: with none of
+// these env vars set, behavior is byte-for-byte identical to before this
+// change (in-memory event bus/cache/locking/workflow-engine, local-disk
+// file storage, notification-local only) - see docs/DEPLOYMENT.md §9 and
+// §8. None of this enables live payments, live transfers, live email,
+// live SMS, or any other real-operation feature flag; those remain gated
+// separately by business-config (see docs/DEPLOYMENT.md §4.3).
+const redisUrl = process.env.REDIS_URL
+
+// "@medusajs/medusa/cache-redis" etc. are Medusa's own re-exports of the
+// underlying @medusajs/cache-redis/@medusajs/event-bus-redis/... packages
+// (see apps/backend/package.json) - the same resolution pattern already
+// used below for "@medusajs/medusa/notification". Required the moment
+// more than one backend instance runs (see docs/DEPLOYMENT.md §9): the
+// default in-memory implementations do not coordinate across processes.
+const redisInfraModules = redisUrl
+  ? [
+      { resolve: "@medusajs/medusa/cache-redis", options: { redisUrl } },
+      { resolve: "@medusajs/medusa/event-bus-redis", options: { redisUrl } },
+      { resolve: "@medusajs/medusa/locking-redis", options: { redisUrl } },
+      { resolve: "@medusajs/medusa/workflow-engine-redis", options: { redisUrl } },
+    ]
+  : []
+
+// Config-only swap from the default local-disk file provider to S3 (or
+// any S3-compatible provider - MinIO, DigitalOcean Spaces, etc. via
+// S3_ENDPOINT) - see docs/DEPLOYMENT.md §8. Only active once every
+// required credential is actually set; otherwise Medusa's own default
+// (local disk) module keeps handling uploads unchanged.
+const s3FileModule =
+  process.env.S3_BUCKET && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+    ? [
+        {
+          resolve: "@medusajs/medusa/file",
+          options: {
+            providers: [
+              {
+                resolve: "@medusajs/medusa/file-s3",
+                id: "s3",
+                options: {
+                  file_url: process.env.S3_FILE_URL,
+                  access_key_id: process.env.S3_ACCESS_KEY_ID,
+                  secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
+                  region: process.env.S3_REGION,
+                  bucket: process.env.S3_BUCKET,
+                  endpoint: process.env.S3_ENDPOINT,
+                },
+              },
+            ],
+          },
+        },
+      ]
+    : []
+
+// Config-only additional notification provider, off unless explicitly
+// selected - real_email_enabled (business-config) still gates whether
+// any code path treats email as actually delivered; this only makes a
+// real provider available to select once that decision is made (see
+// docs/DEPLOYMENT.md §8).
+const emailProviders = [
+  {
+    resolve: "@medusajs/notification-local",
+    id: "local",
+    options: { channels: ["email"] },
+  },
+  ...(process.env.EMAIL_PROVIDER === "sendgrid"
+    ? [
+        {
+          resolve: "@medusajs/medusa/notification-sendgrid",
+          id: "sendgrid",
+          options: {
+            channels: ["email"],
+            api_key: process.env.SENDGRID_API_KEY,
+            from: process.env.SENDGRID_FROM_EMAIL,
+          },
+        },
+      ]
+    : []),
+]
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -56,14 +136,10 @@ module.exports = defineConfig({
     {
       resolve: "@medusajs/medusa/notification",
       options: {
-        providers: [
-          {
-            resolve: "@medusajs/notification-local",
-            id: "local",
-            options: { channels: ["email"] },
-          },
-        ],
+        providers: emailProviders,
       },
     },
+    ...s3FileModule,
+    ...redisInfraModules,
   ],
 })
