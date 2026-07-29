@@ -70,6 +70,9 @@ export default async function EditProductPage({
           <Link href={`/products/${id}/preview`} className="text-neutral-600 underline">
             Preview
           </Link>
+          <Link href={`/products/${id}/translations`} className="text-neutral-600 underline">
+            Translations
+          </Link>
         </div>
       </div>
 

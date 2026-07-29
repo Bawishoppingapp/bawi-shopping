@@ -23,6 +23,10 @@ export default defineMiddlewares({
       middlewares: [authenticate("user", ["bearer", "session"])],
     },
     {
+      matcher: "/admin/product-translations*",
+      middlewares: [authenticate("user", ["bearer", "session"])],
+    },
+    {
       matcher: "/admin/categories*",
       middlewares: [authenticate("user", ["bearer", "session"])],
     },

@@ -63,6 +63,7 @@ Every data-driven view — product grid, cart, order list, dashboard, moderation
 - Forms: every input has a programmatically associated label; errors are announced (via `aria-live` or equivalent) and associated with their field.
 - Images have meaningful `alt` text (product images: seller-provided or auto-generated from product title, never empty on content-bearing images); purely decorative graphics use empty `alt`.
 - Semantic HTML first (buttons are `<button>`, nav is `<nav>`, etc.); ARIA only fills genuine gaps, not a substitute for correct markup.
+- **Found and fixed in the Batch 5 accessibility audit:** the storefront and seller-portal notification-list components (`features/notifications/components/notification-list.tsx`) originally used a clickable `<li onClick=...>` with no keyboard semantics - unreachable and non-operable by keyboard, a direct violation of the first bullet above. Fixed by converting each list item's interactive surface to a real `<button type="button">`, discovered via a proactive grep-based sweep of every `onClick` usage in the codebase (see `docs/DECISIONS.md`) rather than a report from the user - the kind of gap this section exists to catch before it ships.
 
 ## 9. Responsive behavior
 

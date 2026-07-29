@@ -508,9 +508,9 @@ Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-paym
 
 ---
 
-### 9.24 Localization & Translations *(i18n foundation built this slice; full translation system built later)*
+### 9.24 Localization & Translations *(implemented — i18n foundation plus product-content moderation)*
 
-**Domain module:** `localization`/`translation` (content/moderation side still planned); i18n plumbing (`packages/i18n` or equivalent) built now — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12.
+**Domain module:** `product-translation` (content/moderation - implemented, Batch 5); i18n plumbing (`packages/i18n`) - implemented earlier — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12.
 
 - **User story:** As a customer who reads Amharic, Tigrinya, Afaan Oromo, Simplified Chinese, or Spanish, I want to browse and shop in my language.
 - **Supported locales:** English `en-US` (fallback), Amharic `am`, Tigrinya `ti`, Afaan Oromo `om`, Simplified Chinese `zh-CN`, Spanish `es`.
@@ -527,7 +527,8 @@ Fully detailed in [`PAYMENTS.md`](PAYMENTS.md) (Stripe Connect model, split-paym
   10. **Layouts must tolerate longer translated text** without breaking buttons, menus, forms, or mobile screens (see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) §12).
   11. **Accessibility labels are localized** in the selected language, not hard-coded English (see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) §8).
   12. **No separate application and no separate product record per language** — one codebase, one product table, locale is a rendering/lookup concern, not a data-partitioning one.
-- **What's built this slice (the "i18n foundation"):** locale context/provider, cookie-based locale persistence, an English-fallback string-lookup mechanism, and a message-catalog file structure with stub locale files for all six locales — wired into the storefront first. See [`ARCHITECTURE.md`](ARCHITECTURE.md) §12 for the concrete implementation and [`TESTING.md`](TESTING.md) for the required foundation-level tests (switching, persistence, fallback, non-Latin rendering, mobile layout resilience).
+- **What's built (i18n foundation, earlier slice):** locale context/provider, cookie-based locale persistence, an English-fallback string-lookup mechanism, and a fully-translated message catalog for all six locales — wired into the storefront (and reused directly by `apps/seller-portal`/`apps/admin` where each app needed a locale label). See [`ARCHITECTURE.md`](ARCHITECTURE.md) §12 and [`TESTING.md`](TESTING.md) for the foundation-level tests (switching, persistence, fallback, non-Latin rendering, mobile layout resilience).
+- **What's built (product-content translation, this slice):** the `product_translation` module and its full moderation lifecycle - a seller drafts and submits a title/description per locale (seller-portal `/products/:id/translations`), an admin approves or rejects it (`/translations`), and only an `approved` row is ever resolved on the public product-detail route (`GET /products/:code?locale=`, English fallback). **Known scope boundary:** the search/discovery results grid does not yet resolve product translations, only the single-product detail page does - see [`ARCHITECTURE.md`](ARCHITECTURE.md) §12.
 - **Explicitly not built this slice:** the product-translation table itself, the seller/AI translation submission UI, the Bawi translation-approval queue, locale-aware search indexing, and translated email templates — these fill in gradually, per-feature, on top of the foundation.
 - **Security/content risks (for when the full system is built):** unapproved translations reaching customers (same approval-gate discipline as product moderation — see §9.19); a translation used to inject misleading pricing/claims not present in the approved English original (translations should be diffed/reviewed against the source, not approved blind); stored-XSS via translated free text (same escaping/sanitization rule as reviews — see [`SECURITY.md`](SECURITY.md) §5).
 

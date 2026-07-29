@@ -47,6 +47,9 @@ export default async function SellersPage() {
         <Link href="/team" className="text-neutral-500 hover:underline">
           Team
         </Link>
+        <Link href="/translations" className="text-neutral-500 hover:underline">
+          Translations
+        </Link>
         <Link href="/config" className="text-neutral-500 hover:underline">
           Configuration
         </Link>

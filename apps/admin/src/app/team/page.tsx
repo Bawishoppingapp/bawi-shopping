@@ -51,6 +51,9 @@ export default async function TeamPage() {
           Finance
         </Link>
         <span className="font-medium text-neutral-900">Team</span>
+        <Link href="/translations" className="text-neutral-500 hover:underline">
+          Translations
+        </Link>
         <Link href="/config" className="text-neutral-500 hover:underline">
           Configuration
         </Link>

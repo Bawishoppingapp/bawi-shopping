@@ -51,6 +51,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/notification-inbox",
     },
     {
+      resolve: "./src/modules/product-translation",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: [

@@ -5,6 +5,9 @@ import type ProductListingModuleService from "../../../modules/product-listing/s
 import { SELLER_MODULE } from "../../../modules/seller"
 import type SellerModuleService from "../../../modules/seller/service"
 import { resolvePublicBrand } from "../../../modules/seller/public-brand"
+import { isTranslatableLocale } from "../../../modules/category-translation/locales"
+import { PRODUCT_TRANSLATION_MODULE } from "../../../modules/product-translation"
+import type ProductTranslationModuleService from "../../../modules/product-translation/service"
 
 /**
  * Public, unauthenticated. Only ever returns an `approved` listing - draft/
@@ -41,6 +44,22 @@ export async function GET(
   const sellerModuleService: SellerModuleService = req.scope.resolve(SELLER_MODULE)
   const seller = await sellerModuleService.retrieveSeller(listing.vendor_id)
 
+  const requestedLocale = typeof req.query.locale === "string" ? req.query.locale : undefined
+  const locale =
+    requestedLocale && isTranslatableLocale(requestedLocale) ? requestedLocale : undefined
+  let translatedTitle: string | undefined
+  let translatedDescription: string | null | undefined
+  if (locale) {
+    const productTranslationModuleService: ProductTranslationModuleService = req.scope.resolve(
+      PRODUCT_TRANSLATION_MODULE
+    )
+    const translations = await productTranslationModuleService.getApprovedTranslationsForProduct(
+      listing.product_id
+    )
+    translatedTitle = translations[locale]?.title
+    translatedDescription = translations[locale]?.description
+  }
+
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data: variantData } = await query.graph({
     entity: "product_variant",
@@ -76,8 +95,8 @@ export async function GET(
   res.json({
     product: {
       product_code: listing.product_code,
-      title: product.title,
-      description: product.description,
+      title: translatedTitle || product.title,
+      description: translatedDescription || product.description,
       brand: resolvePublicBrand(seller),
       images: product.images?.map((image) => image.url) ?? [],
       thumbnail: product.thumbnail,

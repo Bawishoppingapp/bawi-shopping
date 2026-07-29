@@ -1,6 +1,6 @@
 # Bawi Shopping — Implementation Plan
 
-**Status: Phase 0 through Phase 9 (doc numbering) are done.** Eight vertical slices are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left, not a not-yet-started plan — update it as each phase progresses rather than treating it as historical.
+**Status: Phase 0 through Phase 15 (doc numbering) are done.** All eleven vertical slices of the original plan are implemented, tested, and passing (see `CLAUDE.md` for the current-phase summary). This document now tracks what's left for a human operator before a real production launch, not a not-yet-started plan — update it as that remaining work progresses rather than treating it as historical.
 
 ## 1. Phased build order
 
@@ -52,8 +52,8 @@ With merchant-of-record now resolved (Bawi is merchant of record — see [`DECIS
 | Phase 8 — Returns, refunds, transfer reversals, and disputes ✅ done | Phase 11 | Return request/approval/denial flow, customer pre-preparation cancellation, Stripe test-mode refunds, proportional commission-reversal ledger entries, reason-based inventory restock, Stripe dispute webhook handling (`charge.dispute.*`). See [`DECISIONS.md`](DECISIONS.md) |
 | Phase 9 — Email, in-app notifications, and Bawi-controlled communication ✅ done | Phase 12 | Native Medusa `notification` module (`notification-local` provider) + custom `notification_inbox` module for a per-recipient in-app notification center; eight existing workflows now notify at the moment they act. Combined with Phase 10 below into one implementation pass ("Batch 4: Notifications and Complete Portals") |
 | Phase 10 — Customer, seller, and admin account completion ✅ done | Phase 13 | Saved addresses (storefront `/account`, native `customer_address`), seller staff roles (`/staff`, reusing the seller-application activation-token pattern), admin user/invite management (`/team`, native `user`/`invite`) - order history/detail pages already existed (Phase 4/7) as a foundation |
-| Phase 11 — Complete six-language localization | Phase 14 | Full translation content (product/policy/email) building on the `packages/i18n` foundation and the `product_translation`/category-translation patterns already in place |
-| Phase 12 — Production infrastructure, security hardening, and launch testing | Phase 15 | CI pipeline, load testing, full [`SECURITY.md`](SECURITY.md) review, accessibility audit, staging soak test, production environment provisioning, production-readiness check (see [`DECISIONS.md`](DECISIONS.md)) must report zero remaining placeholders before real Stripe keys are ever configured |
+| Phase 11 — Complete six-language localization ✅ done (product content) | Phase 14 | New `product_translation` module (own moderation lifecycle, mirroring `product-listing`'s draft→pending_review→approved/rejected shape) makes product titles/descriptions translatable into the same five non-English locales as categories, with English-fallback resolution at read time. Seller-portal and admin translation-management UI ships alongside it. See [`DECISIONS.md`](DECISIONS.md) |
+| Phase 12 — Production infrastructure, security hardening, and launch testing ✅ done (what an agent can do) | Phase 15 | CI pipeline (`.github/workflows/ci.yml`) shipped and running lint/typecheck/unit/build plus a real-Postgres backend integration job on every PR; a full `docs/SECURITY.md` review and an accessibility audit both completed (one real keyboard-accessibility bug found and fixed - see [`DECISIONS.md`](DECISIONS.md)); `apps/backend/src/scripts/check-production-readiness.ts` run and its current output recorded honestly (one placeholder, all feature flags `false`). **Not achievable by an agent in this sandbox:** real load testing, a real staging deployment/soak test, and production environment provisioning - these remain for a human operator, see §"Recommended next vertical slice" below |
 
 Each phase follows the same discipline already established in Phases 0-3: read the relevant docs first, inspect the existing implementation, confirm architecture/boundaries before writing code, list DB/API/page/security/test changes up front, implement one small vertical slice at a time, write unit/integration/component/E2E tests without weakening existing ones, run the full verification suite, update documentation in the same change, commit logically, and push. Phases are not batched together in one change.
 
@@ -90,7 +90,15 @@ The original plan called for one seller/one product/one customer/one paid order 
 
 ### Recommended next vertical slice
 
-With identity, seller applications, admin review, the core catalog slice, product discovery/search/filtering, merchant-of-record, Stripe Connect seller onboarding, the multi-vendor cart, checkout/multi-vendor order splitting, private fulfillment/delivery, the commission ledger/payouts/returns/refunds/disputes slice, and now notifications/account-completion all built, the next slice is **Phase 11-12 (doc Phase 14-15), user-facing "Batch 5: Production Readiness and Launch Prep"** - full six-language content translation, CI pipeline, load testing, a full `docs/SECURITY.md` review, accessibility audit, staging soak test, and a production-readiness check that must report zero remaining placeholders before any real Stripe keys are ever configured.
+All eleven vertical slices of the original plan are now built: identity, seller applications/admin review, the core catalog, product discovery/search/filtering, merchant-of-record + Stripe Connect seller onboarding, the multi-vendor cart, checkout/multi-vendor order splitting, private fulfillment/delivery, the commission ledger/payouts/returns/refunds/disputes slice, notifications/account-completion, and now product-content translation + CI + an honest production-readiness accounting (Batch 5). There is no further first-release feature-list work left for an agent to build in this sandbox.
+
+What remains is exclusively the three items `CLAUDE.md` and `docs/DECISIONS.md` already flag as out of reach for an agent working locally, and they are genuinely for a human operator, not a next "batch":
+
+1. **Real load testing** against a realistic traffic profile - needs infrastructure (a load-generation tool, a target environment) this sandbox doesn't have.
+2. **A real staging deployment and soak test** - needs an actual cloud environment, DNS, and TLS, not a local Postgres.app instance.
+3. **Production environment provisioning and the one remaining business-config placeholder** (`shipping.standard_shipping_fee_cents`) - the placeholder is a business decision (what should Bawi actually charge for shipping), not an engineering one; provisioning real infrastructure and real Stripe keys is an operational/financial decision with real-world consequences.
+
+Only after all three are complete, `check-production-readiness.ts` reports zero remaining placeholders, and every `real_*`/`live_payments_enabled` feature flag is deliberately flipped to `true` by a human with the authority to do so, should this project take real payments.
 
 ## 4. Non-actions requiring confirmation first
 

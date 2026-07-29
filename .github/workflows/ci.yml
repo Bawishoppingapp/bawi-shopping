@@ -1,0 +1,99 @@
+name: CI
+
+# Runs on every PR and every push to main - see docs/TESTING.md §5 "CI
+# gates". No Stripe key of any kind is configured here: every job sets
+# ENABLE_TEST_SUPPORT_ROUTES=true, which switches the backend to the
+# network-free fake Stripe client (see docs/DECISIONS.md) - the same
+# switch used for local integration tests. This workflow never touches
+# a real Stripe account, live or test.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  lint-typecheck-unit-build:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (every workspace)
+        run: npm run lint
+
+      - name: Typecheck (every workspace)
+        run: npm run typecheck
+
+      - name: Unit tests (every workspace)
+        run: npm run test
+
+      - name: Production build (every workspace)
+        run: npm run build
+
+  backend-integration:
+    name: Backend integration tests (real Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bawishopping
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bawi_shopping_test
+        ports:
+          - 5544:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://bawishopping:postgres@127.0.0.1:5544/bawi_shopping_test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5544
+      DB_USERNAME: bawishopping
+      DB_PASSWORD: postgres
+      JWT_SECRET: ci-only-not-a-real-secret
+      COOKIE_SECRET: ci-only-not-a-real-secret
+      AUTH_MFA_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      STORE_CORS: http://localhost:8000
+      ADMIN_CORS: http://localhost:9000,http://localhost:3002
+      AUTH_CORS: http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:9000
+      SELLER_PORTAL_URL: http://localhost:3001
+      COURIER_PORTAL_URL: http://localhost:3002/courier
+      # Network-free fake Stripe client only - see docs/DECISIONS.md.
+      ENABLE_TEST_SUPPORT_ROUTES: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        working-directory: apps/backend
+        run: npx medusa db:migrate
+
+      - name: Run integration tests
+        working-directory: apps/backend
+        run: npm run test:integration

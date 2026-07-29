@@ -15,7 +15,7 @@ export default async function ProductDetailPage({
 }) {
   const { code } = await params
   const locale = await getLocale()
-  const product = await getPublicProduct(code)
+  const product = await getPublicProduct(code, locale)
 
   if (!product) {
     notFound()
