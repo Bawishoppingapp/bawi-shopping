@@ -12,18 +12,27 @@ environment = "production"
 domain_name = "example.com"
 alert_email = "alerts@example.com"
 
-# --- Replace after building and pushing apps/*/Dockerfile to a registry
-# (ECR or otherwise). Terraform cannot build/push images itself. ---
-backend_image        = "replace-with-a-real-backend-image-uri:latest"
-storefront_image     = "replace-with-a-real-storefront-image-uri:latest"
-seller_portal_image  = "replace-with-a-real-seller-portal-image-uri:latest"
-admin_image          = "replace-with-a-real-admin-image-uri:latest"
+# --- Container images: leave all four commented out on your FIRST apply.
+# This module creates its own ECR repository per app (ecr.tf) and every
+# task definition automatically points at "<that repo>:latest"
+# (main.tf's coalesce()) - build and push your images there (see
+# README.md's exact docker build/tag/push commands, using this apply's
+# `ecr_repository_urls` output), then either re-apply or force a new ECS
+# deployment to pick up what you pushed. Only uncomment these if you're
+# using a registry this module didn't create (Docker Hub, a pre-existing
+# ECR repo, etc). ---
+# backend_image        = "111111111111.dkr.ecr.us-east-1.amazonaws.com/your-repo:latest"
+# storefront_image     = "111111111111.dkr.ecr.us-east-1.amazonaws.com/your-repo:latest"
+# seller_portal_image  = "111111111111.dkr.ecr.us-east-1.amazonaws.com/your-repo:latest"
+# admin_image          = "111111111111.dkr.ecr.us-east-1.amazonaws.com/your-repo:latest"
 
 # --- Must be globally unique across all of AWS. ---
 product_images_bucket_name = "replace-with-a-real-globally-unique-bucket-name"
 
 # --- Generate real values - see docs/DEPLOYMENT.md §2.1 for exactly how
-# (openssl rand -hex 32, etc.). Never reuse across environments. ---
+# (openssl rand -hex 32, etc.). Never reuse across environments. Stored
+# in AWS Secrets Manager (secrets.tf), never as plaintext task-definition
+# environment variables. ---
 db_password             = "replace-with-a-real-generated-password"
 jwt_secret              = "replace-with-a-real-generated-secret"
 cookie_secret           = "replace-with-a-real-generated-secret"
@@ -34,3 +43,9 @@ auth_mfa_encryption_key = "replace-with-a-real-64-char-hex-string"
 # This module has no path to a live key - see docs/LAUNCH-CHECKLIST.md §12. ---
 stripe_secret_key     = ""
 stripe_webhook_secret = ""
+
+# --- Both genuinely cannot have a working value before the environment
+# exists - leave blank on your first apply. Fill in and re-apply once
+# you've created them (docs/DEPLOYMENT.md §5 steps 6-7). ---
+medusa_publishable_key = ""
+stripe_publishable_key = ""

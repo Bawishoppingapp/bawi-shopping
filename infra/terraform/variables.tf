@@ -110,31 +110,55 @@ variable "product_images_bucket_name" {
 }
 
 # --- Container images ---
-# Build and push apps/*/Dockerfile to a registry (ECR or otherwise) before
-# a real apply - these have no working default.
+# Leave all four unset (null) and this module creates its own ECR
+# repository per app (ecr.tf) and points every task definition at
+# "<that repo's URL>:latest" automatically - see local.backend_image
+# etc. in main.tf. You still have to build and push the four images
+# yourself (Terraform cannot do that part - docker build/push are not
+# AWS API calls), but you no longer have to manually copy a URI into a
+# tfvars file first. Only set one of these explicitly if you're using a
+# registry Terraform didn't create here (e.g. Docker Hub, a
+# pre-existing ECR repo).
 
 variable "backend_image" {
-  description = "Container image URI for apps/backend (e.g. an ECR repository URI:tag)."
+  description = "Container image URI for apps/backend. Leave null to use the ECR repo this module creates (aws_ecr_repository.backend)."
   type        = string
-  default     = "replace-with-a-real-backend-image-uri:latest"
+  default     = null
 }
 
 variable "storefront_image" {
-  description = "Container image URI for apps/storefront."
+  description = "Container image URI for apps/storefront. Leave null to use the ECR repo this module creates."
   type        = string
-  default     = "replace-with-a-real-storefront-image-uri:latest"
+  default     = null
 }
 
 variable "seller_portal_image" {
-  description = "Container image URI for apps/seller-portal."
+  description = "Container image URI for apps/seller-portal. Leave null to use the ECR repo this module creates."
   type        = string
-  default     = "replace-with-a-real-seller-portal-image-uri:latest"
+  default     = null
 }
 
 variable "admin_image" {
-  description = "Container image URI for apps/admin."
+  description = "Container image URI for apps/admin. Leave null to use the ECR repo this module creates."
   type        = string
-  default     = "replace-with-a-real-admin-image-uri:latest"
+  default     = null
+}
+
+# --- Frontend keys created only after the backend's first deploy ---
+# Both genuinely cannot have a working value before the environment
+# exists (docs/DEPLOYMENT.md §5 steps 6-7) - leave blank on the first
+# apply, fill in and re-apply once you have them.
+
+variable "medusa_publishable_key" {
+  description = "Storefront's MEDUSA_PUBLISHABLE_KEY, created in the Medusa admin after the first deploy. Blank until then."
+  type        = string
+  default     = ""
+}
+
+variable "stripe_publishable_key" {
+  description = "Storefront's NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (test-mode pk_test_... until go-live - docs/LAUNCH-CHECKLIST.md §12). Blank until you've registered with Stripe."
+  type        = string
+  default     = ""
 }
 
 # --- Backend application secrets ---

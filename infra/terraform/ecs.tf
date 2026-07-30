@@ -8,7 +8,7 @@ resource "aws_ecs_cluster" "main" {
 }
 
 resource "aws_lb" "main" {
-  name               = "${local.name_prefix}-alb"
+  name               = "${local.alb_prefix}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
@@ -54,13 +54,21 @@ resource "aws_lb_listener" "https" {
 }
 
 # --- Target groups + listener rules, one per app, routed by host header ---
+#
+# Names use local.alb_prefix, not local.name_prefix - see main.tf's
+# comment. deregistration_delay is shortened from AWS's 300s default to
+# 30s so rolling deploys (a new task definition revision) don't leave a
+# draining-but-still-registered old task around for five minutes each
+# time - safe here since these are stateless HTTP services with no
+# long-lived connections to drain.
 
 resource "aws_lb_target_group" "backend" {
-  name        = "${local.name_prefix}-backend"
-  port        = 9000
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  name                 = "${local.alb_prefix}-backend"
+  port                 = 9000
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  target_type          = "ip"
+  deregistration_delay = 30
 
   health_check {
     path                = "/health"
@@ -89,11 +97,12 @@ resource "aws_lb_listener_rule" "backend" {
 }
 
 resource "aws_lb_target_group" "storefront" {
-  name        = "${local.name_prefix}-storefront"
-  port        = 3000
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  name                 = "${local.alb_prefix}-storefront"
+  port                 = 3000
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  target_type          = "ip"
+  deregistration_delay = 30
 
   health_check {
     path                = "/"
@@ -122,11 +131,12 @@ resource "aws_lb_listener_rule" "storefront" {
 }
 
 resource "aws_lb_target_group" "seller_portal" {
-  name        = "${local.name_prefix}-seller-portal"
-  port        = 3001
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  name                 = "${local.alb_prefix}-seller-portal"
+  port                 = 3001
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  target_type          = "ip"
+  deregistration_delay = 30
 
   health_check {
     path                = "/"
@@ -155,11 +165,12 @@ resource "aws_lb_listener_rule" "seller_portal" {
 }
 
 resource "aws_lb_target_group" "admin" {
-  name        = "${local.name_prefix}-admin"
-  port        = 3002
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  name                 = "${local.alb_prefix}-admin"
+  port                 = 3002
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  target_type          = "ip"
+  deregistration_delay = 30
 
   health_check {
     path                = "/"
@@ -185,26 +196,6 @@ resource "aws_lb_listener_rule" "admin" {
       values = [local.admin_domain]
     }
   }
-}
-
-# --- IAM: ECS task execution role (pulls images, writes logs) ---
-
-resource "aws_iam_role" "ecs_task_execution" {
-  name = "${local.name_prefix}-ecs-task-execution"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
-  role       = aws_iam_role.ecs_task_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 # --- CloudWatch log groups, one per service ---
@@ -235,14 +226,19 @@ resource "aws_cloudwatch_log_group" "admin" {
 # variables.tf) - a real apply requires supplying real TEST-mode values;
 # this module has no path to a live key (docs/LAUNCH-CHECKLIST.md §12).
 #
-# Accepted simplification, flagged rather than silently shipped: secrets
-# (DB password, JWT/cookie secrets, Stripe keys, S3 credentials) are passed
-# as plain `environment` entries, which land in Terraform state and the
-# task definition itself in plaintext. Good enough for a first apply/
-# experiment; before real launch traffic, move these to AWS Secrets
-# Manager or SSM Parameter Store and reference them via each container
-# definition's `secrets` block instead (requires adding
-# secretsmanager:GetSecretValue to aws_iam_role.ecs_task_execution).
+# Every genuinely sensitive value (DB connection string, JWT/cookie
+# secrets, MFA key, Stripe keys) is injected via the container's
+# `secrets` block from AWS Secrets Manager (see secrets.tf and iam.tf),
+# not passed as plaintext `environment` entries - this was a flagged
+# accepted-simplification in an earlier pass, now actually fixed rather
+# than left as a to-do. S3 access needs no credential of any kind: the
+# backend task assumes aws_iam_role.ecs_task (iam.tf), and
+# medusa-config.ts's file-s3 provider is configured with
+# `authentication_method: "s3-iam-role"` when no explicit access key is
+# supplied, which resolves credentials from that role automatically via
+# the AWS SDK's default credential chain - confirmed by reading
+# @medusajs/file-s3's own source (node_modules/@medusajs/file-s3/dist/
+# services/s3-file.js), not assumed.
 
 resource "aws_ecs_task_definition" "backend" {
   family                   = "${local.name_prefix}-backend"
@@ -251,30 +247,31 @@ resource "aws_ecs_task_definition" "backend" {
   cpu                      = var.backend_task_cpu
   memory                   = var.backend_task_memory
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([
     {
       name         = "backend"
-      image        = var.backend_image
+      image        = local.backend_image
       portMappings = [{ containerPort = 9000, protocol = "tcp" }]
       environment = [
-        { name = "DATABASE_URL", value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.address}:5432/${var.db_name}" },
         { name = "STORE_CORS", value = "https://${local.storefront_domain}" },
         { name = "ADMIN_CORS", value = "https://${local.admin_domain}" },
         { name = "AUTH_CORS", value = "https://${local.storefront_domain},https://${local.seller_portal_domain},https://${local.admin_domain}" },
-        { name = "JWT_SECRET", value = var.jwt_secret },
-        { name = "COOKIE_SECRET", value = var.cookie_secret },
-        { name = "AUTH_MFA_ENCRYPTION_KEY", value = var.auth_mfa_encryption_key },
         { name = "SELLER_PORTAL_URL", value = "https://${local.seller_portal_domain}" },
         { name = "COURIER_PORTAL_URL", value = "https://${local.admin_domain}/courier" },
         { name = "ENABLE_TEST_SUPPORT_ROUTES", value = "false" },
-        { name = "STRIPE_SECRET_KEY", value = var.stripe_secret_key },
-        { name = "STRIPE_WEBHOOK_SECRET", value = var.stripe_webhook_secret },
         { name = "REDIS_URL", value = "redis://${aws_elasticache_cluster.main.cache_nodes[0].address}:6379" },
-        { name = "S3_ACCESS_KEY_ID", value = aws_iam_access_key.backend_s3.id },
-        { name = "S3_SECRET_ACCESS_KEY", value = aws_iam_access_key.backend_s3.secret },
         { name = "S3_BUCKET", value = aws_s3_bucket.product_images.bucket },
         { name = "S3_REGION", value = var.aws_region },
+      ]
+      secrets = [
+        { name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn },
+        { name = "JWT_SECRET", valueFrom = aws_secretsmanager_secret.jwt_secret.arn },
+        { name = "COOKIE_SECRET", valueFrom = aws_secretsmanager_secret.cookie_secret.arn },
+        { name = "AUTH_MFA_ENCRYPTION_KEY", valueFrom = aws_secretsmanager_secret.auth_mfa_encryption_key.arn },
+        { name = "STRIPE_SECRET_KEY", valueFrom = aws_secretsmanager_secret.stripe_secret_key.arn },
+        { name = "STRIPE_WEBHOOK_SECRET", valueFrom = aws_secretsmanager_secret.stripe_webhook_secret.arn },
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -299,16 +296,17 @@ resource "aws_ecs_task_definition" "storefront" {
   container_definitions = jsonencode([
     {
       name         = "storefront"
-      image        = var.storefront_image
+      image        = local.storefront_image
       portMappings = [{ containerPort = 3000, protocol = "tcp" }]
       environment = [
         { name = "MEDUSA_BACKEND_URL", value = "https://${local.backend_domain}" },
-        # MEDUSA_PUBLISHABLE_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY have
-        # no working default - see docs/DEPLOYMENT.md §5 steps 6-7; both are
-        # created manually after the first apply, then this task definition
-        # updated (or supplied as additional terraform variables once known).
-        { name = "MEDUSA_PUBLISHABLE_KEY", value = "" },
-        { name = "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", value = "" },
+        # Both created manually in the Medusa admin after the backend's
+        # first deploy (docs/DEPLOYMENT.md §5 steps 6-7) - there is no
+        # publishable key or Stripe account to reference before that
+        # point exists, so these can only be filled in on a *second*
+        # apply once you have real values, via terraform.tfvars.
+        { name = "MEDUSA_PUBLISHABLE_KEY", value = var.medusa_publishable_key },
+        { name = "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", value = var.stripe_publishable_key },
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -333,7 +331,7 @@ resource "aws_ecs_task_definition" "seller_portal" {
   container_definitions = jsonencode([
     {
       name         = "seller-portal"
-      image        = var.seller_portal_image
+      image        = local.seller_portal_image
       portMappings = [{ containerPort = 3001, protocol = "tcp" }]
       environment = [
         { name = "MEDUSA_BACKEND_URL", value = "https://${local.backend_domain}" },
@@ -361,7 +359,7 @@ resource "aws_ecs_task_definition" "admin" {
   container_definitions = jsonencode([
     {
       name         = "admin"
-      image        = var.admin_image
+      image        = local.admin_image
       portMappings = [{ containerPort = 3002, protocol = "tcp" }]
       environment = [
         { name = "MEDUSA_BACKEND_URL", value = "https://${local.backend_domain}" },
@@ -379,13 +377,22 @@ resource "aws_ecs_task_definition" "admin" {
 }
 
 # --- Services ---
+#
+# health_check_grace_period_seconds matters specifically because these
+# services sit behind an ALB: without it, ECS can decide a slow-starting
+# task is unhealthy and cycle it before the application has even finished
+# booting, especially the backend (a real Medusa boot, not just a static
+# file server, observed taking ~11s even in this project's own local dev
+# runs - a cold start on a fresh Fargate task with a real RDS connection
+# should be assumed slower, not faster).
 
 resource "aws_ecs_service" "backend" {
-  name            = "${local.name_prefix}-backend"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.backend.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  name                              = "${local.name_prefix}-backend"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.backend.arn
+  desired_count                     = var.desired_count
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 90
 
   network_configuration {
     subnets         = aws_subnet.private[*].id
@@ -402,11 +409,12 @@ resource "aws_ecs_service" "backend" {
 }
 
 resource "aws_ecs_service" "storefront" {
-  name            = "${local.name_prefix}-storefront"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.storefront.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  name                              = "${local.name_prefix}-storefront"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.storefront.arn
+  desired_count                     = var.desired_count
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 60
 
   network_configuration {
     subnets         = aws_subnet.private[*].id
@@ -423,11 +431,12 @@ resource "aws_ecs_service" "storefront" {
 }
 
 resource "aws_ecs_service" "seller_portal" {
-  name            = "${local.name_prefix}-seller-portal"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.seller_portal.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  name                              = "${local.name_prefix}-seller-portal"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.seller_portal.arn
+  desired_count                     = var.desired_count
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 60
 
   network_configuration {
     subnets         = aws_subnet.private[*].id
@@ -444,11 +453,12 @@ resource "aws_ecs_service" "seller_portal" {
 }
 
 resource "aws_ecs_service" "admin" {
-  name            = "${local.name_prefix}-admin"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.admin.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  name                              = "${local.name_prefix}-admin"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.admin.arn
+  desired_count                     = var.desired_count
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 60
 
   network_configuration {
     subnets         = aws_subnet.private[*].id

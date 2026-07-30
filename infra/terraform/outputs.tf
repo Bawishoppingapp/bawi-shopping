@@ -42,3 +42,13 @@ output "route53_name_servers" {
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.main.name
 }
+
+output "ecr_repository_urls" {
+  description = "Push your four built images here (docker tag/push) - see infra/terraform/README.md's exact commands. Each defaults into its matching task definition automatically (main.tf's coalesce()) unless you override backend_image/storefront_image/seller_portal_image/admin_image."
+  value = {
+    backend       = aws_ecr_repository.backend.repository_url
+    storefront    = aws_ecr_repository.storefront.repository_url
+    seller_portal = aws_ecr_repository.seller_portal.repository_url
+    admin         = aws_ecr_repository.admin.repository_url
+  }
+}

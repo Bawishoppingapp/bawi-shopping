@@ -28,33 +28,48 @@ const redisInfraModules = redisUrl
 
 // Config-only swap from the default local-disk file provider to S3 (or
 // any S3-compatible provider - MinIO, DigitalOcean Spaces, etc. via
-// S3_ENDPOINT) - see docs/DEPLOYMENT.md §8. Only active once every
-// required credential is actually set; otherwise Medusa's own default
-// (local disk) module keeps handling uploads unchanged.
-const s3FileModule =
-  process.env.S3_BUCKET && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
-    ? [
-        {
-          resolve: "@medusajs/medusa/file",
-          options: {
-            providers: [
-              {
-                resolve: "@medusajs/medusa/file-s3",
-                id: "s3",
-                options: {
-                  file_url: process.env.S3_FILE_URL,
-                  access_key_id: process.env.S3_ACCESS_KEY_ID,
-                  secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
-                  region: process.env.S3_REGION,
-                  bucket: process.env.S3_BUCKET,
-                  endpoint: process.env.S3_ENDPOINT,
-                },
+// S3_ENDPOINT) - see docs/DEPLOYMENT.md §8. Only active once S3_BUCKET is
+// set; otherwise Medusa's own default (local disk) module keeps handling
+// uploads unchanged.
+//
+// Two authentication modes, matching @medusajs/file-s3's own
+// `authentication_method: "access-key" | "s3-iam-role"` option (confirmed
+// against its source, node_modules/@medusajs/file-s3/dist/services/
+// s3-file.js - not guessed):
+//   - S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY set: "access-key" mode, for a
+//     non-AWS S3-compatible provider that has no concept of an IAM role.
+//   - Neither set: "s3-iam-role" mode - the AWS SDK's default credential
+//     chain resolves the running ECS task's IAM role automatically (see
+//     infra/terraform/iam.tf's aws_iam_role.ecs_task), so a real AWS
+//     deployment needs zero S3 credentials of any kind.
+const s3FileModule = process.env.S3_BUCKET
+  ? [
+      {
+        resolve: "@medusajs/medusa/file",
+        options: {
+          providers: [
+            {
+              resolve: "@medusajs/medusa/file-s3",
+              id: "s3",
+              options: {
+                file_url: process.env.S3_FILE_URL,
+                region: process.env.S3_REGION,
+                bucket: process.env.S3_BUCKET,
+                endpoint: process.env.S3_ENDPOINT,
+                ...(process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY
+                  ? {
+                      authentication_method: "access-key",
+                      access_key_id: process.env.S3_ACCESS_KEY_ID,
+                      secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
+                    }
+                  : { authentication_method: "s3-iam-role" }),
               },
-            ],
-          },
+            },
+          ],
         },
-      ]
-    : []
+      },
+    ]
+  : []
 
 // Config-only additional notification provider, off unless explicitly
 // selected - real_email_enabled (business-config) still gates whether
