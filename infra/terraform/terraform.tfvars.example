@@ -1,0 +1,36 @@
+# Copy to terraform.tfvars and replace every placeholder with a real
+# value before running `terraform apply` against a real AWS account. Never
+# commit terraform.tfvars itself once it holds real secrets - see
+# .gitignore. See infra/terraform/README.md and docs/DEPLOYMENT.md for what
+# each of these does.
+
+aws_region  = "us-east-1"
+environment = "production"
+
+# --- Replace with your real domain (must already be purchasable/owned by
+# you) and a real, monitored alert inbox. ---
+domain_name = "example.com"
+alert_email = "alerts@example.com"
+
+# --- Replace after building and pushing apps/*/Dockerfile to a registry
+# (ECR or otherwise). Terraform cannot build/push images itself. ---
+backend_image        = "replace-with-a-real-backend-image-uri:latest"
+storefront_image     = "replace-with-a-real-storefront-image-uri:latest"
+seller_portal_image  = "replace-with-a-real-seller-portal-image-uri:latest"
+admin_image          = "replace-with-a-real-admin-image-uri:latest"
+
+# --- Must be globally unique across all of AWS. ---
+product_images_bucket_name = "replace-with-a-real-globally-unique-bucket-name"
+
+# --- Generate real values - see docs/DEPLOYMENT.md §2.1 for exactly how
+# (openssl rand -hex 32, etc.). Never reuse across environments. ---
+db_password             = "replace-with-a-real-generated-password"
+jwt_secret              = "replace-with-a-real-generated-secret"
+cookie_secret           = "replace-with-a-real-generated-secret"
+auth_mfa_encryption_key = "replace-with-a-real-64-char-hex-string"
+
+# --- TEST-mode Stripe values only (docs/DEPLOYMENT.md §3). Leave blank
+# until you've registered a webhook endpoint at https://api.<domain>/webhooks/stripe.
+# This module has no path to a live key - see docs/LAUNCH-CHECKLIST.md §12. ---
+stripe_secret_key     = ""
+stripe_webhook_secret = ""

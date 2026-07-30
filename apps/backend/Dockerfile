@@ -41,6 +41,10 @@ COPY --from=build /app/packages/search-contract ./packages/search-contract
 WORKDIR /app/apps/backend
 USER bawi
 EXPOSE 9000
+# Medusa's own /health route (see docs/DEPLOYMENT.md §1) - used here and
+# by infra/terraform's ALB target group health check.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:9000/health || exit 1
 # Runs `medusa start` against the .medusa/server output produced above -
 # migrations are NOT run automatically on container start (see
 # docs/DEPLOYMENT.md/docs/DATABASE.md §6: migrations run as their own

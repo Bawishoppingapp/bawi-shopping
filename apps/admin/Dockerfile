@@ -37,4 +37,6 @@ WORKDIR /app/apps/admin
 USER bawi
 EXPOSE 3002
 ENV PORT=3002
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3002/ || exit 1
 CMD ["node", "server.js"]

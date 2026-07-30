@@ -2,6 +2,8 @@
 
 The single, ordered list to work through before Bawi Shopping takes its first real payment. Every item links to the document that explains it in full — this file is an index and a checklist, not a duplicate explanation. Nothing on this list has been done for you as "real" — every checkbox represents a placeholder, a decision, or a human action this session could not and should not take on its own (see `CLAUDE.md`'s action-category rules on hard-to-reverse and real-money actions).
 
+A later production-prep pass built real, runnable scaffolding for most of §1-§3 and §11 with placeholder values throughout (`infra/terraform`, `load-testing/`) — see each section below for exactly what exists vs. what's still a manual step. Three things remain genuinely outside any agent's reach regardless of tooling: §7 (an attorney has to actually review the legal documents), actually running `terraform apply` against a real cloud account (no credentials exist in this environment), and §12's live-Stripe-key/feature-flag switch (a deliberate, human, real-money-enabling action - never automated, never defaulted to placeholder "just in case" values).
+
 Work top to bottom. Don't skip ahead to §7 (go-live) without completing everything above it.
 
 ## 1. Infrastructure provisioned
@@ -10,7 +12,7 @@ Work top to bottom. Don't skip ahead to §7 (go-live) without completing everyth
 - [ ] Secrets generated and stored in the hosting provider's secret manager — `JWT_SECRET`, `COOKIE_SECRET`, `AUTH_MFA_ENCRYPTION_KEY` (`openssl rand -hex 32`) — unique to this environment, never reused, never committed (`docs/DEPLOYMENT.md` §2.1, §5 step 2).
 - [ ] **If running more than one backend instance**: a Redis instance is provisioned and `REDIS_URL` is set (`docs/DEPLOYMENT.md` §2.1, §9 — this switches the event bus/cache/locking/workflow-engine to their Redis-backed equivalents; skip this box for a genuine single-instance deployment).
 - [ ] **If real product-image traffic at scale is expected**: S3 (or an S3-compatible provider) is provisioned and `S3_BUCKET`/`S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` are set (`docs/DEPLOYMENT.md` §2.1, §8); otherwise local-disk storage is an explicit, accepted choice for now.
-- [ ] Deployment mechanism chosen and tested — either the Dockerfiles + `docker-compose.yml` (`docs/DEPLOYMENT.md` §1) or an equivalent hosting-provider-native build.
+- [ ] Deployment mechanism chosen and tested — the Dockerfiles + `docker-compose.yml`, or `infra/terraform` (a real, `terraform validate`-clean AWS module provisioning all of the above in one `apply` — see `docs/DEPLOYMENT.md` §1 and `infra/terraform/README.md`; never applied against a real account by this session, since it has no AWS credentials), or an equivalent hosting-provider-native build.
 
 ## 2. Backend deployed and migrated
 
@@ -76,8 +78,11 @@ Work top to bottom. Don't skip ahead to §7 (go-live) without completing everyth
 
 ## 11. Load and soak testing
 
-- [ ] Real load testing performed against this environment under a realistic traffic profile (`docs/IMPLEMENTATION-PLAN.md` — explicitly flagged as needing infrastructure this development sandbox couldn't provide).
-- [ ] A staging soak test (the environment left running under light real traffic for an extended period) completed with no unexpected errors or memory growth.
+- [ ] Real k6 scripts exist (`load-testing/smoke.js`, `load.js`, `soak.js`) and were genuinely dry-run locally this session (`load-testing/RESULTS.md`) — that only proves the tooling works, not real capacity.
+- [ ] `load-testing/load.js` run against **this real deployed environment** (`k6 run -e BASE_URL=... -e BACKEND_URL=... load-testing/load.js`), reviewed for p95/p99 latency and error rate, and infrastructure right-sized (`infra/terraform/variables.tf`'s task CPU/memory, RDS instance class, ECS desired count) if it doesn't hold up.
+- [ ] `load-testing/soak.js` run against a real staging environment with `SOAK_DURATION` overridden to several hours (not the local dry run's default), watching for drift over time (memory growth, slowly rising latency), not just a final pass/fail.
+
+**A note on this session's own dry run**: the first local attempt at `load.js` stalled for 2h43m against what should have been a 3m30s script — diagnosed as sandbox-environment resource contention (this same session independently found and killed two unrelated stuck background processes earlier), not an application bug, confirmed by an immediate clean re-run. Don't assume a single load-test run — anomalous or clean — is the final word; run it more than once.
 
 ## 12. Go-live: switching mock values to real (do last, in order)
 

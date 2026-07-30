@@ -34,6 +34,8 @@ docker compose up --build
 
 See `docker-compose.yml`'s own header comment for the one-time setup this needs (backend secrets) — it's a local verification tool, not a hosting recommendation; a real environment still needs a managed Postgres, real secrets in a proper secret store, and a registered Stripe webhook endpoint (§2.4, §5).
 
+**`infra/terraform/` provisions a real AWS environment** — networking, all four apps on ECS Fargate behind one ALB, RDS Postgres, ElastiCache Redis, an S3 bucket, Route53 + ACM (DNS/TLS), and CloudWatch alarms/SNS alerting — from one `terraform apply`. It's a template with placeholder values (see `infra/terraform/terraform.tfvars.example`), validated this session with a real `terraform init`/`validate`/`plan` (the plan run stops cleanly at "no AWS credentials found," exactly as expected with no cloud account attached to this session) but never applied against a real account. See `infra/terraform/README.md` for exactly what it does and does not automate.
+
 ## 2. Every environment variable, by app
 
 ### 2.1 `apps/backend`
@@ -165,6 +167,8 @@ All nine default `false` and gate a code path that would otherwise move real mon
 
 These steps apply to standing up any environment (staging or production) from scratch. Repeat per environment — never share a database, Stripe account, or set of secrets across environments.
 
+**If using `infra/terraform`** (§1), step 1 (Postgres), most of step 3 (CORS/secrets get wired into the ECS task definition directly), and the Redis/S3 pieces of step 3 all happen as part of `terraform apply` — fill in `terraform.tfvars` first (real domain, real generated secrets, real pushed image URIs), then `terraform init && terraform plan && terraform apply`, and resume at step 5 below (creating the admin user) once it completes. Steps 5-7 and 10-11 are never automated by Terraform regardless — they're one-time, stateful actions against the running application, not infrastructure.
+
 1. **Provision Postgres.** Create a dedicated database. Note its connection string for `DATABASE_URL`.
 2. **Generate secrets.** `JWT_SECRET`, `COOKIE_SECRET` (long random strings), `AUTH_MFA_ENCRYPTION_KEY` (`openssl rand -hex 32`) — unique to this environment, stored in the hosting provider's secret manager, never in a committed file.
 3. **Set backend environment variables** (§2.1) — CORS origins pointing at this environment's actual frontend URLs, `ENABLE_TEST_SUPPORT_ROUTES` unset or `false`, Stripe keys in **test mode** initially even in a "production" environment (see §8 — going live with Stripe is a separate, deliberate step after the environment itself is verified working).
@@ -185,16 +189,18 @@ These steps apply to standing up any environment (staging or production) from sc
 - **Audit log**: the `audit-log` module records every approval/rejection/financial/role-change action and is itself just Postgres rows — covered by the database backup above, with no separate retention policy defined yet. If a compliance-driven retention/export requirement emerges, that's a business decision to make explicit in `business-config`, not an assumption to bake in silently.
 - **Stripe** is its own system of record for payment/transfer/dispute history — Stripe's dashboard and API are the source of truth there, not a local mirror; this project's ledger tables are a derived view (see `docs/PAYMENTS.md`), not the canonical record.
 - **No automated restore drill exists** — this is a real gap, not a built feature. Test a restore in staging before trusting it in production; that's a one-time operational exercise this document can name but not perform for you.
+- **If using `infra/terraform`**: `db_backup_retention_days` (`variables.tf`) provisions real RDS automated backups + point-in-time recovery, and the S3 bucket has versioning enabled — both real, not just documented as a recommendation. A restore drill is still a real operational exercise no Terraform apply performs for you.
 
 ## 7. Monitoring setup
 
-Nothing beyond structured stdout logging (Medusa's built-in logger, used throughout every module and workflow in this codebase) exists today. Before a real launch, at minimum:
+Nothing beyond structured stdout logging (Medusa's built-in logger, used throughout every module and workflow in this codebase) exists today in the *application*. **`infra/terraform`'s `monitoring.tf`** closes part of this gap with real CloudWatch alarms (ECS CPU/memory per service, ALB 5xx rate, RDS CPU/storage/connections, Redis memory) publishing to an SNS topic with an email subscription — provisioned, not just recommended, once applied against a real AWS account. Beyond that, at minimum before a real launch:
 
-- **Uptime / health checks** against the backend and each frontend — Medusa exposes a basic health endpoint; verify it responds and wire an external uptime monitor (any provider) to page on failure.
-- **Error tracking** (e.g., an APM/error-tracking SDK) in the backend and all three Next.js apps — none is installed currently; this is a genuine gap worth closing before production traffic, not something silently assumed to exist.
-- **Database monitoring** — connection count, query latency, disk usage — via whatever your Postgres host provides natively.
+- **Uptime / health checks** — Medusa exposes a `/health` endpoint (confirmed in this project's own source, `@medusajs/medusa`'s `start` command); all four Dockerfiles now have a `HEALTHCHECK` instruction hitting it (backend) or each frontend's homepage, and the ALB target groups in `infra/terraform/ecs.tf` health-check the same paths — real, wired monitoring at the container/load-balancer level, not just a recommendation.
+- **Error tracking** (e.g., an APM/error-tracking SDK) in the backend and all three Next.js apps — none is installed currently; this is a genuine gap worth closing before production traffic, not something silently assumed to exist. `infra/terraform` doesn't install one either — that's an application-level dependency choice, not infrastructure.
+- **Database monitoring** — CloudWatch RDS alarms above cover the essentials (CPU, storage, connections); deeper query-level monitoring (e.g., pg_stat_statements) is still your Postgres host's own tooling.
 - **Stripe Dashboard** — webhook delivery success/failure, dispute rate, payout status — Stripe's own dashboard already covers this; no custom mirroring is needed unless you want it surfaced inside `apps/admin` too (not built, would be a new feature, not a gap in the current scope).
-- **Log aggregation** — ship stdout from the backend and frontends to whatever log platform your host provides; nothing in this codebase writes logs anywhere other than stdout/stderr today.
+- **Log aggregation** — every ECS task ships its stdout to a CloudWatch log group already (`infra/terraform/ecs.tf`, 30-day retention); export those to a longer-term log platform if you need retention beyond that.
+- **Load and soak testing** — `load-testing/` has real k6 scripts (smoke, ramping load, soak) and a genuine local dry-run result (`load-testing/RESULTS.md`) — including one anomalous multi-hour stall this session hit and diagnosed as sandbox-environment contention, not an application bug, on a clean immediate re-run. Real load/soak testing against real deployed infrastructure is still a required, separate step before trusting any capacity number — see `docs/LAUNCH-CHECKLIST.md` §11.
 
 ## 8. Switching from mock/test values to real production values
 
@@ -215,6 +221,8 @@ Do this **only after** §5's environment is fully deployed and smoke-tested, and
 7. **Re-run the readiness check** after every flag flip to confirm the change was applied where you intended and nothing else drifted.
 8. **This process is entirely manual today** — nothing in CI or the deploy pipeline currently blocks a deploy on the readiness script's output (`docs/IMPLEMENTATION-PLAN.md`'s Phase 12 row notes this explicitly). Wiring the readiness check into CI as a hard gate before any environment's `live_payments_enabled` can be set is a reasonable follow-up, but is itself a process/policy change worth its own explicit decision rather than something to add silently.
 
+**Steps 4-6 above are deliberately never automated by this project's own tooling.** `infra/terraform` has no variable that accepts a live Stripe key, and no code path in this repository sets `live_payments_enabled` or any other `real_*` flag to `true` — that switch is a real-money-enabling action performed by a human, directly, with real credentials, as a distinct and deliberate act separate from any infrastructure or deployment automation.
+
 ## 9. Known gaps, stated plainly
 
 These are genuine, current gaps — not oversights hidden from this document, and not things to "fix" unilaterally without confirming scope first:
@@ -224,6 +232,8 @@ These are genuine, current gaps — not oversights hidden from this document, an
 - **Local-disk file storage is still the default** (fine for one instance with a persistent volume) but the S3 swap (§2.1, §8) is now wired and config-only, not a code change.
 - **Rate limiting is in-memory, single-instance only** (`apps/backend/src/rate-limiting/rate-limiter.ts`, added this session — see `docs/SECURITY.md` §16). Correct for today's deployment; needs a Redis-backed store before it means anything across more than one instance.
 - **`npm audit` reviewed but not blindly fixed** (see `docs/SECURITY.md` §9) — `sharp`, `lodash`, and `react-router` are flagged as worth a real dependency bump in a future, deliberate `@medusajs/*` version-upgrade pass; not done this session since it would desync the pinned `2.17.2` lockstep version across every `@medusajs/*` package.
-- **No automated restore drill, no wired monitoring/error-tracking stack** (§6, §7) — both are real, named gaps for a human operator to close, not silently assumed handled.
+- **No automated restore drill, no wired error-tracking/APM stack** (§6, §7) — real gaps for a human operator to close; CloudWatch alarms (`infra/terraform/monitoring.tf`) cover infrastructure-level signals but not application-level error tracking.
 - **The production-readiness check is a report, not a gate** — nothing currently stops a deploy or a flag flip if it reports a placeholder. See §8's closing note.
 - **Legal documents are drafts pending attorney review** (§4.4) — the storefront pages exist and are live, but must not be treated as final, binding terms until reviewed.
+- **`infra/terraform` has never been applied against a real AWS account** — this session has no cloud credentials. It's validated (`terraform init`/`validate`/`plan` all ran cleanly, per §1) but not proven against a real account; `terraform plan` should be reviewed carefully by whoever runs the first real `apply`, and secrets are currently passed as plain ECS task-definition environment variables (flagged in `ecs.tf` itself) rather than through AWS Secrets Manager — acceptable for a first apply, worth upgrading before real launch traffic.
+- **The k6 load test hit one severe, anomalous multi-hour stall during this session's local dry run**, diagnosed as sandbox-environment resource contention (not an application bug, confirmed by an immediate clean re-run) — see `load-testing/RESULTS.md`. Real load/soak testing against real deployed infrastructure remains a required, separate step; don't treat either local dry-run result as a real capacity number.
