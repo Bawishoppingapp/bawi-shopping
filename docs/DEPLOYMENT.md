@@ -6,6 +6,8 @@ Nothing in this document is aspirational — every setting, route, and script na
 
 Security hardening (rate limiting, CSP/security headers, dependency-audit findings) is documented in `docs/SECURITY.md` §16, not duplicated here — this document covers infrastructure, integrations, and the deployment sequence; that one covers the threat model and what's been hardened against it.
 
+**This document describes the AWS/Terraform path.** Before onboarding real vendors/customers, an interim free/low-cost path (Vercel + Render/Railway + Supabase Postgres) is also available and requires almost no changes from what's described here — see `docs/DEPLOYMENT-LOWCOST.md`.
+
 ## 1. What gets deployed
 
 Four deployables today (a fifth, `apps/workers`, is designed for but not built — see §9):

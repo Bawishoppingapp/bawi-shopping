@@ -30,8 +30,9 @@ const cspHeader = [
 const nextConfig: NextConfig = {
   transpilePackages: ["@bawi/ui"],
   // Standalone output - see apps/seller-portal/Dockerfile and
-  // docs/DEPLOYMENT.md.
-  output: "standalone",
+  // docs/DEPLOYMENT.md. Skipped on Vercel (sets VERCEL=1 automatically) -
+  // see docs/DEPLOYMENT-LOWCOST.md.
+  ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   async headers() {
     return [
       {

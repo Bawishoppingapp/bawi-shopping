@@ -1,0 +1,51 @@
+# Render Blueprint for the interim low-cost hosting path — see
+# docs/DEPLOYMENT-LOWCOST.md. Deploys only apps/backend (the Medusa API);
+# apps/storefront, apps/seller-portal, and apps/admin are deployed to
+# Vercel instead, not via this file.
+#
+# Import at https://dashboard.render.com/blueprints — Render reads this
+# file directly from the connected repo. Every `sync: false` value must
+# be filled in manually in the Render dashboard after import (Render
+# blueprints intentionally never carry real secrets in git).
+#
+# This file provisions the same container docker-compose.yml and
+# infra/terraform both already build/run — no separate Dockerfile.
+
+services:
+  - type: web
+    name: bawi-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./apps/backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Supabase direct connection string — see docs/DEPLOYMENT-LOWCOST.md
+      - key: STORE_CORS
+        sync: false # e.g. https://bawi-storefront.vercel.app
+      - key: ADMIN_CORS
+        sync: false # e.g. https://bawi-admin.vercel.app
+      - key: AUTH_CORS
+        sync: false # comma-separated: storefront,seller-portal,admin origins
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: AUTH_MFA_ENCRYPTION_KEY
+        sync: false # 64-char hex — see apps/backend/.env.production.example
+      - key: SELLER_PORTAL_URL
+        sync: false # e.g. https://bawi-seller-portal.vercel.app
+      - key: COURIER_PORTAL_URL
+        sync: false # e.g. https://bawi-admin.vercel.app/courier
+      - key: ENABLE_TEST_SUPPORT_ROUTES
+        value: "false"
+      - key: STRIPE_SECRET_KEY
+        sync: false # test-mode key only — see docs/DEPLOYMENT.md §8
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: EMAIL_PROVIDER
+        value: "" # leave blank to keep notification-local (no email actually sends)
+      - key: S3_BUCKET
+        value: "" # leave blank to use local disk; see docs/DEPLOYMENT-LOWCOST.md for why that's lossy here

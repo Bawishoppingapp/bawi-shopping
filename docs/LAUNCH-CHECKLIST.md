@@ -6,6 +6,8 @@ A later production-prep pass built real, runnable scaffolding for most of §1-§
 
 Work top to bottom. Don't skip ahead to §7 (go-live) without completing everything above it.
 
+This checklist assumes the AWS/Terraform infrastructure path (`docs/DEPLOYMENT.md`, `infra/terraform/`). Before onboarding real vendors/customers, `docs/DEPLOYMENT-LOWCOST.md` describes a free/low-cost interim path (Vercel + Render/Railway + Supabase) for validating the product first — most of §2–§6 and §8–§11 below still apply there (feature flags, business config, security headers, legal review are infrastructure-independent); §1's specific AWS resources and §12's production Stripe go-live are what actually change when you're ready to move off the interim path.
+
 ## 1. Infrastructure provisioned
 
 - [ ] A dedicated PostgreSQL database exists for this environment (14+), separate from every other environment's database (`docs/DEPLOYMENT.md` §3).

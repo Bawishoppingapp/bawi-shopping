@@ -44,8 +44,11 @@ const nextConfig: NextConfig = {
   // Standalone output produces a self-contained .next/standalone folder
   // (server + only the deps actually used, including hoisted workspace
   // packages) - what apps/storefront/Dockerfile copies into its runner
-  // stage. See docs/DEPLOYMENT.md.
-  output: "standalone",
+  // stage. See docs/DEPLOYMENT.md. Skipped on Vercel (which sets VERCEL=1
+  // automatically) - Vercel does its own build tracing/bundling and
+  // doesn't run next start against this folder. See
+  // docs/DEPLOYMENT-LOWCOST.md.
+  ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   async headers() {
     return [
       {
