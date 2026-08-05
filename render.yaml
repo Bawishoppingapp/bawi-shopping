@@ -22,7 +22,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false # Supabase direct connection string — see docs/DEPLOYMENT-LOWCOST.md
+        sync: false # Supabase DIRECT connection string (not the pooler) + ?sslmode=require — see docs/DEPLOYMENT-LOWCOST.md §2
       - key: STORE_CORS
         sync: false # e.g. https://bawi-storefront.vercel.app
       - key: ADMIN_CORS

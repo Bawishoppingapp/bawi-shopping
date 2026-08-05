@@ -1,104 +1,275 @@
 # Interim low-cost deployment (Vercel + Render/Railway + Supabase)
 
-This is an **alternative to `docs/DEPLOYMENT.md`** (the AWS/Terraform path) for the period before real vendors and customers are onboarded. The goal is $0–~$7/mo total instead of AWS's real infrastructure cost, while validating the product. See `docs/DECISIONS.md` ("Interim low-cost hosting…") for why this is compatible with the project's "no Supabase" rule — short version: Supabase is used here **only** as a hosted Postgres connection string, never its Auth/Storage/SDK/RLS.
+This is the **staging deployment runbook** for the low-cost path — an alternative to `docs/DEPLOYMENT.md` (the AWS/Terraform path) for validating the product before real vendors/customers are onboarded. Target cost: $0–~$7/mo. See `docs/DECISIONS.md` ("Interim low-cost hosting…") for why this is compatible with the project's "no Supabase" rule — short version: Supabase is used here **only** as a hosted Postgres connection string, never its Auth/Storage/SDK/RLS.
 
-`infra/terraform/` is untouched and stays ready — migrating back to AWS later is a redeploy of the same Docker images plus a `DATABASE_URL`/DNS change, not a rewrite. See "Migrating back to AWS" at the bottom.
+`infra/terraform/` is untouched and stays ready — see "Migrating back to AWS" at the bottom.
+
+**Nothing in this document turns on real money, real email/SMS, or real anything.** Stripe stays in test mode; `live_payments_enabled` and every `real_*` feature flag stay `false` throughout. See §6.
 
 ## Architecture
 
 ```
-Vercel (free)                Render or Railway            Supabase (free)
-┌─────────────────┐          ┌──────────────────┐          ┌──────────────┐
-│ storefront :3000│──┐       │                  │          │              │
-│ seller-portal    │──┼─────▶│  apps/backend    │─────────▶│  PostgreSQL  │
-│ admin            │──┘      │  (Medusa API)    │          │              │
-└─────────────────┘          └──────────────────┘          └──────────────┘
-     3 separate                 1 web service                1 database
-     Vercel projects            (Dockerfile-based)            (direct connection)
+Vercel (free)                Render (free) or Railway     Supabase (free)
+┌──────────────────┐         ┌──────────────────┐         ┌──────────────┐
+│ storefront :3000 │──┐      │                  │         │              │
+│ seller-portal     │──┼────▶│  apps/backend    │────────▶│  PostgreSQL  │
+│ admin             │──┘     │  (Medusa API)    │         │  (direct     │
+└──────────────────┘         └──────────────────┘         │  connection) │
+   3 separate Vercel            1 web service              └──────────────┘
+   projects                     (existing Dockerfile)
 ```
 
-No Redis, no S3, no separate worker process in this interim setup — all three are already optional in the code (`apps/backend/medusa-config.ts` falls back to in-memory/local-disk when their env vars are unset), which is exactly what makes a single free/low-cost instance workable. Nothing here needs to change if/when you add them back for AWS.
+**Redis: not used, not required.** `apps/backend/medusa-config.ts` already falls back to in-memory event bus/cache/locking when `REDIS_URL` is unset — correct behavior for a single instance, which is what a free-tier deploy is. Skip it entirely for staging; nothing below provisions it. If you later want to test multi-instance behavior, a Redis add-on (Render) or Upstash's free tier both just need a `REDIS_URL` value — no code or provisioning-order change.
 
-## What actually changes vs. the AWS path
+**Object storage: optional, decide in §5.** Local disk works but is ephemeral on Render/Railway; Cloudflare R2's free tier is the low-cost fix, no code change either way.
 
-**Code (already done):** all three `next.config.ts` files (`apps/storefront`, `apps/seller-portal`, `apps/admin`) now skip `output: "standalone"` when `process.env.VERCEL` is set — Vercel's own build pipeline doesn't use that folder and don't need the change reverted later. Nothing else in the application changed.
+## §1. Accounts and credentials — everything that requires you
 
-**Everything else is configuration**, because the backend was already built to be host-agnostic (`DATABASE_URL`, `REDIS_URL`, `S3_*`, CORS origins are all plain env vars — see `apps/backend/.env.production.example`).
+Nothing below can be created or entered by me. This is the complete list; nothing else in the sections that follow needs a new account.
 
-## Step 1 — Supabase (database)
+| # | Account | Why | Cost |
+|---|---|---|---|
+| 1 | [Supabase](https://supabase.com) | Hosted Postgres | Free tier |
+| 2 | [Render](https://render.com) (or [Railway](https://railway.app)) | Hosts the backend container | Render: free tier (cold starts). Railway: ~$5/mo, no cold starts |
+| 3 | [Vercel](https://vercel.com) | Hosts the 3 frontends | Free (Hobby) tier |
+| 4 | [Stripe](https://stripe.com) | Payments — **test mode only** | Free |
+| 5 | (Optional) [Cloudflare](https://dash.cloudflare.com) | R2 object storage, if you don't want ephemeral local disk | Free tier (10GB) |
 
-1. Create a project at [supabase.com](https://supabase.com) (free tier). Pick a strong database password — you'll need it in the connection string.
-2. In **Project Settings → Database → Connection string**, use the **direct connection** (`db.<project-ref>.supabase.co:5432`), **not** the "Session pooler"/"Transaction pooler" one. Medusa/Mikro-ORM keeps persistent connections and uses server-side prepared statements, which the transaction-mode pooler doesn't support — using the pooler here causes obscure query failures under load, not a clean error.
-3. Your `DATABASE_URL` looks like:
+Credentials to collect as you go (none exist yet — generate/copy them during the steps below, don't invent them ahead of time):
+- Supabase database password (you set it at project creation) → becomes part of `DATABASE_URL`
+- Stripe test-mode **Secret key** and **Publishable key** (Stripe Dashboard → Developers → API keys, with "Test mode" toggled on)
+- Stripe webhook **signing secret** (generated only after the backend has a real URL — see §3 step 5)
+- (Optional) Cloudflare R2 access key ID/secret if you choose R2 in §5
+
+No DNS, no custom domain, and no paid plan is required anywhere in this staging setup — Vercel and Render/Railway both issue free, working HTTPS subdomains (`*.vercel.app`, `*.onrender.com`), which is what §3–§4 use throughout.
+
+## §2. Database — Supabase
+
+1. Create a project at [supabase.com](https://supabase.com) (free tier). Pick a strong database password.
+2. **Project Settings → Database → Connection string → URI**, tab **"Direct connection"** — **not** "Session pooler"/"Transaction pooler". Medusa/Mikro-ORM holds persistent connections and uses server-side prepared statements, which the transaction-mode pooler doesn't support (silent query failures under load, not a clean error, if you use it by mistake).
+3. Your `DATABASE_URL`, with SSL forced explicitly (Supabase requires TLS; appending `?sslmode=require` is enough — `pg`, which Medusa's Postgres driver uses, parses `sslmode` from the URL itself, no code change needed):
    ```
-   postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+   postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require
    ```
-4. Known free-tier limits worth planning around: the project **auto-pauses after ~1 week of no activity** (first request after a pause is slow while it wakes up — fine for validation, surprising during a demo if you haven't touched it recently), and there's a 500MB storage cap. Both are non-issues at validation-phase data volumes.
-5. Do **not** install `@supabase/supabase-js` or use Supabase Auth/Storage anywhere — this project's own auth/storage layers (Medusa's `auth` module, `file-s3`/local-disk) are what's used; Supabase is only the Postgres server itself.
+4. Free-tier limits worth knowing: project **auto-pauses after ~1 week idle** (first request after is slow while it wakes), 500MB storage cap. Both fine at validation-phase volume.
+5. Do **not** install `@supabase/supabase-js` or touch Supabase Auth/Storage anywhere — this is a bare Postgres connection string, nothing else.
 
-## Step 2 — Backend on Render (recommended) or Railway
+## §3. Backend — Render (recommended) or Railway
 
-### Render (has an actual perpetual free tier)
+Pick the service name now — URLs are deterministic (`https://<service-name>.onrender.com`), so you know the backend's public URL before deploying the frontends.
 
-Pick a service name now — Render URLs are deterministic (`https://<service-name>.onrender.com`), so you can decide the backend's public URL before deploying the frontends.
+### Deploy
 
-**Option A — Blueprint (`render.yaml`, already in the repo root):**
-1. In the Render dashboard, **New → Blueprint**, connect this repo. Render reads `render.yaml` and creates the `bawi-backend` web service.
-2. Fill in every env var marked `sync: false` in the Render dashboard (Supabase `DATABASE_URL`, CORS origins once you know your Vercel URLs, Stripe test keys, etc.) — see `apps/backend/.env.production.example` for what each does.
+**Render, Option A — Blueprint (`render.yaml`, already in the repo root):**
+1. Render dashboard → **New → Blueprint** → connect this repo. Render reads `render.yaml` and creates the `bawi-backend` web service.
+2. Fill in every env var marked `sync: false` — see §5's tables for what each one is and where it comes from.
 
-**Option B — manual service:** New → Web Service → Docker → point at this repo, set **Dockerfile Path** = `apps/backend/Dockerfile` and **Docker Build Context Directory** = `.` (repo root — required, since the Dockerfile depends on the npm-workspaces root lockfile, see the Dockerfile's own header comment). Health check path `/health`. Then add the same env vars as above manually.
+**Render, Option B — manual service:** New → Web Service → Docker → this repo → **Dockerfile Path** = `apps/backend/Dockerfile`, **Docker Build Context Directory** = `.` (repo root — required; the Dockerfile depends on the npm-workspaces root lockfile). Health check path `/health`. Add the same env vars manually.
 
-Free-tier tradeoff: the service spins down after 15 minutes of no traffic and takes ~30–60s to cold-start the next request. Acceptable for internal validation; worth knowing if a Stripe webhook or a demo hits it cold.
+**Railway** (if you'd rather avoid Render's cold starts, at ~$5/mo): New Project → Deploy from repo → root directory `.`, Dockerfile path `apps/backend/Dockerfile` → add the same env vars via the Variables tab.
 
-### Railway (no true free tier anymore, but no cold starts)
+Render free-tier tradeoff: the service spins down after 15 min idle, ~30–60s cold start on the next request. Stripe retries webhook delivery on timeout, so this delays events, doesn't lose them.
 
-Railway now requires a ~$5/mo usage-based Hobby plan rather than an indefinite free tier. Same Dockerfile approach: New Project → Deploy from repo → set root directory to `.` and Dockerfile path to `apps/backend/Dockerfile` (Railway's Docker builder uses the configured root directory as build context) → add the same env vars via Railway's Variables tab. Use this if the Render cold-start behavior is a problem for you.
+### Migrate, seed, and create an admin user
 
-### Run migrations and create an admin user (either platform)
+Run these **once**, against the deployed service, in this exact order (Render: **Shell** tab on the service; Railway: `railway run <command>`):
 
-Both platforms offer a one-off command runner against the deployed service (Render: **Shell** tab on the service; Railway: `railway run <command>` via their CLI, scoped to the service's environment). Run, once, against the same `DATABASE_URL` as the running service:
 ```bash
+# 1. Apply every module's migrations (also this project's own smoke test for
+#    workflow-definition errors - confirm it exits 0 before continuing)
 npx medusa db:migrate
-npx medusa user -e you@example.com -p <password>
+
+# 2. Required platform scaffolding - store, region, sales channel, shipping
+#    profile, and (critically) the publishable API key the storefront needs.
+#    Not "demo data" - the storefront cannot function without this.
+npx medusa exec ./src/migration-scripts/initial-data-seed.ts
+
+# 3. Business-config defaults (commission rate, shipping fee, return
+#    window, etc., each flagged is_placeholder - see §7). Also required;
+#    the application reads these at runtime, they don't have hardcoded
+#    fallbacks.
+npx medusa exec ./src/scripts/seed-business-config.ts
+
+# 4. Your admin login for apps/admin.
+npx medusa user -e you@example.com -p <a-real-password>
 ```
 
-## Step 3 — Vercel (storefront, seller-portal, admin)
+Skip `seed-seller.ts` — it's an explicit dev/test-only convenience script for creating a demo seller login without going through the real application-approval flow (see its own header comment). Use the real seller-application flow once the seller-portal is deployed instead, unless you specifically want a demo seller to poke at early.
 
-Vercel URLs are also deterministic from the project name (`https://<project-name>.vercel.app`), so pick names before deploying if you want to set the backend's CORS vars up front.
+### Health check
 
-For each of the three apps, **New Project → import this repo → set Root Directory** to `apps/storefront`, `apps/seller-portal`, or `apps/admin` respectively (Vercel builds each as an independent project pointed at a subdirectory of the monorepo; it detects the Next.js framework and handles the workspace install itself — no Dockerfile involved). Set the env vars per app:
+```bash
+curl -i https://<your-backend>.onrender.com/health
+# expect: HTTP/1.1 200 OK
+```
 
-| App | Env vars |
+### Logs
+
+- Render: dashboard **Logs** tab (live tail), or `render logs <service-name> --tail` via the [Render CLI](https://render.com/docs/cli).
+- Railway: `railway logs` (CLI), scoped to the linked service, or the dashboard's **Deployments → Logs** view.
+
+### Rollback
+
+- Render: **Deploys** tab on the service → pick a previous successful deploy → **Redeploy**. Render keeps prior build images; no rebuild needed for a same-image rollback.
+- Railway: **Deployments** tab → previous deployment → **Redeploy**.
+- If a bad *migration* shipped (not just a bad app version): migrations in this project have no automated `down` runner wired to a CLI shortcut — write and run the specific migration's `down()` manually via `npx medusa db:migrate` tooling is forward-only by default, so the safe path is: redeploy the previous app image first (above), then restore the Supabase database from its automatic daily backup (Supabase dashboard → Database → Backups) if the migration already altered data, not just schema. Test this restore path once for real before you rely on it, per `docs/DEPLOYMENT.md` §6's standing gap ("no automated restore drill exists").
+
+## §4. Frontends — Vercel (storefront, seller-portal, admin)
+
+Vercel URLs are also deterministic (`https://<project-name>.vercel.app`), so name the projects before deploying if you want the backend's CORS vars set up front.
+
+For each of the three apps: **New Project → import this repo → Root Directory** = `apps/storefront`, `apps/seller-portal`, or `apps/admin`. Vercel auto-detects Next.js and handles the workspace install itself — no Dockerfile involved, nothing else to configure.
+
+Env vars per app — see §5 for the full reference:
+
+| App | Required env vars |
 |---|---|
-| storefront | `MEDUSA_BACKEND_URL` (your Render/Railway backend URL), `MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
+| storefront | `MEDUSA_BACKEND_URL`, `MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
 | seller-portal | `MEDUSA_BACKEND_URL` |
 | admin | `MEDUSA_BACKEND_URL` |
 
-`MEDUSA_PUBLISHABLE_KEY` is created from the deployed backend's admin (Settings → Publishable API Keys) once it's up and migrated — same as the AWS path, not new to this setup.
+`MEDUSA_PUBLISHABLE_KEY` comes from the deployed backend's admin (Settings → Publishable API Keys), created **after** §3's seed step and the admin user exist.
 
-## Step 4 — close the loop
+### Health check
 
-Once all four services have real URLs, go back to the backend's env vars and set `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `SELLER_PORTAL_URL`, and `COURIER_PORTAL_URL` to the actual Vercel URLs, then redeploy the backend (Render/Railway both redeploy automatically on env var changes, or trigger manually).
+```bash
+curl -i https://<your-app>.vercel.app/
+# expect: HTTP/2 200 (storefront/admin homepage renders)
+```
 
-## Object storage (product images)
+### Rollback
 
-Render and Railway's free/low-cost containers have **ephemeral disk** — anything written to local disk (the default when `S3_BUCKET` is unset) can be lost on redeploy or restart. Two options, no code change either way:
-- **Accept it for now.** Simplest; fine for early testing where you don't mind re-uploading a few product images occasionally.
-- **Use Cloudflare R2's free tier** (10GB storage free, S3-compatible API). `apps/backend/medusa-config.ts` already supports any S3-compatible endpoint via `S3_ENDPOINT` — set `S3_BUCKET`, `S3_ENDPOINT` (R2's S3 endpoint), `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION=auto`. No code change; this is the same `authentication_method: "access-key"` path already wired for any non-AWS S3-compatible provider.
+Vercel keeps every deployment. Dashboard → **Deployments** → pick a prior one → **Promote to Production**. No rebuild.
+
+## §5. Close the loop, then the full environment-variable reference
+
+Once all four services (backend + 3 frontends) have real URLs:
+1. Go back to the backend's env vars (Render/Railway dashboard) and set `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `SELLER_PORTAL_URL`, `COURIER_PORTAL_URL` to the actual Vercel URLs.
+2. **Register the Stripe webhook** (Stripe Dashboard, test mode → Developers → Webhooks → **Add endpoint**): `https://<your-backend>.onrender.com/webhooks/stripe`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+3. Redeploy the backend (env var changes trigger this automatically on both platforms, or trigger manually).
+
+### Env vars — backend, categorized
+
+**Safe public configuration** (fine in a dashboard, not secret, not business-sensitive):
+| Var | Value |
+|---|---|
+| `STORE_CORS` | `https://<storefront>.vercel.app` |
+| `ADMIN_CORS` | `https://<admin>.vercel.app` |
+| `AUTH_CORS` | `https://<storefront>.vercel.app,https://<seller-portal>.vercel.app,https://<admin>.vercel.app` |
+| `SELLER_PORTAL_URL` | `https://<seller-portal>.vercel.app` |
+| `COURIER_PORTAL_URL` | `https://<admin>.vercel.app/courier` |
+| `ENABLE_TEST_SUPPORT_ROUTES` | `false` — must stay false outside CI |
+| `EMAIL_PROVIDER` | leave blank (keeps `notification-local`; no email actually sends) |
+| `S3_BUCKET` | blank unless you did §"Object storage" below |
+
+**Private secrets** (Render/Railway's secret-marked env vars, never in git):
+| Var | Source |
+|---|---|
+| `DATABASE_URL` | §2, includes the Supabase password |
+| `JWT_SECRET` | generate: `openssl rand -hex 32` (or `render.yaml`'s `generateValue: true` does this for you) |
+| `COOKIE_SECRET` | same |
+| `AUTH_MFA_ENCRYPTION_KEY` | `openssl rand -hex 32` |
+| `STRIPE_SECRET_KEY` | Stripe Dashboard, **test mode**, `sk_test_...` |
+| `STRIPE_WEBHOOK_SECRET` | from §5 step 2 above, `whsec_...` |
+
+**Production-only credentials — do NOT set any of these for staging:**
+| Var | Why it stays unset here |
+|---|---|
+| `sk_live_...` (a live Stripe key) | Staging is test-mode only, per this task's own instructions and `CLAUDE.md`'s non-negotiable rule |
+| Real `SENDGRID_API_KEY` | Only needed once `real_email_enabled` is deliberately flipped — a separate, later, human decision |
+| AWS-specific S3 IAM-role auth (`authentication_method: "s3-iam-role"`, i.e. leaving `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` blank while `S3_BUCKET` is set) | Only applies on ECS with a task role — not this path. If using R2 here, set explicit `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` instead (R2 has no IAM-role concept) |
+
+**Placeholder business settings** — not env vars at all; they live in the `business_config_entry` table, seeded by §3's `seed-business-config.ts` step with `is_placeholder: true` on each. See §7 — no action needed for staging, only before a real launch.
+
+### Env vars — frontends
+
+| Var | App(s) | Category |
+|---|---|---|
+| `MEDUSA_BACKEND_URL` | all 3 | Safe public config |
+| `MEDUSA_PUBLISHABLE_KEY` | storefront | Safe public config (scoped API key, not a secret in Medusa's model, but still specific to this environment) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | storefront | Safe public config — Stripe **test-mode** publishable key, `pk_test_...` (never a secret key) |
+
+### Object storage (product images) — optional
+
+Render/Railway free containers have ephemeral disk. Two options, no code change either way:
+- **Accept it for staging** — simplest; images may need re-uploading after a redeploy.
+- **Cloudflare R2 free tier** (10GB, S3-compatible): set `S3_BUCKET`, `S3_ENDPOINT` (R2's endpoint), `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION=auto`. Same `authentication_method: "access-key"` code path already wired in `medusa-config.ts` for any non-AWS S3-compatible provider.
+
+## §6. Feature-flag and payment-mode confirmation
+
+Nothing in this deployment path changes any of these — confirming explicitly since it's this task's own requirement:
+- `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` above are **test mode** (`sk_test_...`/webhook registered under Stripe's test-mode toggle). Never enter a `sk_live_...` key for this environment.
+- `live_payments_enabled`, `real_transfers_enabled`, `real_payouts_enabled`, `real_refunds_enabled`, `real_tax_calculation_enabled`, `real_email_enabled`, `real_sms_enabled`, `real_courier_booking_enabled` all default `false` from `seed-business-config.ts` (§3) and are never touched by anything in this document. Verify with §8's readiness check.
+- `EMAIL_PROVIDER` staying blank keeps every notification on `notification-local` (logged only, nothing sent).
+
+## §7. Remaining placeholder business decisions (unaffected by this deployment)
+
+These are pre-existing, business/legal decisions — not deployment work, not blocking staging — carried over unchanged from `docs/DECISIONS.md`/`CLAUDE.md`: commission rate, shipping fee, free-shipping threshold, return window/policy, seller prep deadline, cancellation cutoff, service area, tax rate/provider, courier/email/SMS provider selection, support contact info, and every `legal.*` entry (company legal name, address, registered agent state, DMCA/privacy contact emails, terms-last-updated). Run §8's readiness check against this staging database for the current, authoritative list — it's DB state, not something this document can hardcode a number for.
+
+## §8. Production-readiness check — run against staging
+
+```bash
+# From apps/backend, with DATABASE_URL pointed at the staging Supabase DB
+# (either run this via Render/Railway's shell against the live service,
+# or locally with DATABASE_URL temporarily overridden):
+npx medusa exec ./src/scripts/check-production-readiness.ts
+```
+Prints every `business_config_entry` still at its placeholder default, plus the live value of every `real_*`/`live_payments_enabled` flag. Expect every flag `false` and a non-empty placeholder list (§7) — that's the correct, safe state for staging.
+
+## §9. GitHub Actions — checking CI, especially the 3 previously-local-blocked spec files
+
+`.github/workflows/ci.yml` runs on every push to `main` and every PR: a `lint-typecheck-unit-build` job, and a `backend-integration` job against a real `postgres:16` service container (unrelated to Supabase — CI provisions its own disposable database, never touches staging).
+
+`checkout.spec.ts`, `fulfillment.spec.ts`, and `seller-finance.spec.ts` (all under `apps/backend/integration-tests/http/`) are part of that job's `npm run test:integration` step — this local machine's memory pressure previously prevented them completing locally; CI is where to actually confirm they pass.
+
+**Web UI:** repo → **Actions** tab → latest run of `backend-integration` → expand the "Run integration tests" step, search its output for the three filenames.
+
+**CLI (`gh`):**
+```bash
+gh run list --repo Bawishoppingapp/bawi-shopping --workflow=ci.yml --limit 5
+gh run view <run-id> --repo Bawishoppingapp/bawi-shopping --log \
+  | grep -E "checkout\.spec\.ts|fulfillment\.spec\.ts|seller-finance\.spec\.ts|PASS|FAIL"
+```
+A clean run shows `PASS integration-tests/http/checkout.spec.ts` (and the other two) with no `FAIL` lines in that job.
+
+## §10. Load/soak testing against staging
+
+Once §3–§5 are deployed and the smoke test (below) passes:
+```bash
+# Quick sanity check against the real staging URLs (seconds):
+k6 run -e BASE_URL=https://<storefront>.vercel.app \
+       -e BACKEND_URL=https://<your-backend>.onrender.com \
+       load-testing/smoke.js
+
+# Ramping load (~3.5 min):
+k6 run -e BASE_URL=https://<storefront>.vercel.app \
+       -e BACKEND_URL=https://<your-backend>.onrender.com \
+       load-testing/load.js
+
+# Soak test - override duration, then actually let it run:
+k6 run -e BASE_URL=https://<storefront>.vercel.app \
+       -e BACKEND_URL=https://<your-backend>.onrender.com \
+       -e SOAK_DURATION=1h \
+       load-testing/soak.js
+```
+Expect Render's free-tier cold start to show up as one slow first request if the service had been idle — not a failure, just the tradeoff noted in §3. See `load-testing/README.md` for how to read `http_req_duration`/`http_req_failed` thresholds.
+
+## §11. End-to-end smoke test (after §3–§5)
+
+Register a customer on the storefront → submit a seller application (seller-portal) → approve it (admin) → activate the seller → create and approve a product → add to cart → complete a **test-mode** Stripe checkout (use [Stripe's test card `4242 4242 4242 4242`](https://stripe.com/docs/testing)) → confirm the webhook fires and splits the order → confirm an in-app notification appears. This exercises every module across all 16 slices in one pass.
 
 ## Known limitations of this interim setup
 
-- **Vercel's Hobby (free) plan** is intended for personal/non-commercial use per Vercel's own terms. Fine for a private validation phase with no real customers; plan to upgrade to a paid Vercel plan (or move the frontends to AWS/CloudFront) once you're onboarding real vendors/customers — same trigger point as the Supabase→RDS migration below.
-- **Single backend instance, no Redis** — fine at validation-phase traffic; matches this project's existing "Redis optional" design, not a new gap.
-- **Render free-tier cold starts** (~30–60s) can make the first Stripe webhook delivery after idle slow; Stripe retries on timeout, so this doesn't lose events, just delays them.
-- **Supabase free-tier auto-pause** after ~1 week idle — first request after a pause is slow.
+- **Vercel's Hobby (free) plan** is intended for personal/non-commercial use per Vercel's own terms — fine for private validation with no real customers; revisit before onboarding real vendors/customers.
+- **Render free-tier cold starts** (~30–60s) — Stripe retries on timeout, so this delays webhook delivery, doesn't lose events.
+- **Supabase free-tier auto-pause** after ~1 week idle.
+- **Single backend instance, no Redis** — matches this project's existing "Redis optional" design, not a new gap.
 
 ## Migrating back to AWS later
 
-When you're ready to onboard real vendors/customers:
-1. `terraform apply` in `infra/terraform/` (already audited and hardened — see `infra/terraform/DEPLOYMENT-SEQUENCE.md`) to provision RDS, ECS, ALB, etc.
-2. Migrate data: `pg_dump` from Supabase's direct connection, restore into the new RDS instance.
-3. Push the same Docker images (already built for all 4 apps, unchanged) to ECR and let ECS run them instead of Render/Railway.
-4. Repoint DNS from the Vercel/Render URLs to the ALB/CloudFront the Terraform module provisions.
+1. `terraform apply` in `infra/terraform/` (audited, hardened — see `infra/terraform/DEPLOYMENT-SEQUENCE.md`) to provision RDS, ECS, ALB, etc.
+2. `pg_dump` from Supabase's direct connection, restore into the new RDS instance.
+3. Push the same Docker images (unchanged) to ECR; let ECS run them instead of Render/Railway.
+4. Repoint DNS from the Vercel/Render URLs to the ALB/CloudFront Terraform provisions.
 
-No application code changes are required for this migration — it was a deliberate property of keeping every external dependency env-var-driven, not something added just for this doc.
+No application code changes required — every external dependency is env-var-driven by design.
