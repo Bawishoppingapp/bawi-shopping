@@ -47,9 +47,9 @@ No DNS, no custom domain, and no paid plan is required anywhere in this staging 
 
 1. Create a project at [supabase.com](https://supabase.com) (free tier). Pick a strong database password.
 2. **Project Settings → Database → Connection string → URI**, tab **"Direct connection"** — **not** "Session pooler"/"Transaction pooler". Medusa/Mikro-ORM holds persistent connections and uses server-side prepared statements, which the transaction-mode pooler doesn't support (silent query failures under load, not a clean error, if you use it by mistake).
-3. Your `DATABASE_URL`, with SSL forced explicitly (Supabase requires TLS; appending `?sslmode=require` is enough — `pg`, which Medusa's Postgres driver uses, parses `sslmode` from the URL itself, no code change needed):
+3. Your `DATABASE_URL`, with SSL forced explicitly via `?sslmode=no-verify` (confirmed against `pg-connection-string`'s actual source, `node_modules/pg-connection-string/index.js`: `sslmode=require` only enables TLS and leaves Node's default strict certificate-chain verification on, which fails against Supabase's chain from a generic Node client — `no-verify` is the value that disables strict verification while keeping the connection encrypted; this was confirmed against a real failed Render deploy, not assumed):
    ```
-   postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require
+   postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=no-verify
    ```
 4. Free-tier limits worth knowing: project **auto-pauses after ~1 week idle** (first request after is slow while it wakes), 500MB storage cap. Both fine at validation-phase volume.
 5. Do **not** install `@supabase/supabase-js` or touch Supabase Auth/Storage anywhere — this is a bare Postgres connection string, nothing else.
