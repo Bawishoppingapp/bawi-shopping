@@ -47,12 +47,17 @@ No DNS, no custom domain, and no paid plan is required anywhere in this staging 
 
 1. Create a project at [supabase.com](https://supabase.com) (free tier). Pick a strong database password.
 2. **Project Settings → Database → Connection string → URI**, tab **"Direct connection"** — **not** "Session pooler"/"Transaction pooler". Medusa/Mikro-ORM holds persistent connections and uses server-side prepared statements, which the transaction-mode pooler doesn't support (silent query failures under load, not a clean error, if you use it by mistake).
-3. Your `DATABASE_URL`, with SSL forced explicitly via `?sslmode=no-verify` (confirmed against `pg-connection-string`'s actual source, `node_modules/pg-connection-string/index.js`: `sslmode=require` only enables TLS and leaves Node's default strict certificate-chain verification on, which fails against Supabase's chain from a generic Node client — `no-verify` is the value that disables strict verification while keeping the connection encrypted; this was confirmed against a real failed Render deploy, not assumed):
+3. Your `DATABASE_URL`:
    ```
-   postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=no-verify
+   postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
    ```
-4. Free-tier limits worth knowing: project **auto-pauses after ~1 week idle** (first request after is slow while it wakes), 500MB storage cap. Both fine at validation-phase volume.
-5. Do **not** install `@supabase/supabase-js` or touch Supabase Auth/Storage anywhere — this is a bare Postgres connection string, nothing else.
+4. **TLS certificate verification needs a second, separate env var — not a `DATABASE_URL` query param.** Supabase requires TLS but presents a certificate chain Node's default strict verification rejects from a generic client (`self-signed certificate in certificate chain` — confirmed against a real failed Render deploy). A `?sslmode=...` suffix on `DATABASE_URL` does **not** fix this: Medusa's own Postgres connection loader (`@medusajs/utils`'s `createPgConnection`, confirmed against its actual source) always passes an explicit `ssl` option to the driver that overrides anything parsed from the connection string, defaulting to `ssl: false`. The real fix, already wired in `apps/backend/medusa-config.ts`: set
+   ```
+   DATABASE_SSL_REJECT_UNAUTHORIZED=false
+   ```
+   as its own env var (§3/§5's tables). Off by default — AWS RDS (`infra/terraform`) and local/CI Postgres are unaffected by this var existing.
+5. Free-tier limits worth knowing: project **auto-pauses after ~1 week idle** (first request after is slow while it wakes), 500MB storage cap. Both fine at validation-phase volume.
+6. Do **not** install `@supabase/supabase-js` or touch Supabase Auth/Storage anywhere — this is a bare Postgres connection string, nothing else.
 
 ## §3. Backend — Render (recommended) or Railway
 
@@ -161,6 +166,7 @@ Once all four services (backend + 3 frontends) have real URLs:
 | `ENABLE_TEST_SUPPORT_ROUTES` | `false` — must stay false outside CI |
 | `EMAIL_PROVIDER` | leave blank (keeps `notification-local`; no email actually sends) |
 | `S3_BUCKET` | blank unless you did §"Object storage" below |
+| `DATABASE_SSL_REJECT_UNAUTHORIZED` | `false` — required for Supabase, see §2 step 4. Not a real secret itself, but keep it next to `DATABASE_URL` for clarity |
 
 **Private secrets** (Render/Railway's secret-marked env vars, never in git):
 | Var | Source |

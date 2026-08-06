@@ -11,6 +11,22 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 // separately by business-config (see docs/DEPLOYMENT.md §4.3).
 const redisUrl = process.env.REDIS_URL
 
+// Managed Postgres providers outside AWS (Supabase, Heroku, etc.) require
+// TLS but present a certificate chain Node's default strict verification
+// rejects for a generic client ("self-signed certificate in certificate
+// chain") - confirmed against a real failed deploy, see
+// docs/DEPLOYMENT-LOWCOST.md §2. A `?sslmode=...` query param on
+// DATABASE_URL alone does NOT fix this: Medusa's own connection loader
+// (@medusajs/utils's createPgConnection, confirmed against its actual
+// source) always passes an explicit `ssl` option to the driver that
+// overrides anything parsed from the connection string, defaulting to
+// `ssl: false` unless set here via databaseDriverOptions. Off by default
+// - AWS RDS (via infra/terraform) and local/CI Postgres need no change.
+const databaseDriverOptions =
+  process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "false"
+    ? { connection: { ssl: { rejectUnauthorized: false } } }
+    : undefined
+
 // "@medusajs/medusa/cache-redis" etc. are Medusa's own re-exports of the
 // underlying @medusajs/cache-redis/@medusajs/event-bus-redis/... packages
 // (see apps/backend/package.json) - the same resolution pattern already
@@ -100,6 +116,7 @@ const emailProviders = [
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    ...(databaseDriverOptions ? { databaseDriverOptions } : {}),
     http: {
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,

@@ -22,7 +22,9 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false # Supabase DIRECT connection string (not the pooler) + ?sslmode=no-verify (not "require" — fails cert-chain verification) — see docs/DEPLOYMENT-LOWCOST.md §2
+        sync: false # Supabase DIRECT connection string (not the pooler), no query params needed — see docs/DEPLOYMENT-LOWCOST.md §2
+      - key: DATABASE_SSL_REJECT_UNAUTHORIZED
+        value: "false" # required for Supabase's cert chain — see docs/DEPLOYMENT-LOWCOST.md §2 step 4
       - key: STORE_CORS
         sync: false # e.g. https://bawi-storefront.vercel.app
       - key: ADMIN_CORS
