@@ -33,11 +33,18 @@ RUN npm run build --workspace=@bawi/backend
 
 FROM base AS runner
 ENV NODE_ENV=production
+# --chown here (not a later `RUN chown -R`) matters: Medusa's migration
+# runner writes into node_modules/@medusajs/*/dist/migrations at runtime
+# for modules that don't ship one yet (confirmed against a real EACCES
+# failure - `npx medusa db:migrate` as the non-root `bawi` user, against
+# node_modules copied in as root with no ownership flag, failed on every
+# such mkdir). This affects any environment's *first* migrate run against
+# a fresh database, not just Render - see docs/DEPLOYMENT-LOWCOST.md §3.
 RUN addgroup -S bawi && adduser -S bawi -G bawi
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/apps/backend ./apps/backend
-COPY --from=build /app/packages/search-contract ./packages/search-contract
+COPY --from=build --chown=bawi:bawi /app/node_modules ./node_modules
+COPY --from=build --chown=bawi:bawi /app/package.json ./package.json
+COPY --from=build --chown=bawi:bawi /app/apps/backend ./apps/backend
+COPY --from=build --chown=bawi:bawi /app/packages/search-contract ./packages/search-contract
 WORKDIR /app/apps/backend
 USER bawi
 EXPOSE 9000
