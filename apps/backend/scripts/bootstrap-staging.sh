@@ -29,4 +29,7 @@ npx medusa exec ./src/scripts/seed-business-config.ts
 npx medusa user -e "${STAGING_ADMIN_EMAIL:?set STAGING_ADMIN_EMAIL}" -p "${STAGING_ADMIN_PASSWORD:?set STAGING_ADMIN_PASSWORD}" || \
   echo "medusa user errored (likely already created by an earlier attempt) - continuing"
 
+# Must run from .medusa/server, not apps/backend - see Dockerfile's CMD
+# comment for why (admin UI static-file path resolves relative to cwd).
+cd .medusa/server
 npm run start

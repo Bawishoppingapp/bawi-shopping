@@ -52,8 +52,18 @@ EXPOSE 9000
 # by infra/terraform's ALB target group health check.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget -qO- http://localhost:9000/health || exit 1
-# Runs `medusa start` against the .medusa/server output produced above -
-# migrations are NOT run automatically on container start (see
+# `medusa start` must run from WITHIN .medusa/server, not apps/backend -
+# .medusa/server is a separate, self-contained deployable output (its own
+# package.json) that the admin UI's static-file path resolves relative
+# to. Running it from apps/backend instead (as an earlier version of this
+# Dockerfile did) reproducibly fails with "Could not find index.html in
+# the admin build directory" - confirmed by reproducing and fixing this
+# locally (see docs/DEPLOYMENT-LOWCOST.md §3), not guessed. node_modules
+# resolution still works from here since Node walks up to /app/node_
+# modules same as it does from apps/backend directly.
+# Migrations are NOT run automatically on container start (see
 # docs/DEPLOYMENT.md/docs/DATABASE.md §6: migrations run as their own
-# explicit step, staging before production, never implicitly on boot).
-CMD ["npm", "run", "start"]
+# explicit step, staging before production, never implicitly on boot) -
+# and still run from apps/backend (via Shell or bootstrap-staging.sh),
+# not from here, since they use ts-node against the original src/ tree.
+CMD ["sh", "-c", "cd .medusa/server && npm run start"]
