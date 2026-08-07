@@ -69,7 +69,9 @@ Pick the service name now — URLs are deterministic (`https://<service-name>.on
 1. Render dashboard → **New → Blueprint** → connect this repo. Render reads `render.yaml` and creates the `bawi-backend` web service.
 2. Fill in every env var marked `sync: false` — see §5's tables for what each one is and where it comes from.
 
-**Render, Option B — manual service:** New → Web Service → Docker → this repo → **Dockerfile Path** = `apps/backend/Dockerfile`, **Docker Build Context Directory** = `.` (repo root — required; the Dockerfile depends on the npm-workspaces root lockfile). Health check path `/health`. Add the same env vars manually.
+**Render, Option B — manual service:** New → Web Service → Docker → this repo → **Dockerfile Path** = `apps/backend/Dockerfile`, **Docker Build Context Directory** = `.` (repo root — required; the Dockerfile depends on the npm-workspaces root lockfile). Health check path `/health`. Add the same env vars manually — **including `PORT=9000`** (see below; not needed if you used the Blueprint, it's already in `render.yaml`).
+
+**`PORT` must be pinned to `9000` explicitly** — confirmed against a real deploy that timed out on Render's health check. Medusa's `start` command reads a `PORT` env var if one is set (falling back to `9000` only when unset — confirmed against `@medusajs/cli`'s own `--port` option help text), and Render injects its own `PORT` (defaulting to `10000`) into Docker services unless overridden. Without pinning this, Medusa may bind to a different port than the Dockerfile's `EXPOSE`/`HEALTHCHECK` and this file's `healthCheckPath` assume, and nothing lines up.
 
 **Railway** (if you'd rather avoid Render's cold starts, at ~$5/mo): New Project → Deploy from repo → root directory `.`, Dockerfile path `apps/backend/Dockerfile` → add the same env vars via the Variables tab.
 

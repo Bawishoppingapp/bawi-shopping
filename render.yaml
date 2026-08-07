@@ -21,6 +21,8 @@ services:
     dockerContext: .
     healthCheckPath: /health
     envVars:
+      - key: PORT
+        value: "9000" # Medusa's start command reads PORT if set, defaulting to 9000 otherwise (confirmed against @medusajs/cli's own --port option help text). Render injects its own PORT (defaulting to 10000) into Docker services unless pinned here — without this, Medusa binds to whatever Render's default is while the Dockerfile's EXPOSE/HEALTHCHECK and this file's healthCheckPath assume 9000, so nothing lines up. Confirmed against a real deploy that timed out on Render's health check at port 10000.
       - key: DATABASE_URL
         sync: false # Supabase DIRECT connection string (not the pooler), no query params needed — see docs/DEPLOYMENT-LOWCOST.md §2
       - key: DATABASE_SSL_REJECT_UNAUTHORIZED
