@@ -77,29 +77,20 @@ Render free-tier tradeoff: the service spins down after 15 min idle, ~30–60s c
 
 ### Migrate, seed, and create an admin user
 
-Run these **once**, against the deployed service, in this exact order (Render: **Shell** tab on the service; Railway: `railway run <command>`):
+**Render's free tier has no Shell/one-off-job access — both require the paid Starter instance type** (confirmed against a real "Enable Shell Access" upgrade prompt; Railway's `railway run` is the equivalent free-tier-compatible option there). On Render's free tier, use `apps/backend/scripts/bootstrap-staging.sh` instead — a one-time startup override, not an interactive shell:
 
-```bash
-# 1. Apply every module's migrations (also this project's own smoke test for
-#    workflow-definition errors - confirm it exits 0 before continuing)
-npx medusa db:migrate
+1. Set two env vars on the service (**Environment** tab): `STAGING_ADMIN_EMAIL` and `STAGING_ADMIN_PASSWORD` — your real admin login for `apps/admin`.
+2. **Settings → Docker Command**, set it to:
+   ```
+   sh scripts/bootstrap-staging.sh
+   ```
+   (Render's Docker Command field does not reliably parse `&&`-chained shell strings typed directly into it — confirmed against a real failed deploy where the entire chained command was passed through as one unparsed token. A checked-in script file sidesteps that entirely: one simple token, no quoting.)
+3. Save — this triggers a deploy that runs migrations → seed data → business-config defaults → creates your admin user → **then** starts the server, all in one boot. Watch **Logs**; expect this first boot to take longer than normal.
+4. Once it reaches **"Live"**, go back to **Settings → Docker Command** and **clear it back to blank** — this reverts to the Dockerfile's normal `npm run start` for every deploy after this one. Re-running the seed scripts or `medusa user` a second time is not safe (duplicate data / duplicate-user error), so this override must not stay in place permanently.
 
-# 2. Required platform scaffolding - store, region, sales channel, shipping
-#    profile, and (critically) the publishable API key the storefront needs.
-#    Not "demo data" - the storefront cannot function without this.
-npx medusa exec ./src/migration-scripts/initial-data-seed.ts
+Railway (no Docker Command field issue there, or use its Shell): same four commands, run via `railway run <command>`, in order — `npx medusa db:migrate`, `npx medusa exec ./src/migration-scripts/initial-data-seed.ts`, `npx medusa exec ./src/scripts/seed-business-config.ts`, `npx medusa user -e you@example.com -p <password>`.
 
-# 3. Business-config defaults (commission rate, shipping fee, return
-#    window, etc., each flagged is_placeholder - see §7). Also required;
-#    the application reads these at runtime, they don't have hardcoded
-#    fallbacks.
-npx medusa exec ./src/scripts/seed-business-config.ts
-
-# 4. Your admin login for apps/admin.
-npx medusa user -e you@example.com -p <a-real-password>
-```
-
-Skip `seed-seller.ts` — it's an explicit dev/test-only convenience script for creating a demo seller login without going through the real application-approval flow (see its own header comment). Use the real seller-application flow once the seller-portal is deployed instead, unless you specifically want a demo seller to poke at early.
+Skip `seed-seller.ts` either way — it's an explicit dev/test-only convenience script for creating a demo seller login without going through the real application-approval flow (see its own header comment). Use the real seller-application flow once the seller-portal is deployed instead, unless you specifically want a demo seller to poke at early.
 
 ### Health check
 
