@@ -6,7 +6,10 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./locales": "./src/locales.ts",
+    "./translate": "./src/translate.ts",
+    "./messages": "./src/messages.ts"
   },
   "scripts": {
     "test": "vitest run",
