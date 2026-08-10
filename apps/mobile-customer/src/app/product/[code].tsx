@@ -7,13 +7,22 @@ import { ActivityIndicator, ScrollView, Text, View, useWindowDimensions } from "
 
 import { type PublicProduct, getPublicProduct } from "@/features/products/services/products-client";
 import { formatUsd } from "@/features/discovery/utils/format-price";
+import { useCart } from "@/features/cart/hooks/use-cart";
 
 export default function ProductDetailScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const { width } = useWindowDimensions();
+  const { addItem } = useCart();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  // Keyed to the variant it applied to, so switching color/size
+  // automatically "resets" the added/error state without a separate
+  // effect - it just no longer matches the currently selected variant.
+  const [lastAddResult, setLastAddResult] = useState<
+    { variantId: string; status: "added" } | { variantId: string; status: "error"; message: string } | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,6 +46,20 @@ export default function ProductDetailScreen() {
     );
   }, [product, selectedColor, selectedSize]);
 
+  async function onAddToBag() {
+    if (!selectedVariant) return;
+    const variantId = selectedVariant.id;
+    setAdding(true);
+    try {
+      await addItem(variantId, 1);
+      setLastAddResult({ variantId, status: "added" });
+    } catch {
+      setLastAddResult({ variantId, status: "error", message: "Couldn't add this to your bag. Please try again." });
+    } finally {
+      setAdding(false);
+    }
+  }
+
   if (product === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
@@ -58,6 +81,10 @@ export default function ProductDetailScreen() {
   const price = selectedVariant?.price ?? product.base_price;
   const isAvailable = selectedVariant ? selectedVariant.available_quantity > 0 : false;
   const imageSize = width;
+  const addResultForSelection =
+    selectedVariant && lastAddResult?.variantId === selectedVariant.id ? lastAddResult : null;
+  const added = addResultForSelection?.status === "added";
+  const addError = addResultForSelection?.status === "error" ? addResultForSelection.message : null;
 
   return (
     <View className="flex-1 bg-paper">
@@ -136,10 +163,11 @@ export default function ProductDetailScreen() {
             </Text>
           ) : null}
 
-          {/* Cart wiring lands with the cart feature - this validates a
-              real, in-stock variant is selected but doesn't call the cart
-              API yet. */}
-          <Button disabled={!isAvailable}>Add to bag</Button>
+          {addError ? <Text className="text-body-sm text-danger">{addError}</Text> : null}
+
+          <Button disabled={!isAvailable || adding} loading={adding} onPress={onAddToBag}>
+            {added ? "Added to bag" : "Add to bag"}
+          </Button>
 
           {product.description ? (
             <View className="gap-1 pt-2">
