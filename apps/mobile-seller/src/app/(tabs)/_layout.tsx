@@ -37,6 +37,27 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="grid-outline" size={ICON_SIZE} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="fulfillment"
+        options={{
+          title: "Fulfillment",
+          tabBarIcon: ({ color }) => <Ionicons name="cube-outline" size={ICON_SIZE} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="finance"
+        options={{
+          title: "Finance",
+          tabBarIcon: ({ color }) => <Ionicons name="cash-outline" size={ICON_SIZE} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="returns"
+        options={{
+          title: "Returns",
+          tabBarIcon: ({ color }) => <Ionicons name="return-up-back-outline" size={ICON_SIZE} color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
