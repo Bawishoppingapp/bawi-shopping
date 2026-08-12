@@ -1,20 +1,22 @@
-import { forwardRef, useState } from "react";
+import { useState, type Ref } from "react";
 import { Text, TextInput, View, type TextInputProps } from "react-native";
 
 interface InputProps extends TextInputProps {
   label: string;
   error?: string;
   helperText?: string;
+  ref?: Ref<TextInput>;
 }
 
 /**
  * Label is always visible (never placeholder-as-label) and errors render
  * inline below the field - matches docs/DESIGN-SYSTEM.md §6's forms rule.
+ * React 19 takes `ref` as a plain prop - no forwardRef needed (forwardRef's
+ * exotic component type doesn't satisfy React 19's JSX element type
+ * constraint cleanly in a monorepo with more than one @types/react
+ * instance; see https://github.com/react-icons/react-icons/issues/1006).
  */
-export const Input = forwardRef<TextInput, InputProps>(function Input(
-  { label, error, helperText, className = "", onFocus, onBlur, ...props },
-  ref
-) {
+export function Input({ label, error, helperText, className = "", onFocus, onBlur, ref, ...props }: InputProps) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -44,4 +46,4 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
       ) : null}
     </View>
   );
-});
+}

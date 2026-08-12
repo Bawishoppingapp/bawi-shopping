@@ -17,7 +17,8 @@
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
     "test:e2e": "turbo run test:e2e",
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "postinstall": "node scripts/fix-nativewind-tailwind.js && node scripts/fix-mobile-ui-react-dedup.js"
   },
   "devDependencies": {
     "ajv": "^8.17.1",

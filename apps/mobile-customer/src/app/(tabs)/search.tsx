@@ -53,9 +53,6 @@ export default function SearchScreen() {
   // category chip) - not on every keystroke, only when the query is
   // submitted (see TextInput onSubmitEditing below).
   useEffect(() => {
-    // Standard fetch-on-filter-change - runs once per dependency change,
-    // not a cascading-render loop.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     runSearch({ reset: true });
     // runSearch intentionally omitted: it's rebuilt every render (closes
     // over `query`), including it would refetch on every keystroke.

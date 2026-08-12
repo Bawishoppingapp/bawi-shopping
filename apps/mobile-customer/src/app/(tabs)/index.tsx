@@ -30,8 +30,6 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    // Standard fetch-on-mount - runs once, not a cascading-render loop.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load().finally(() => setLoading(false));
   }, [load]);
 
