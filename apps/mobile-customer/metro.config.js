@@ -23,20 +23,33 @@ config.resolver.nodeModulesPaths = [
 // on which file is importing it - Metro builds one flat module graph, so
 // that means two live React instances in the same bundle at once
 // ("Invalid hook call" / "Incompatible React versions", however deep in
-// the tree - react-native-css-interop, react-native itself, etc). Force
-// every import of these to the exact same directory regardless of npm's
-// hoisting decision that install (it isn't stable across installs - a
-// scoped install in just one workspace can move react-native from
-// "local to each app" to "hoisted to root" - so resolve dynamically via
-// require.resolve rather than a hardcoded path that may not exist this
-// time). apps/mobile-seller's metro.config.js resolves the same way from
-// this app, so both apps always agree.
-config.resolver.extraNodeModules = {
-  ...config.resolver.extraNodeModules,
+// the tree - react-native-css-interop, react-native itself, etc).
+//
+// `resolver.extraNodeModules` does NOT fix this - it's only consulted as
+// a fallback *after* Metro's normal nodeModulesPaths search already
+// finds a match, which react/react-native always do here. The only API
+// Metro guarantees is consulted for every single resolution is a custom
+// `resolveRequest`, so intercept there and force these two (and their
+// subpaths, e.g. react/jsx-runtime) to one canonical directory,
+// resolved dynamically via require.resolve since npm's hoisting
+// decision for them isn't stable across installs. apps/mobile-seller's
+// metro.config.js resolves the same way from this app, so both apps
+// always agree.
+const singletonDirs = {
   react: path.dirname(require.resolve("react/package.json", { paths: [projectRoot] })),
   "react-native": path.dirname(
     require.resolve("react-native/package.json", { paths: [projectRoot] })
   ),
+};
+const defaultResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  for (const [pkg, dir] of Object.entries(singletonDirs)) {
+    if (moduleName === pkg || moduleName.startsWith(`${pkg}/`)) {
+      const target = path.join(dir, `.${moduleName.slice(pkg.length)}`);
+      return (defaultResolveRequest ?? context.resolveRequest)(context, target, platform);
+    }
+  }
+  return (defaultResolveRequest ?? context.resolveRequest)(context, moduleName, platform);
 };
 
 module.exports = withNativeWind(config, { input: "./src/global.css" });
