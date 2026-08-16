@@ -109,6 +109,15 @@ export default function SellDashboardScreen() {
             <Text className="text-body text-ink-800">Finance</Text>
             <Text className="text-body-sm text-ink-500">{">"}</Text>
           </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/(tabs)/sell/notifications")}
+            className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
+          >
+            <Text className="text-body text-ink-800">Notifications</Text>
+            <Text className="text-body-sm text-ink-500">{">"}</Text>
+          </Pressable>
         </View>
 
         <Button variant="secondary" onPress={onLogout}>

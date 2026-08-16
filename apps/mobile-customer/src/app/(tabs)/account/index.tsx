@@ -49,11 +49,22 @@ export default function AccountScreen() {
             </View>
           </Card>
         </Pressable>
-        <Card>
-          <Text className="text-body-sm text-ink-500">
-            Saved addresses and notification preferences are coming soon - manage them from bawi.com for now.
-          </Text>
-        </Card>
+        <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/account/addresses")}>
+          <Card>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-body-sm font-medium text-ink-950">Addresses</Text>
+              <Text className="text-body-sm text-ink-500">{">"}</Text>
+            </View>
+          </Card>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/account/notifications")}>
+          <Card>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-body-sm font-medium text-ink-950">Notifications</Text>
+              <Text className="text-body-sm text-ink-500">{">"}</Text>
+            </View>
+          </Card>
+        </Pressable>
         <Button variant="secondary" onPress={() => logout()}>
           Log out
         </Button>
