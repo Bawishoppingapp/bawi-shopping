@@ -1,10 +1,13 @@
-// packages/mobile-ui, apps/mobile-customer, and apps/mobile-seller must
-// all resolve the exact same physical react and react-native install -
-// not just the same version, but the same directory - or React throws
-// "Incompatible React versions" at runtime (and TypeScript treats
-// same-version-different-directory copies as nominally distinct types,
-// breaking exotic component types like ForwardRefExoticComponent/
-// Context.Provider - see git history on this file).
+// packages/mobile-ui and apps/mobile-customer must resolve the exact same
+// physical react and react-native install - not just the same version,
+// but the same directory - or React throws "Incompatible React versions"
+// at runtime (and TypeScript treats same-version-different-directory
+// copies as nominally distinct types, breaking exotic component types
+// like ForwardRefExoticComponent/Context.Provider - see git history on
+// this file). Metro's own resolution is handled separately by
+// mobile-customer's metro.config.js (a resolveRequest hook, not a
+// symlink); this script exists for TypeScript's own module-identity
+// resolution, which doesn't go through Metro at all.
 //
 // npm's hoisting decision for react/react-native isn't stable across
 // installs (it depends on what else is being resolved at the time - a
@@ -13,7 +16,7 @@
 // local, or vice versa). Rather than assume a fixed anchor location,
 // resolve where apps/mobile-customer *actually* gets each package from
 // right now (whether that's local or hoisted to root) and symlink
-// mobile-seller and packages/mobile-ui to that same real path.
+// packages/mobile-ui to that same real path.
 const fs = require("fs");
 const path = require("path");
 const { createRequire } = require("module");
@@ -22,7 +25,7 @@ const root = path.join(__dirname, "..");
 const anchorDir = path.join(root, "apps/mobile-customer");
 const anchorRequire = createRequire(path.join(anchorDir, "package.json"));
 
-const targetDirs = [path.join(root, "packages/mobile-ui"), path.join(root, "apps/mobile-seller")];
+const targetDirs = [path.join(root, "packages/mobile-ui")];
 
 const packages = ["react", "react-native", "@types/react"];
 

@@ -35,10 +35,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="orders"
+        name="sell"
         options={{
-          title: "Orders",
-          tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={ICON_SIZE} color={color} />,
+          title: "Sell",
+          tabBarIcon: ({ color }) => <Ionicons name="storefront-outline" size={ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
