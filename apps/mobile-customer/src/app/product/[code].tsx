@@ -1,22 +1,29 @@
 import { DEFAULT_LOCALE } from "@bawi/i18n/locales";
 import { Button } from "@bawi/mobile-ui";
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type PublicProduct, getPublicProduct } from "@/features/products/services/products-client";
 import { formatUsd } from "@/features/discovery/utils/format-price";
 import { useCart } from "@/features/cart/hooks/use-cart";
+import { addToWishlist, listWishlist, removeFromWishlist } from "@/features/wishlist/services/wishlist-client";
 
 export default function ProductDetailScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const { width } = useWindowDimensions();
+  const { customer } = useAuth();
   const { addItem } = useCart();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [savingWishlist, setSavingWishlist] = useState(false);
   // Keyed to the variant it applied to, so switching color/size
   // automatically "resets" the added/error state without a separate
   // effect - it just no longer matches the currently selected variant.
@@ -46,6 +53,36 @@ export default function ProductDetailScreen() {
       cancelled = true;
     };
   }, [code]);
+
+  useEffect(() => {
+    if (!customer || !code) {
+      setSaved(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const token = await getSessionToken();
+      const items = await listWishlist(token);
+      if (!cancelled) setSaved(items.some((item) => item.productCode === code));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [customer, code]);
+
+  async function onToggleSave() {
+    if (!customer) {
+      router.push("/login");
+      return;
+    }
+    setSavingWishlist(true);
+    const wasSaved = saved;
+    setSaved(!wasSaved);
+    const token = await getSessionToken();
+    const ok = wasSaved ? await removeFromWishlist(code, token) : await addToWishlist(code, token);
+    if (!ok) setSaved(wasSaved);
+    setSavingWishlist(false);
+  }
 
   const selectedVariant = useMemo(() => {
     if (!product) return null;
@@ -117,10 +154,21 @@ export default function ProductDetailScreen() {
         ) : null}
 
         <View className="gap-4 px-4 pb-8 pt-2">
-          <View className="gap-1">
-            <Text className="text-caption uppercase tracking-wide text-ink-500">{product.brand}</Text>
-            <Text className="text-h1 text-ink-950">{product.title}</Text>
-            <Text className="text-h3 text-ink-950">{formatUsd(price)}</Text>
+          <View className="flex-row items-start justify-between gap-2">
+            <View className="flex-1 gap-1">
+              <Text className="text-caption uppercase tracking-wide text-ink-500">{product.brand}</Text>
+              <Text className="text-h1 text-ink-950">{product.title}</Text>
+              <Text className="text-h3 text-ink-950">{formatUsd(price)}</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={saved ? "Remove from wishlist" : "Save to wishlist"}
+              onPress={onToggleSave}
+              disabled={savingWishlist}
+              className="p-2"
+            >
+              <Ionicons name={saved ? "heart" : "heart-outline"} size={26} color="#151210" />
+            </Pressable>
           </View>
 
           {product.colors.length > 0 ? (
