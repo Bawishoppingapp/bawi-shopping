@@ -57,6 +57,7 @@ In scope for v1 (detailed specs in §9):
 
 - Email/password authentication for customers, sellers, and admins; role-based access control.
 - Customer registration, profile, addresses, order history.
+- Customer wishlist: save/unsave products for later viewing.
 - Seller application, review/approval, Stripe Connect onboarding.
 - Catalog: categories, products, variants (size/color), images, inventory counts, pricing.
 - Postgres-backed keyword search with filters (category, price, size, color).

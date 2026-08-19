@@ -81,6 +81,7 @@ erDiagram
 | `moderation` | `moderation_item`, `moderation_flag` | No (platform-owned, references seller-owned content) |
 | `notification` (native Medusa, implemented) | `notification` | No (platform-owned; native `NotificationDTO.receiver_id`/`resource_id` reference the recipient/subject) |
 | `notification_inbox` (implemented) | `notification_inbox_entry` | Nullable — set when the notification concerns a specific seller (`payout_sent`, `seller_application_approved`) |
+| `wishlist` (implemented) | `wishlist_item` | No (customer-owned; `product_code` is a plain reference to `product_listing.product_code`, same loose-coupling pattern as `seller_application.seller_id`) |
 | `reporting` | (no owned tables — aggregation views/queries only) | n/a |
 | `audit-log` (implemented) | `audit_log` | Nullable — set when the logged action is seller-scoped |
 
@@ -165,6 +166,9 @@ Payment lives directly on this row rather than a separate `payment` table as ori
 
 **`notification_inbox_entry`** *(migrated — `apps/backend/src/modules/notification-inbox/migrations`)*
 `id, notification_id (text, unique - plain reference to the native `notification.id`, same loose-coupling pattern as vendor_id elsewhere), event_type (text), recipient_type (customer|seller_user|user), recipient_id (text), vendor_id (text, nullable), subject (text), body (text), read_at (timestamptz, nullable), created_at, updated_at, deleted_at`. Not the notification's own storage - Medusa's native `notification` table already holds that; this is a thin, receiver-queryable index over it, since the native module exposes no receiver-scoped store/seller API and no read/unread state.
+
+**`wishlist_item`** *(migrated — `apps/backend/src/modules/wishlist/migrations`)*
+`id, customer_id (text), product_code (text — plain reference to product_listing.product_code, no hard FK), created_at, updated_at, deleted_at`. No DB-level unique constraint on `(customer_id, product_code)` — duplicate-save prevention is application-layer check-then-create (`POST /store/wishlist`), same pattern as `seller_application`'s pending-application-by-email check.
 
 **`audit_log`** *(migrated — `apps/backend/src/modules/audit-log/migrations`)*
 `id, actor_type (customer|seller_user|user|system|courier — `courier` added in the private-fulfillment slice), actor_id (nullable), action, entity_type, entity_id, vendor_id (nullable), before_state (jsonb, nullable), after_state (jsonb, nullable), ip_address (nullable), created_at, updated_at, deleted_at` — append-only *by convention* today: no application code path issues UPDATE/DELETE against it, but the DB role's grants aren't yet restricted to enforce this at the database level (still a documented future hardening step, see `docs/SECURITY.md` §6). Note the actor_type value is `user` (matching Medusa's actual native admin actor type name), not `admin_user` as originally sketched.
