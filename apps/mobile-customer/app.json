@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bawi",
+    "name": "Bawi Shopping",
     "slug": "mobile-customer",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,9 +24,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FBF8F4",
+          "backgroundColor": "#151210",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 220
         }
       ],
       "expo-secure-store"

@@ -1,6 +1,10 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <text x="512" y="440" text-anchor="middle" dominant-baseline="central"
-        font-family="Georgia, 'Times New Roman', serif" font-weight="700"
-        font-size="380" fill="#FBF8F4">B</text>
-  <rect x="452" y="590" width="120" height="10" rx="5" fill="#B8863B"/>
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E3B368"/>
+      <stop offset="100%" stop-color="#B8863B"/>
+    </linearGradient>
+  </defs>
+  <text x="486" y="531" text-anchor="middle" dominant-baseline="central"
+        font-family="Snell Roundhand" font-size="420" fill="url(#gold)">B</text>
 </svg>
