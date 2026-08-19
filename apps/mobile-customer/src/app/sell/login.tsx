@@ -33,7 +33,7 @@ export default function SellLoginScreen() {
     try {
       await login(parsed.data.email, parsed.data.password);
       await clearPendingApplicationId();
-      router.replace("/(tabs)/sell/dashboard");
+      router.replace("/sell/dashboard");
     } catch (error) {
       setFormError(
         error instanceof SellerAuthError ? error.message : "Something went wrong. Please try again."

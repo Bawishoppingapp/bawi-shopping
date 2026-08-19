@@ -35,10 +35,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="sell"
+        name="wishlist"
         options={{
-          title: "Sell",
-          tabBarIcon: ({ color }) => <Ionicons name="storefront-outline" size={ICON_SIZE} color={color} />,
+          title: "Wishlist",
+          tabBarIcon: ({ color }) => <Ionicons name="heart-outline" size={ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen

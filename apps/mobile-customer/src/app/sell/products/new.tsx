@@ -62,7 +62,7 @@ export default function SellNewProductScreen() {
     setSubmitting(true);
     try {
       const { listing } = await createProduct(token, parsed.data);
-      router.replace({ pathname: "/(tabs)/sell/products/[id]", params: { id: listing.id } });
+      router.replace({ pathname: "/sell/products/[id]", params: { id: listing.id } });
     } catch (error) {
       setFormError(error instanceof ProductsClientError ? error.message : "Something went wrong.");
     } finally {

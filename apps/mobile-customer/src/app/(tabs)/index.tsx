@@ -1,5 +1,6 @@
 import { DEFAULT_LOCALE } from "@bawi/i18n/locales";
 import { ProductCard } from "@bawi/mobile-ui";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
@@ -58,9 +59,14 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
         ListHeaderComponent={
           <View className="gap-6 pb-2">
-            <View className="gap-1 px-4 pt-2">
-              <Text className="text-display text-ink-950">Bawi</Text>
-              <Text className="text-body text-ink-500">Fashion, from independent brands.</Text>
+            <View className="flex-row items-center justify-between px-4 pt-2">
+              <View className="gap-1">
+                <Text className="text-display text-ink-950">Bawi</Text>
+                <Text className="text-body text-ink-500">Fashion, from independent brands.</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Sell on Bawi" onPress={() => router.push("/sell")} className="p-2">
+                <Ionicons name="storefront-outline" size={24} color="#151210" />
+              </Pressable>
             </View>
 
             {categories.length > 0 ? (

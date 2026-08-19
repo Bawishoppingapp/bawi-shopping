@@ -12,7 +12,7 @@ export default function SellPitchScreen() {
       router.push("/login");
       return;
     }
-    router.push("/(tabs)/sell/apply");
+    router.push("/sell/apply");
   }
 
   return (
@@ -29,7 +29,7 @@ export default function SellPitchScreen() {
         <Button onPress={onCreateStorefront}>Create my storefront</Button>
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push("/(tabs)/sell/login")}
+          onPress={() => router.push("/sell/login")}
           className="items-center py-2"
         >
           <Text className="text-body-sm text-ink-500">

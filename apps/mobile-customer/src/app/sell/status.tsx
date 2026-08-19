@@ -61,12 +61,12 @@ export default function SellStatusScreen() {
 
   async function onApplyAgain() {
     await clearPendingApplicationId();
-    router.replace("/(tabs)/sell/apply");
+    router.replace("/sell/apply");
   }
 
   useEffect(() => {
     if (application === null) {
-      router.replace("/(tabs)/sell/pitch");
+      router.replace("/sell/pitch");
     }
   }, [application]);
 
@@ -107,7 +107,7 @@ export default function SellStatusScreen() {
               Your storefront application was approved. Activate your account to start listing
               products.
             </Text>
-            <Button onPress={() => router.push("/(tabs)/sell/activate")}>Activate my storefront</Button>
+            <Button onPress={() => router.push("/sell/activate")}>Activate my storefront</Button>
           </View>
         ) : null}
 

@@ -67,7 +67,7 @@ export default function SellFulfillmentScreen() {
           return (
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push({ pathname: "/(tabs)/sell/fulfillment/[id]", params: { id: item.id } })}
+              onPress={() => router.push({ pathname: "/sell/fulfillment/[id]", params: { id: item.id } })}
               className="gap-2 rounded-md border border-ink-100 p-4 active:bg-ink-100"
             >
               <View className="flex-row items-center justify-between">

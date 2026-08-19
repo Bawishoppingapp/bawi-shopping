@@ -32,7 +32,7 @@ export default function SellActivateScreen() {
     try {
       await completeSellerActivation(parsed.data.token, parsed.data.password);
       await clearPendingApplicationId();
-      router.replace({ pathname: "/(tabs)/sell/login", params: { activated: "1" } });
+      router.replace({ pathname: "/sell/login", params: { activated: "1" } });
     } catch (error) {
       setFormError(
         error instanceof SellerAuthError ? error.message : "Something went wrong. Please try again."

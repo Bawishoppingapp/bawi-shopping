@@ -18,12 +18,12 @@ export default function SellGatekeeperScreen() {
       (async () => {
         if (sellerAuthLoading) return;
         if (seller) {
-          router.replace("/(tabs)/sell/dashboard");
+          router.replace("/sell/dashboard");
           return;
         }
         const pendingId = await getPendingApplicationId();
         if (cancelled) return;
-        router.replace(pendingId ? "/(tabs)/sell/status" : "/(tabs)/sell/pitch");
+        router.replace(pendingId ? "/sell/status" : "/sell/pitch");
       })();
       return () => {
         cancelled = true;

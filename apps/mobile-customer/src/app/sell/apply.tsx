@@ -96,7 +96,7 @@ export default function SellApplyScreen() {
     try {
       const application = await submitSellerApplication(parsed.data);
       await setPendingApplicationId(application.id);
-      router.replace("/(tabs)/sell/status");
+      router.replace("/sell/status");
     } catch (error) {
       setFormError(
         error instanceof SellerApplicationError ? error.message : "Something went wrong. Please try again."

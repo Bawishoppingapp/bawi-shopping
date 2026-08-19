@@ -36,7 +36,7 @@ export default function SellDashboardScreen() {
 
   async function onLogout() {
     await logout();
-    router.replace("/(tabs)/sell");
+    router.replace("/sell");
   }
 
   if (!seller) return null;
@@ -66,7 +66,7 @@ export default function SellDashboardScreen() {
         <View className="gap-3">
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push("/(tabs)/sell/products")}
+            onPress={() => router.push("/sell/products")}
             className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
           >
             <Text className="text-body text-ink-800">Products</Text>
@@ -77,7 +77,7 @@ export default function SellDashboardScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push("/(tabs)/sell/fulfillment")}
+            onPress={() => router.push("/sell/fulfillment")}
             className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
           >
             <Text className="text-body text-ink-800">Awaiting preparation</Text>
@@ -90,7 +90,7 @@ export default function SellDashboardScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push("/(tabs)/sell/returns")}
+            onPress={() => router.push("/sell/returns")}
             className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
           >
             <Text className="text-body text-ink-800">Return requests to review</Text>
@@ -103,7 +103,7 @@ export default function SellDashboardScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push("/(tabs)/sell/finance")}
+            onPress={() => router.push("/sell/finance")}
             className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
           >
             <Text className="text-body text-ink-800">Finance</Text>
@@ -112,7 +112,7 @@ export default function SellDashboardScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push("/(tabs)/sell/notifications")}
+            onPress={() => router.push("/sell/notifications")}
             className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
           >
             <Text className="text-body text-ink-800">Notifications</Text>

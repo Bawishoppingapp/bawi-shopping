@@ -53,7 +53,7 @@ export default function SellProductsScreen() {
         ListHeaderComponent={
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-h1 text-ink-950">Products</Text>
-            <Button onPress={() => router.push("/(tabs)/sell/products/new")}>New</Button>
+            <Button onPress={() => router.push("/sell/products/new")}>New</Button>
           </View>
         }
         ListEmptyComponent={
@@ -62,7 +62,7 @@ export default function SellProductsScreen() {
             <Text className="text-center text-body-sm text-ink-500">
               Create your first product to start selling on Bawi.
             </Text>
-            <Button onPress={() => router.push("/(tabs)/sell/products/new")}>Create a product</Button>
+            <Button onPress={() => router.push("/sell/products/new")}>Create a product</Button>
           </View>
         }
         renderItem={({ item }) => {
@@ -70,7 +70,7 @@ export default function SellProductsScreen() {
           return (
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push({ pathname: "/(tabs)/sell/products/[id]", params: { id: item.listing.id } })}
+              onPress={() => router.push({ pathname: "/sell/products/[id]", params: { id: item.listing.id } })}
               className="flex-row items-center gap-3 rounded-md border border-ink-100 p-3 active:bg-ink-100"
             >
               <View className="h-16 w-14 overflow-hidden rounded-md bg-ink-100">
