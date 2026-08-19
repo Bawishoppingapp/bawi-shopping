@@ -26,14 +26,22 @@ export default function ProductDetailScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    getPublicProduct(code, DEFAULT_LOCALE).then((result) => {
-      if (cancelled) return;
-      setProduct(result);
-      if (result) {
-        setSelectedColor(result.colors[0] ?? null);
-        setSelectedSize(result.sizes[0] ?? null);
-      }
-    });
+    getPublicProduct(code, DEFAULT_LOCALE)
+      .then((result) => {
+        if (cancelled) return;
+        setProduct(result);
+        if (result) {
+          setSelectedColor(result.colors[0] ?? null);
+          setSelectedSize(result.sizes[0] ?? null);
+        }
+      })
+      .catch(() => {
+        // Network/server unreachable, not just a 404 - getPublicProduct
+        // only handles non-ok responses itself, so a thrown fetch error
+        // (no connection) needs its own catch or this screen is stuck on
+        // its loading spinner forever.
+        if (!cancelled) setProduct(null);
+      });
     return () => {
       cancelled = true;
     };
