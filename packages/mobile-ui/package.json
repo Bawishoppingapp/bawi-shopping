@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
+    "@expo/vector-icons": "*",
     "expo-image": "*",
     "react": ">=19",
     "react-native": "*"

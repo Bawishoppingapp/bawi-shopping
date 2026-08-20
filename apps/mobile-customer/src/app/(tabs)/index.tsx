@@ -1,21 +1,42 @@
 import { DEFAULT_LOCALE } from "@bawi/i18n/locales";
 import { ProductCard } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
 
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type CategoryNode, type ProductHit, listCategories, searchProducts } from "@/features/discovery/services/discovery-client";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { listNotifications } from "@/features/notifications/services/notifications-client";
 
 const NEW_ARRIVALS_LIMIT = 12;
 
 export default function HomeScreen() {
+  const { customer } = useAuth();
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [newArrivals, setNewArrivals] = useState<ProductHit[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Refetched on every focus (not just mount) so the badge clears
+  // promptly after visiting Account -> Notifications.
+  useFocusEffect(
+    useCallback(() => {
+      if (!customer) {
+        setUnreadCount(0);
+        return;
+      }
+      (async () => {
+        const token = await getSessionToken();
+        const notifications = await listNotifications(token);
+        setUnreadCount(notifications.filter((n) => !n.read_at).length);
+      })();
+    }, [customer])
+  );
 
   const load = useCallback(async () => {
     setError(false);
@@ -64,9 +85,30 @@ export default function HomeScreen() {
                 <Text className="text-display text-ink-950">Bawi</Text>
                 <Text className="text-body text-ink-500">Fashion, from independent brands.</Text>
               </View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Sell on Bawi" onPress={() => router.push("/sell")} className="p-2">
-                <Ionicons name="storefront-outline" size={24} color="#151210" />
-              </Pressable>
+              <View className="flex-row items-center">
+                {customer ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+                    onPress={() => router.push("/(tabs)/account/notifications")}
+                    className="p-2"
+                  >
+                    <View>
+                      <Ionicons name="notifications-outline" size={24} color="#151210" />
+                      {unreadCount > 0 ? (
+                        <View className="absolute -right-0.5 -top-0.5 h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1">
+                          <Text className="text-[10px] font-medium text-white">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                ) : null}
+                <Pressable accessibilityRole="button" accessibilityLabel="Sell on Bawi" onPress={() => router.push("/sell")} className="p-2">
+                  <Ionicons name="storefront-outline" size={24} color="#151210" />
+                </Pressable>
+              </View>
             </View>
 
             {categories.length > 0 ? (
