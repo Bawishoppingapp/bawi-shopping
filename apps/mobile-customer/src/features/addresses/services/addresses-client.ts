@@ -15,6 +15,18 @@ export class AddressesClientError extends Error {
   }
 }
 
+// International delivery notes (landmark, gate color, floor, etc.) have
+// no dedicated column on Medusa's native address model - stored in the
+// model's own `metadata` jsonb field instead (confirmed it round-trips
+// correctly via a live POST/GET against the real backend), so this needs
+// zero backend changes. Keys are namespaced under a single object rather
+// than flat metadata keys, so this doesn't collide with anything else
+// that might use metadata on the same record later.
+export interface AddressMetadata {
+  landmark?: string;
+  delivery_notes?: string;
+}
+
 export interface CustomerAddress {
   id: string;
   address_name: string | null;
@@ -30,6 +42,7 @@ export interface CustomerAddress {
   phone: string | null;
   is_default_shipping: boolean;
   is_default_billing: boolean;
+  metadata: AddressMetadata | null;
 }
 
 export interface AddressInput {
@@ -41,11 +54,12 @@ export interface AddressInput {
   address_2?: string;
   city: string;
   province?: string;
-  postal_code: string;
+  postal_code?: string;
   country_code: string;
   phone?: string;
   is_default_shipping?: boolean;
   is_default_billing?: boolean;
+  metadata?: AddressMetadata;
 }
 
 function authHeaders(sessionToken: string | null): Record<string, string> | null {

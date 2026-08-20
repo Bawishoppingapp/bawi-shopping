@@ -10,6 +10,7 @@ import {
   deleteAddress,
   listAddresses,
 } from "@/features/addresses/services/addresses-client";
+import { countryName } from "@/features/addresses/data/countries";
 
 export default function AddressesScreen() {
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
@@ -96,8 +97,13 @@ export default function AddressesScreen() {
               {item.address_2 ? `, ${item.address_2}` : ""}
             </Text>
             <Text className="text-body-sm text-ink-700">
-              {[item.city, item.province, item.postal_code].filter(Boolean).join(", ")}
+              {[item.city, item.province, item.postal_code, countryName(item.country_code)]
+                .filter(Boolean)
+                .join(", ")}
             </Text>
+            {item.metadata?.landmark ? (
+              <Text className="text-caption text-ink-500">Near {item.metadata.landmark}</Text>
+            ) : null}
             <Pressable
               accessibilityRole="button"
               onPress={() => confirmDelete(item)}

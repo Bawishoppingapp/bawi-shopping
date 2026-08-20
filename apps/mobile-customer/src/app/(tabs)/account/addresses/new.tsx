@@ -9,6 +9,8 @@ import {
   AddressesClientError,
   createAddress,
 } from "@/features/addresses/services/addresses-client";
+import { CountryPicker } from "@/features/addresses/components/country-picker";
+import { findCountry } from "@/features/addresses/data/countries";
 import { addressSchema } from "@/features/addresses/schemas/address-schema";
 
 export default function NewAddressScreen() {
@@ -19,13 +21,17 @@ export default function NewAddressScreen() {
   const [city, setCity] = useState("");
   const [province, setProvince] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [countryCode, setCountryCode] = useState("us");
+  const [countryCode, setCountryCode] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isDefaultShipping, setIsDefaultShipping] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const selectedCountry = findCountry(countryCode);
 
   async function onSubmit() {
     setFormError(null);
@@ -37,8 +43,10 @@ export default function NewAddressScreen() {
       city,
       province,
       postal_code: postalCode,
-      country_code: countryCode,
+      country_code: countryCode ?? "",
       phone,
+      landmark,
+      delivery_notes: deliveryNotes,
       is_default_shipping: isDefaultShipping,
     });
 
@@ -55,7 +63,12 @@ export default function NewAddressScreen() {
     setSubmitting(true);
     try {
       const token = await getSessionToken();
-      await createAddress(token, { ...parsed.data, country_code: parsed.data.country_code.toLowerCase() });
+      const { landmark: landmarkValue, delivery_notes: deliveryNotesValue, ...addressFields } = parsed.data;
+      const metadata =
+        landmarkValue || deliveryNotesValue
+          ? { landmark: landmarkValue || undefined, delivery_notes: deliveryNotesValue || undefined }
+          : undefined;
+      await createAddress(token, { ...addressFields, metadata });
       router.back();
     } catch (error) {
       setFormError(
@@ -76,31 +89,50 @@ export default function NewAddressScreen() {
           </View>
         ) : null}
 
+        <CountryPicker
+          selectedCode={countryCode}
+          onSelect={(country) => setCountryCode(country.code)}
+          error={fieldErrors.country_code}
+        />
+
         <Input label="First name" value={firstName} onChangeText={setFirstName} error={fieldErrors.first_name} />
         <Input label="Last name" value={lastName} onChangeText={setLastName} error={fieldErrors.last_name} />
         <Input label="Address line 1" value={addressLine1} onChangeText={setAddressLine1} error={fieldErrors.address_1} />
         <Input label="Address line 2 (optional)" value={addressLine2} onChangeText={setAddressLine2} />
         <Input label="City" value={city} onChangeText={setCity} error={fieldErrors.city} />
-        <Input label="State" value={province} onChangeText={setProvince} error={fieldErrors.province} />
         <Input
-          label="Postal code"
+          label="State / Province / Region (optional)"
+          value={province}
+          onChangeText={setProvince}
+          error={fieldErrors.province}
+        />
+        <Input
+          label={selectedCountry?.postalCodeRequired === false ? "Postal code (optional)" : "Postal code"}
           value={postalCode}
           onChangeText={setPostalCode}
           error={fieldErrors.postal_code}
-          keyboardType="number-pad"
+          autoCapitalize="characters"
         />
         <Input
-          label="Country"
-          value={countryCode}
-          onChangeText={setCountryCode}
-          error={fieldErrors.country_code}
-          autoCapitalize="none"
+          label="Landmark (optional)"
+          value={landmark}
+          onChangeText={setLandmark}
+          helperText="A nearby, easy-to-find place - useful when there's no formal street address."
+        />
+        <Input
+          label="Delivery notes (optional)"
+          value={deliveryNotes}
+          onChangeText={setDeliveryNotes}
+          multiline
+          numberOfLines={2}
+          helperText="Gate color, floor, best time to deliver, etc."
         />
         <Input
           label="Phone (optional)"
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
+          placeholder={selectedCountry ? `${selectedCountry.phoneCode} …` : undefined}
         />
 
         <Pressable
