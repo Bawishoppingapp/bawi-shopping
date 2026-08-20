@@ -10,6 +10,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type PublicProduct, getPublicProduct } from "@/features/products/services/products-client";
 import { formatUsd } from "@/features/discovery/utils/format-price";
+import { recordProductView } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { addToWishlist, listWishlist, removeFromWishlist } from "@/features/wishlist/services/wishlist-client";
 
@@ -40,6 +41,17 @@ export default function ProductDetailScreen() {
         if (result) {
           setSelectedColor(result.colors[0] ?? null);
           setSelectedSize(result.sizes[0] ?? null);
+          const prices = result.variants.map((v) => v.price).filter((p): p is number => p !== null);
+          recordProductView({
+            productCode: result.product_code,
+            title: result.title,
+            brand: result.brand,
+            thumbnail: result.thumbnail,
+            priceMin: prices.length ? Math.min(...prices) : result.base_price,
+            priceMax: prices.length ? Math.max(...prices) : result.base_price,
+            available: result.variants.some((v) => v.available_quantity > 0),
+            categoryIds: [],
+          });
         }
       })
       .catch(() => {
