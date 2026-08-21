@@ -2,6 +2,7 @@ import { Button } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
@@ -89,6 +90,7 @@ export default function ProductDetailScreen() {
       router.push("/login");
       return;
     }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSavingWishlist(true);
     const wasSaved = saved;
     setSaved(!wasSaved);
@@ -112,6 +114,7 @@ export default function ProductDetailScreen() {
     try {
       await addItem(variantId, 1);
       setLastAddResult({ variantId, status: "added" });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
       setLastAddResult({ variantId, status: "error", message: "Couldn't add this to your bag. Please try again." });
     } finally {

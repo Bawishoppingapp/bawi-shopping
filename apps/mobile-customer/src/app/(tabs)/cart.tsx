@@ -1,6 +1,7 @@
 import { Button } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 
 import { formatUsd } from "@/features/discovery/utils/format-price";
@@ -45,11 +46,27 @@ function CartLineItem({
         ) : null}
         <View className="mt-1 flex-row items-center justify-between">
           <View className="flex-row items-center gap-3 rounded-full border border-ink-200 px-2 py-1">
-            <Pressable accessibilityRole="button" accessibilityLabel="Decrease quantity" onPress={onDecrement} hitSlop={8}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Decrease quantity"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onDecrement();
+              }}
+              hitSlop={8}
+            >
               <Text className="text-h3 text-ink-950">−</Text>
             </Pressable>
             <Text className="text-body-sm text-ink-950">{item.quantity}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Increase quantity" onPress={onIncrement} hitSlop={8}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Increase quantity"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onIncrement();
+              }}
+              hitSlop={8}
+            >
               <Text className="text-h3 text-ink-950">+</Text>
             </Pressable>
           </View>

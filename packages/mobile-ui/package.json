@@ -9,6 +9,7 @@
   },
   "peerDependencies": {
     "@expo/vector-icons": "*",
+    "expo-haptics": "*",
     "expo-image": "*",
     "react": ">=19",
     "react-native": "*"
