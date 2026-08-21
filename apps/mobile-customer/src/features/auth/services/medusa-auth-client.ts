@@ -80,6 +80,33 @@ export async function loginCustomer(email: string, password: string): Promise<st
   return data.token as string;
 }
 
+// Always resolves - Medusa returns 201 regardless of whether the email
+// matches an account, to avoid leaking which emails are registered. The
+// reset link/token itself is only ever delivered by the backend's
+// notification module (log-only in dev, since real_email_enabled is
+// false - same limitation as seller activation, hence the paste-in-code
+// UI on the reset-password screen instead of a deep link).
+export async function requestPasswordReset(email: string): Promise<void> {
+  await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier: email }),
+  });
+}
+
+export async function resetPassword(resetToken: string, password: string): Promise<void> {
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${resetToken}` },
+    body: JSON.stringify({ password }),
+  });
+
+  if (!response.ok) {
+    const data = await parseJson(response);
+    throw new MedusaAuthError(data.message || "This reset code is invalid or has expired.");
+  }
+}
+
 export async function getCurrentCustomer(sessionToken: string) {
   const response = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
     headers: {

@@ -5,7 +5,17 @@ import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } fr
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { LOCALE_NAMES } from "@bawi/i18n/locales";
-import { useLocale } from "@/features/i18n/hooks/use-locale";
+import { LEGAL_DOCUMENTS, type LegalDocumentSlug } from "@/features/legal/content";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
+
+const LEGAL_ROWS: { slug: LegalDocumentSlug; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { slug: "terms", icon: "document-text-outline" },
+  { slug: "privacy", icon: "shield-checkmark-outline" },
+  { slug: "returns", icon: "return-down-back-outline" },
+  { slug: "cookies", icon: "server-outline" },
+  { slug: "acceptable-use", icon: "checkmark-circle-outline" },
+  { slug: "dmca", icon: "warning-outline" },
+];
 
 function AccountRow({
   icon,
@@ -43,6 +53,22 @@ function AccountSection({ title, children }: { title: string; children: React.Re
   );
 }
 
+function LegalSection() {
+  const t = useTranslations();
+  return (
+    <AccountSection title="Legal">
+      {LEGAL_ROWS.map(({ slug, icon }) => (
+        <AccountRow
+          key={slug}
+          icon={icon}
+          label={t(LEGAL_DOCUMENTS[slug].titleKey)}
+          onPress={() => router.push({ pathname: "/(tabs)/account/legal/[slug]", params: { slug } })}
+        />
+      ))}
+    </AccountSection>
+  );
+}
+
 export default function AccountScreen() {
   const { customer, isLoading, logout } = useAuth();
   const locale = useLocale();
@@ -58,7 +84,7 @@ export default function AccountScreen() {
   if (!customer) {
     return (
       <SafeAreaView className="flex-1 bg-paper">
-        <View className="flex-1 justify-center gap-4 px-6">
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 20, flexGrow: 1, justifyContent: "center" }}>
           <View className="gap-1">
             <Text className="text-h1 text-ink-950">Your account</Text>
             <Text className="text-body text-ink-500">Log in to view orders, save favorites, and check out faster.</Text>
@@ -67,7 +93,8 @@ export default function AccountScreen() {
           <Button variant="secondary" onPress={() => router.push("/register")}>
             Create account
           </Button>
-        </View>
+          <LegalSection />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -103,6 +130,8 @@ export default function AccountScreen() {
             onPress={() => router.push("/(tabs)/account/language")}
           />
         </AccountSection>
+
+        <LegalSection />
 
         <Button variant="secondary" onPress={() => logout()}>
           Log out
