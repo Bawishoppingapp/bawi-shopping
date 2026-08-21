@@ -108,7 +108,7 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: tabBarHeight }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
         <Text className="mb-2 text-h1 text-ink-950">{t("cart.title")}</Text>
 
         {cart.warnings.length > 0 ? (
@@ -133,34 +133,37 @@ export default function CartScreen() {
             t={t}
           />
         ))}
+      </ScrollView>
 
-        <View className="gap-2 py-4">
-          {!cart.qualifies_for_free_shipping ? (
-            <Text className="text-body-sm text-ink-500">
-              Add {formatUsd(cart.amount_remaining_for_free_shipping)} {t("cart.freeShippingProgress")}.
-            </Text>
-          ) : (
-            <Text className="text-body-sm text-success">{t("cart.qualifiesForFreeShipping")}</Text>
-          )}
-          <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">{t("cart.subtotal")}</Text>
-            <Text className="text-body text-ink-950">{formatUsd(cart.subtotal)}</Text>
-          </View>
-          <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">{t("cart.shippingEstimate")}</Text>
-            <Text className="text-body text-ink-950">
-              {cart.qualifies_for_free_shipping ? t("cart.free") : formatUsd(cart.shipping_estimate)}
-            </Text>
-          </View>
+      {/* Sticky checkout summary - sits above the floating tab bar rather
+          than scrolling away with a potentially long line-item list. */}
+      <View
+        style={{ paddingBottom: tabBarHeight }}
+        className="gap-2 border-t border-ink-100 bg-paper px-4 pt-3"
+      >
+        {!cart.qualifies_for_free_shipping ? (
+          <Text className="text-body-sm text-ink-500">
+            Add {formatUsd(cart.amount_remaining_for_free_shipping)} {t("cart.freeShippingProgress")}.
+          </Text>
+        ) : (
+          <Text className="text-body-sm text-success">{t("cart.qualifiesForFreeShipping")}</Text>
+        )}
+        <View className="flex-row justify-between">
+          <Text className="text-body text-ink-700">{t("cart.subtotal")}</Text>
+          <Text className="text-body text-ink-950">{formatUsd(cart.subtotal)}</Text>
+        </View>
+        <View className="flex-row justify-between">
+          <Text className="text-body text-ink-700">{t("cart.shippingEstimate")}</Text>
+          <Text className="text-body text-ink-950">
+            {cart.qualifies_for_free_shipping ? t("cart.free") : formatUsd(cart.shipping_estimate)}
+          </Text>
         </View>
 
-        <Button disabled className="mb-2">
-          Checkout - coming soon
-        </Button>
-        <Text className="mb-8 text-center text-caption text-ink-500">
+        <Button disabled>Checkout - coming soon</Button>
+        <Text className="pb-2 text-center text-caption text-ink-500">
           Checkout is being finished in the next update. Your bag is saved.
         </Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
