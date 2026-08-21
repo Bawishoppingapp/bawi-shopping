@@ -1,4 +1,4 @@
-import { Button } from "@bawi/mobile-ui";
+import { Button, ProductCard } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
@@ -18,11 +18,15 @@ import {
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type PublicProduct, getPublicProduct } from "@/features/products/services/products-client";
+import { type ProductHit, searchProducts } from "@/features/discovery/services/discovery-client";
 import { formatUsd } from "@/features/discovery/utils/format-price";
+import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { recordProductView } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addToWishlist, listWishlist, removeFromWishlist } from "@/features/wishlist/services/wishlist-client";
+
+const RELATED_PRODUCTS_LIMIT = 8;
 
 export default function ProductDetailScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -32,6 +36,7 @@ export default function ProductDetailScreen() {
   const locale = useLocale();
   const t = useTranslations();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
+  const [relatedProducts, setRelatedProducts] = useState<ProductHit[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const galleryRef = useRef<ScrollView>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -66,6 +71,11 @@ export default function ProductDetailScreen() {
             available: result.variants.some((v) => v.available_quantity > 0),
             categoryIds: [],
           });
+          searchProducts({ brand: result.brand, limit: RELATED_PRODUCTS_LIMIT, locale })
+            .then((searchResult) =>
+              setRelatedProducts(searchResult.products.filter((p) => p.productCode !== result.product_code))
+            )
+            .catch(() => setRelatedProducts([]));
         }
       })
       .catch(() => {
@@ -311,6 +321,22 @@ export default function ProductDetailScreen() {
             </View>
           ) : null}
         </View>
+
+        {relatedProducts.length > 0 ? (
+          <View className="gap-2 pb-8">
+            <Text className="px-4 text-h3 text-ink-950">More from {product.brand}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}>
+              {relatedProducts.map((item) => (
+                <View key={item.productCode} style={{ width: 140 }}>
+                  <ProductCard
+                    product={toProductCardData(item)}
+                    onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
