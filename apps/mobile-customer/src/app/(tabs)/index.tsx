@@ -1,9 +1,9 @@
-import { ProductCard } from "@bawi/mobile-ui";
+import { ProductCard, ProductCardSkeleton } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
+import { FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
@@ -66,8 +66,14 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+      <SafeAreaView className="flex-1 bg-paper">
+        <View className="flex-row flex-wrap px-2 pt-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <View key={i} style={{ width: "50%" }} className="px-2 pb-4">
+              <ProductCardSkeleton />
+            </View>
+          ))}
+        </View>
       </SafeAreaView>
     );
   }

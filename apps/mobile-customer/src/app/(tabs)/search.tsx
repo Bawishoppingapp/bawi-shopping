@@ -1,4 +1,4 @@
-import { ProductCard } from "@bawi/mobile-ui";
+import { ProductCard, ProductCardSkeleton } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -257,8 +257,12 @@ export default function SearchScreen() {
           ) : null}
         </ScrollView>
       ) : loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#151210" />
+        <View className="flex-1 flex-row flex-wrap px-2 pt-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <View key={i} style={{ width: "50%" }} className="px-2 pb-4">
+              <ProductCardSkeleton />
+            </View>
+          ))}
         </View>
       ) : (
         <FlashList
