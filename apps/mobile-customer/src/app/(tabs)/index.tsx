@@ -1,4 +1,3 @@
-import { DEFAULT_LOCALE } from "@bawi/i18n/locales";
 import { ProductCard } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -9,12 +8,15 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type CategoryNode, type ProductHit, listCategories, searchProducts } from "@/features/discovery/services/discovery-client";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { listNotifications } from "@/features/notifications/services/notifications-client";
 
 const NEW_ARRIVALS_LIMIT = 12;
 
 export default function HomeScreen() {
   const { customer } = useAuth();
+  const locale = useLocale();
+  const t = useTranslations();
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [newArrivals, setNewArrivals] = useState<ProductHit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,15 +43,15 @@ export default function HomeScreen() {
   const load = useCallback(async () => {
     setError(false);
     const [categoriesResult, arrivalsResult] = await Promise.allSettled([
-      listCategories(DEFAULT_LOCALE),
-      searchProducts({ sort: "newest", limit: NEW_ARRIVALS_LIMIT, locale: DEFAULT_LOCALE }),
+      listCategories(locale),
+      searchProducts({ sort: "newest", limit: NEW_ARRIVALS_LIMIT, locale }),
     ]);
     if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
     if (arrivalsResult.status === "fulfilled") setNewArrivals(arrivalsResult.value.products);
     if (categoriesResult.status === "rejected" && arrivalsResult.status === "rejected") {
       setError(true);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));
@@ -130,7 +132,7 @@ export default function HomeScreen() {
               />
             ) : null}
 
-            <Text className="px-4 text-h3 text-ink-950">New arrivals</Text>
+            <Text className="px-4 text-h3 text-ink-950">{t("home.newArrivals")}</Text>
 
             {error ? (
               <View className="px-4">

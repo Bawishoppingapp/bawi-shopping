@@ -6,17 +6,20 @@ import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } fr
 import { formatUsd } from "@/features/discovery/utils/format-price";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import type { CartItem } from "@/features/cart/services/cart-client";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 function CartLineItem({
   item,
   onIncrement,
   onDecrement,
   onRemove,
+  t,
 }: {
   item: CartItem;
   onIncrement: () => void;
   onDecrement: () => void;
   onRemove: () => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
   return (
     <View className="flex-row gap-3 border-b border-ink-100 py-4">
@@ -53,7 +56,7 @@ function CartLineItem({
           <Text className="text-body-sm font-medium text-ink-950">{formatUsd(item.line_total)}</Text>
         </View>
         <Pressable accessibilityRole="button" onPress={onRemove}>
-          <Text className="text-caption text-ink-500 underline">Remove</Text>
+          <Text className="text-caption text-ink-500 underline">{t("cart.remove")}</Text>
         </Pressable>
       </View>
     </View>
@@ -62,6 +65,7 @@ function CartLineItem({
 
 export default function CartScreen() {
   const { cart, isLoading, updateQuantity, removeItem } = useCart();
+  const t = useTranslations();
 
   if (isLoading) {
     return (
@@ -75,8 +79,9 @@ export default function CartScreen() {
     return (
       <SafeAreaView className="flex-1 bg-paper">
         <View className="flex-1 items-center justify-center gap-4 px-6">
-          <Text className="text-h2 text-ink-950">Your bag is empty</Text>
-          <Button onPress={() => router.push("/(tabs)")}>Start browsing</Button>
+          <Text className="text-h2 text-ink-950">{t("cart.empty")}</Text>
+          <Text className="text-body text-ink-500">{t("cart.emptyHint")}</Text>
+          <Button onPress={() => router.push("/(tabs)")}>{t("cart.continueShopping")}</Button>
         </View>
       </SafeAreaView>
     );
@@ -85,7 +90,7 @@ export default function CartScreen() {
   return (
     <SafeAreaView className="flex-1 bg-paper">
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        <Text className="mb-2 text-h1 text-ink-950">Bag</Text>
+        <Text className="mb-2 text-h1 text-ink-950">{t("cart.title")}</Text>
 
         {cart.warnings.length > 0 ? (
           <View className="mb-2 gap-1 rounded-md bg-warning/10 p-3">
@@ -106,25 +111,26 @@ export default function CartScreen() {
               item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeItem(item.id)
             }
             onRemove={() => removeItem(item.id)}
+            t={t}
           />
         ))}
 
         <View className="gap-2 py-4">
           {!cart.qualifies_for_free_shipping ? (
             <Text className="text-body-sm text-ink-500">
-              Add {formatUsd(cart.amount_remaining_for_free_shipping)} more for free shipping.
+              Add {formatUsd(cart.amount_remaining_for_free_shipping)} {t("cart.freeShippingProgress")}.
             </Text>
           ) : (
-            <Text className="text-body-sm text-success">You&apos;ve got free shipping.</Text>
+            <Text className="text-body-sm text-success">{t("cart.qualifiesForFreeShipping")}</Text>
           )}
           <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">Subtotal</Text>
+            <Text className="text-body text-ink-700">{t("cart.subtotal")}</Text>
             <Text className="text-body text-ink-950">{formatUsd(cart.subtotal)}</Text>
           </View>
           <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">Shipping</Text>
+            <Text className="text-body text-ink-700">{t("cart.shippingEstimate")}</Text>
             <Text className="text-body text-ink-950">
-              {cart.qualifies_for_free_shipping ? "Free" : formatUsd(cart.shipping_estimate)}
+              {cart.qualifies_for_free_shipping ? t("cart.free") : formatUsd(cart.shipping_estimate)}
             </Text>
           </View>
         </View>

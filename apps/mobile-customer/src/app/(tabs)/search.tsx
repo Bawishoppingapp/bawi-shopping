@@ -1,4 +1,3 @@
-import { DEFAULT_LOCALE } from "@bawi/i18n/locales";
 import { ProductCard } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -15,6 +14,7 @@ import {
 } from "@/features/discovery/services/discovery-client";
 import { getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from "@/features/search/services/search-history";
 
 const PAGE_SIZE = 20;
@@ -36,6 +36,8 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ category?: string; categoryName?: string }>();
+  const locale = useLocale();
+  const t = useTranslations();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sort, setSort] = useState<ProductSortOption>("newest");
@@ -75,7 +77,7 @@ export default function SearchScreen() {
           sort,
           cursor: opts.cursor ?? undefined,
           limit: PAGE_SIZE,
-          locale: DEFAULT_LOCALE,
+          locale,
         });
         setItems((prev) => (opts.reset ? result.products : [...prev, ...result.products]));
         setCursor(result.next_cursor);
@@ -88,7 +90,7 @@ export default function SearchScreen() {
         setLoadingMore(false);
       }
     },
-    [debouncedQuery, sort, size, color, params.category]
+    [debouncedQuery, sort, size, color, params.category, locale]
   );
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export default function SearchScreen() {
     // runSearch intentionally omitted: rebuilt every render (closes over
     // filters), including it would refetch redundantly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, sort, size, color, params.category, showDiscovery]);
+  }, [debouncedQuery, sort, size, color, params.category, showDiscovery, locale]);
 
   // Record the submitted query once it actually produces a search, not
   // on every debounce tick - avoids polluting history with partial words.
@@ -111,8 +113,8 @@ export default function SearchScreen() {
 
   const loadDiscoveryData = useCallback(async () => {
     const [categoriesResult, arrivalsResult, recentResult, viewedResult] = await Promise.allSettled([
-      listCategories(DEFAULT_LOCALE),
-      searchProducts({ sort: "newest", limit: 12, locale: DEFAULT_LOCALE }),
+      listCategories(locale),
+      searchProducts({ sort: "newest", limit: 12, locale }),
       getRecentSearches(),
       getRecentlyViewed(),
     ]);
@@ -120,7 +122,7 @@ export default function SearchScreen() {
     if (arrivalsResult.status === "fulfilled") setNewArrivals(arrivalsResult.value.products);
     if (recentResult.status === "fulfilled") setRecentSearches(recentResult.value);
     if (viewedResult.status === "fulfilled") setRecentlyViewed(viewedResult.value);
-  }, []);
+  }, [locale]);
 
   useFocusEffect(
     useCallback(() => {
@@ -128,8 +130,10 @@ export default function SearchScreen() {
       // Only refresh discovery content when it's actually visible -
       // re-running on every focus keeps "recent searches"/"recently
       // viewed" fresh without an extra fetch while browsing results.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showDiscovery])
+      // locale is a real dep here (not just showDiscovery) so a language
+      // change re-fetches translated categories/new-arrivals immediately
+      // rather than waiting for the next focus with a stale closure.
+    }, [showDiscovery, loadDiscoveryData])
   );
 
   function onLoadMore() {
@@ -155,7 +159,7 @@ export default function SearchScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search products"
+            placeholder={t("search.placeholder")}
             placeholderTextColor="#8C8175"
             returnKeyType="search"
             autoCapitalize="none"
@@ -267,10 +271,8 @@ export default function SearchScreen() {
           ListEmptyComponent={
             <View className="items-center gap-2 px-6 pt-16">
               <Ionicons name="search-outline" size={32} color="#8C8175" />
-              <Text className="text-h3 text-ink-950">No products found</Text>
-              <Text className="text-center text-body-sm text-ink-500">
-                Try a different search term or clear your filters.
-              </Text>
+              <Text className="text-h3 text-ink-950">{t("search.noResults")}</Text>
+              <Text className="text-center text-body-sm text-ink-500">{t("search.noResultsHint")}</Text>
             </View>
           }
           ListFooterComponent={loadingMore ? <ActivityIndicator className="py-4" color="#151210" /> : null}

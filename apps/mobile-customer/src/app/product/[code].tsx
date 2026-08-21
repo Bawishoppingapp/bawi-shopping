@@ -1,4 +1,3 @@
-import { DEFAULT_LOCALE } from "@bawi/i18n/locales";
 import { Button } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -12,6 +11,7 @@ import { type PublicProduct, getPublicProduct } from "@/features/products/servic
 import { formatUsd } from "@/features/discovery/utils/format-price";
 import { recordProductView } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addToWishlist, listWishlist, removeFromWishlist } from "@/features/wishlist/services/wishlist-client";
 
 export default function ProductDetailScreen() {
@@ -19,6 +19,8 @@ export default function ProductDetailScreen() {
   const { width } = useWindowDimensions();
   const { customer } = useAuth();
   const { addItem } = useCart();
+  const locale = useLocale();
+  const t = useTranslations();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function ProductDetailScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    getPublicProduct(code, DEFAULT_LOCALE)
+    getPublicProduct(code, locale)
       .then((result) => {
         if (cancelled) return;
         setProduct(result);
@@ -64,7 +66,7 @@ export default function ProductDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, locale]);
 
   useEffect(() => {
     if (!customer || !code) {
@@ -129,7 +131,7 @@ export default function ProductDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-2 bg-paper px-6">
         <Stack.Screen options={{ title: "Product" }} />
-        <Text className="text-h2 text-ink-950">Not found</Text>
+        <Text className="text-h2 text-ink-950">{t("product.notFound")}</Text>
         <Text className="text-body text-ink-500">This product isn&apos;t available anymore.</Text>
       </View>
     );
@@ -185,7 +187,7 @@ export default function ProductDetailScreen() {
 
           {product.colors.length > 0 ? (
             <View className="gap-2">
-              <Text className="text-body-sm font-medium text-ink-800">Color</Text>
+              <Text className="text-body-sm font-medium text-ink-800">{t("product.colors")}</Text>
               <View className="flex-row flex-wrap gap-2">
                 {product.colors.map((color) => (
                   <Text
@@ -206,7 +208,7 @@ export default function ProductDetailScreen() {
 
           {product.sizes.length > 0 ? (
             <View className="gap-2">
-              <Text className="text-body-sm font-medium text-ink-800">Size</Text>
+              <Text className="text-body-sm font-medium text-ink-800">{t("product.sizes")}</Text>
               <View className="flex-row flex-wrap gap-2">
                 {product.sizes.map((size) => (
                   <Text
@@ -227,14 +229,14 @@ export default function ProductDetailScreen() {
 
           {!isAvailable ? (
             <Text className="text-body-sm text-danger">
-              {selectedVariant ? "Out of stock in this size/color." : "Select a size and color."}
+              {selectedVariant ? t("product.outOfStock") : "Select a size and color."}
             </Text>
           ) : null}
 
           {addError ? <Text className="text-body-sm text-danger">{addError}</Text> : null}
 
           <Button disabled={!isAvailable || adding} loading={adding} onPress={onAddToBag}>
-            {added ? "Added to bag" : "Add to bag"}
+            {added ? t("cart.addedToCart") : t("cart.addToCart")}
           </Button>
 
           {product.description ? (
