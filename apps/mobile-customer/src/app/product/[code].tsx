@@ -3,8 +3,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
@@ -23,6 +32,8 @@ export default function ProductDetailScreen() {
   const locale = useLocale();
   const t = useTranslations();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const galleryRef = useRef<ScrollView>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -143,6 +154,22 @@ export default function ProductDetailScreen() {
   const price = selectedVariant?.price ?? product.base_price;
   const isAvailable = selectedVariant ? selectedVariant.available_quantity > 0 : false;
   const imageSize = width;
+  // Thumbnail first, then any additional images not already equal to it -
+  // avoids showing the same photo twice when the backend's `images` list
+  // already includes the thumbnail.
+  const galleryImages = product.thumbnail
+    ? [product.thumbnail, ...product.images.filter((uri) => uri !== product.thumbnail)]
+    : product.images;
+
+  function onGalleryScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const index = Math.round(event.nativeEvent.contentOffset.x / imageSize);
+    setActiveImageIndex(index);
+  }
+
+  function goToImage(index: number) {
+    setActiveImageIndex(index);
+    galleryRef.current?.scrollTo({ x: index * imageSize, animated: true });
+  }
   const addResultForSelection =
     selectedVariant && lastAddResult?.variantId === selectedVariant.id ? lastAddResult : null;
   const added = addResultForSelection?.status === "added";
@@ -153,19 +180,54 @@ export default function ProductDetailScreen() {
       <Stack.Screen options={{ title: product.brand }} />
       <ScrollView>
         <View style={{ width: imageSize, height: imageSize }} className="bg-ink-100">
-          {product.thumbnail ? (
-            <Image
-              source={{ uri: product.thumbnail }}
-              style={{ width: "100%", height: "100%" }}
-              contentFit="cover"
-            />
+          {galleryImages.length > 0 ? (
+            <ScrollView
+              ref={galleryRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={onGalleryScroll}
+            >
+              {galleryImages.map((uri) => (
+                <Image
+                  key={uri}
+                  source={{ uri }}
+                  style={{ width: imageSize, height: imageSize }}
+                  contentFit="cover"
+                />
+              ))}
+            </ScrollView>
+          ) : null}
+          {galleryImages.length > 1 ? (
+            <View className="absolute bottom-3 w-full flex-row items-center justify-center gap-1.5">
+              {galleryImages.map((uri, index) => (
+                <View
+                  key={uri}
+                  className={`h-1.5 rounded-full ${
+                    index === activeImageIndex ? "w-4 bg-white" : "w-1.5 bg-white/60"
+                  }`}
+                />
+              ))}
+            </View>
           ) : null}
         </View>
 
-        {product.images.length > 1 ? (
+        {galleryImages.length > 1 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 16 }}>
-            {product.images.map((uri) => (
-              <Image key={uri} source={{ uri }} style={{ width: 64, height: 80, borderRadius: 6 }} contentFit="cover" />
+            {galleryImages.map((uri, index) => (
+              <Pressable key={uri} accessibilityRole="button" onPress={() => goToImage(index)}>
+                <Image
+                  source={{ uri }}
+                  style={{
+                    width: 64,
+                    height: 80,
+                    borderRadius: 6,
+                    borderWidth: index === activeImageIndex ? 2 : 0,
+                    borderColor: "#151210",
+                  }}
+                  contentFit="cover"
+                />
+              </Pressable>
             ))}
           </ScrollView>
         ) : null}
