@@ -3,24 +3,30 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useState } from "react";
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSessionToken } from "@/features/auth/services/token-storage";
 import { formatUsd } from "@/features/discovery/utils/format-price";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import type { CartItem } from "@/features/cart/services/cart-client";
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
+import { addToWishlist } from "@/features/wishlist/services/wishlist-client";
 
 function CartLineItem({
   item,
   onIncrement,
   onDecrement,
   onRemove,
+  onSaveForLater,
   t,
 }: {
   item: CartItem;
   onIncrement: () => void;
   onDecrement: () => void;
   onRemove: () => void;
+  onSaveForLater: (() => void) | null;
   t: ReturnType<typeof useTranslations>;
 }) {
   return (
@@ -73,9 +79,16 @@ function CartLineItem({
           </View>
           <Text className="text-body-sm font-medium text-ink-950">{formatUsd(item.line_total)}</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={onRemove}>
-          <Text className="text-caption text-ink-500 underline">{t("cart.remove")}</Text>
-        </Pressable>
+        <View className="flex-row gap-4">
+          <Pressable accessibilityRole="button" onPress={onRemove}>
+            <Text className="text-caption text-ink-500 underline">{t("cart.remove")}</Text>
+          </Pressable>
+          {onSaveForLater ? (
+            <Pressable accessibilityRole="button" onPress={onSaveForLater}>
+              <Text className="text-caption text-ink-500 underline">Save for later</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -83,8 +96,20 @@ function CartLineItem({
 
 export default function CartScreen() {
   const { cart, isLoading, updateQuantity, removeItem } = useCart();
+  const { customer } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
   const t = useTranslations();
+  const [savingForLater, setSavingForLater] = useState<string | null>(null);
+
+  async function onSaveForLater(item: CartItem) {
+    if (!item.product_code || savingForLater) return;
+    setSavingForLater(item.id);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const token = await getSessionToken();
+    const ok = await addToWishlist(item.product_code, token);
+    if (ok) await removeItem(item.id);
+    setSavingForLater(null);
+  }
 
   if (isLoading) {
     return (
@@ -130,6 +155,7 @@ export default function CartScreen() {
               item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeItem(item.id)
             }
             onRemove={() => removeItem(item.id)}
+            onSaveForLater={customer && item.product_code ? () => onSaveForLater(item) : null}
             t={t}
           />
         ))}
