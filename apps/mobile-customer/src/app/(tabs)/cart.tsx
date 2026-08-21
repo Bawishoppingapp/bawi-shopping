@@ -1,18 +1,22 @@
-import { Button } from "@bawi/mobile-ui";
+import { Button, ProductCard } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
+import { type ProductHit, searchProducts } from "@/features/discovery/services/discovery-client";
 import { formatUsd } from "@/features/discovery/utils/format-price";
+import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import type { CartItem } from "@/features/cart/services/cart-client";
-import { useTranslations } from "@/features/i18n/hooks/use-locale";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addToWishlist } from "@/features/wishlist/services/wishlist-client";
+
+const RECOMMENDATIONS_LIMIT = 8;
 
 function CartLineItem({
   item,
@@ -97,9 +101,11 @@ function CartLineItem({
 export default function CartScreen() {
   const { cart, isLoading, updateQuantity, removeItem } = useCart();
   const { customer } = useAuth();
+  const locale = useLocale();
   const tabBarHeight = useBottomTabBarHeight();
   const t = useTranslations();
   const [savingForLater, setSavingForLater] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<ProductHit[]>([]);
 
   async function onSaveForLater(item: CartItem) {
     if (!item.product_code || savingForLater) return;
@@ -110,6 +116,32 @@ export default function CartScreen() {
     if (ok) await removeItem(item.id);
     setSavingForLater(null);
   }
+
+  // Recommendations are keyed off the first line item's brand - simple,
+  // honest proxy for "similar to what's in your bag" without a real
+  // recommendation engine. Re-fetched whenever that brand changes, and
+  // filtered against everything currently in cart so it never suggests
+  // an item already there.
+  const firstBrand = cart?.items[0]?.brand ?? null;
+  useEffect(() => {
+    if (!firstBrand) {
+      setRecommendations([]);
+      return;
+    }
+    let cancelled = false;
+    const inCartCodes = new Set(cart?.items.map((i) => i.product_code).filter(Boolean));
+    searchProducts({ brand: firstBrand, limit: RECOMMENDATIONS_LIMIT, locale })
+      .then((result) => {
+        if (!cancelled) setRecommendations(result.products.filter((p) => !inCartCodes.has(p.productCode)));
+      })
+      .catch(() => {
+        if (!cancelled) setRecommendations([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cart.items is intentionally excluded: it changes on every quantity tick and would refetch far more often than the brand-based recommendation set needs to change.
+  }, [firstBrand, locale]);
 
   if (isLoading) {
     return (
@@ -159,6 +191,22 @@ export default function CartScreen() {
             t={t}
           />
         ))}
+
+        {recommendations.length > 0 ? (
+          <View className="gap-2 pt-6">
+            <Text className="text-h3 text-ink-950">You might also like</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+              {recommendations.map((item) => (
+                <View key={item.productCode} style={{ width: 140 }}>
+                  <ProductCard
+                    product={toProductCardData(item)}
+                    onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* Sticky checkout summary - sits above the floating tab bar rather
