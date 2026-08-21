@@ -9,6 +9,7 @@ import { FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type CategoryNode, type ProductHit, listCategories, searchProducts } from "@/features/discovery/services/discovery-client";
+import { getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { listNotifications } from "@/features/notifications/services/notifications-client";
@@ -22,10 +23,21 @@ export default function HomeScreen() {
   const t = useTranslations();
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [newArrivals, setNewArrivals] = useState<ProductHit[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<ProductHit[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Recently-viewed is local-device state (not tied to the discovery
+  // fetch below), so it refreshes on every focus rather than only on
+  // mount/refresh - visiting a product and coming back should show it
+  // immediately without a manual pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      getRecentlyViewed().then(setRecentlyViewed);
+    }, [])
+  );
 
   // Refetched on every focus (not just mount) so the badge clears
   // promptly after visiting Account -> Notifications.
@@ -139,6 +151,27 @@ export default function HomeScreen() {
                   </Pressable>
                 )}
               />
+            ) : null}
+
+            {recentlyViewed.length > 0 ? (
+              <View className="gap-2">
+                <Text className="px-4 text-h3 text-ink-950">Recently viewed</Text>
+                <FlatList
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  data={recentlyViewed}
+                  keyExtractor={(item) => item.productCode}
+                  contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}
+                  renderItem={({ item }) => (
+                    <View style={{ width: 120 }}>
+                      <ProductCard
+                        product={toProductCardData(item)}
+                        onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
+                      />
+                    </View>
+                  )}
+                />
+              </View>
             ) : null}
 
             <Text className="px-4 text-h3 text-ink-950">{t("home.newArrivals")}</Text>
