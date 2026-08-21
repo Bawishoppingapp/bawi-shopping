@@ -1,3 +1,4 @@
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
@@ -11,6 +12,7 @@ import {
 } from "@/features/notifications/services/notifications-client";
 
 export default function NotificationsScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,7 +71,7 @@ export default function NotificationsScreen() {
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, gap: 12 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, gap: 12 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
         renderItem={({ item }) => {
           const unread = !item.read_at;

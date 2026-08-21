@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
+import { StyleSheet } from "react-native";
 
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
@@ -14,7 +16,15 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: "#151210",
         tabBarInactiveTintColor: "#8C8175",
-        tabBarStyle: { backgroundColor: "#FFFFFF", borderTopColor: "#E3DCD1" },
+        // Floating/translucent tab bar - the bar sits above scrolling
+        // content instead of pushing it up, so each tab screen adds its
+        // own bottom inset via useBottomTabBarHeight() to keep content
+        // clear of the glass. Border replaces the old opaque
+        // backgroundColor's implicit separation from content behind it.
+        tabBarStyle: { position: "absolute", borderTopColor: "#E3DCD1" },
+        tabBarBackground: () => (
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        ),
       }}
     >
       <Tabs.Screen

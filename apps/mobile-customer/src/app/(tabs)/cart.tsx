@@ -1,4 +1,5 @@
 import { Button } from "@bawi/mobile-ui";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -82,6 +83,7 @@ function CartLineItem({
 
 export default function CartScreen() {
   const { cart, isLoading, updateQuantity, removeItem } = useCart();
+  const tabBarHeight = useBottomTabBarHeight();
   const t = useTranslations();
 
   if (isLoading) {
@@ -106,7 +108,7 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: tabBarHeight }}>
         <Text className="mb-2 text-h1 text-ink-950">{t("cart.title")}</Text>
 
         {cart.warnings.length > 0 ? (

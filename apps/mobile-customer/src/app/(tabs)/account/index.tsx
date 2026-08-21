@@ -1,5 +1,6 @@
 import { Button, Card } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router } from "expo-router";
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 
@@ -71,6 +72,7 @@ function LegalSection() {
 
 export default function AccountScreen() {
   const { customer, isLoading, logout } = useAuth();
+  const tabBarHeight = useBottomTabBarHeight();
   const locale = useLocale();
 
   if (isLoading) {
@@ -84,7 +86,7 @@ export default function AccountScreen() {
   if (!customer) {
     return (
       <SafeAreaView className="flex-1 bg-paper">
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 20, flexGrow: 1, justifyContent: "center" }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, gap: 20, flexGrow: 1, justifyContent: "center" }}>
           <View className="gap-1">
             <Text className="text-h1 text-ink-950">Your account</Text>
             <Text className="text-body text-ink-500">Log in to view orders, save favorites, and check out faster.</Text>
@@ -101,7 +103,7 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: tabBarHeight + 32 }}>
         <View className="gap-1 px-1 pt-2">
           <Text className="text-h1 text-ink-950">
             {customer.first_name ? `Hi, ${customer.first_name}` : "Your account"}

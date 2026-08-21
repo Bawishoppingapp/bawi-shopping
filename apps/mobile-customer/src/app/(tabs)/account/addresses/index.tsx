@@ -1,4 +1,5 @@
 import { Button, StatusBadge } from "@bawi/mobile-ui";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
@@ -13,6 +14,7 @@ import {
 import { countryName } from "@/features/addresses/data/countries";
 
 export default function AddressesScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export default function AddressesScreen() {
       <FlatList
         data={addresses}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, gap: 12, flexGrow: 1 }}
         ListHeaderComponent={
           <Button className="mb-2" onPress={() => router.push("/(tabs)/account/addresses/new")}>
             + Add address

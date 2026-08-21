@@ -1,5 +1,6 @@
 import { ProductCard, ProductCardSkeleton } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -16,6 +17,7 @@ const NEW_ARRIVALS_LIMIT = 12;
 
 export default function HomeScreen() {
   const { customer } = useAuth();
+  const tabBarHeight = useBottomTabBarHeight();
   const locale = useLocale();
   const t = useTranslations();
   const [categories, setCategories] = useState<CategoryNode[]>([]);
@@ -84,7 +86,7 @@ export default function HomeScreen() {
         data={newArrivals}
         keyExtractor={(item) => item.productCode}
         numColumns={2}
-        contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: tabBarHeight + 24 }}
         refreshing={refreshing}
         onRefresh={onRefresh}
         ListHeaderComponent={

@@ -1,5 +1,6 @@
 import { Button, ProductCard } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
@@ -12,6 +13,7 @@ import { listWishlist, removeFromWishlist } from "@/features/wishlist/services/w
 
 export default function WishlistScreen() {
   const { customer, isLoading: authLoading } = useAuth();
+  const tabBarHeight = useBottomTabBarHeight();
   const [products, setProducts] = useState<ProductHit[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingCode, setRemovingCode] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export default function WishlistScreen() {
         keyExtractor={(item) => item.productCode}
         numColumns={2}
         columnWrapperStyle={{ gap: 16, paddingHorizontal: 16 }}
-        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: 32 }}
+        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: tabBarHeight + 32 }}
         ListHeaderComponent={<Text className="px-4 text-display text-ink-950">Wishlist</Text>}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center gap-2 px-6 py-16">

@@ -1,3 +1,4 @@
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 
@@ -11,6 +12,7 @@ function isLegalSlug(slug: string | undefined): slug is LegalDocumentSlug {
 
 export default function LegalDocumentScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const tabBarHeight = useBottomTabBarHeight();
   const t = useTranslations();
 
   if (!isLegalSlug(slug)) {
@@ -26,7 +28,7 @@ export default function LegalDocumentScreen() {
   return (
     <View className="flex-1 bg-paper">
       <Stack.Screen options={{ headerShown: true, title: t(doc.titleKey) }} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 40 }}>
         <View className="mb-4 rounded-md bg-ink-100 px-4 py-3">
           <Text className="text-body-sm text-ink-700">{t("footer.legalDraftNotice")}</Text>
         </View>

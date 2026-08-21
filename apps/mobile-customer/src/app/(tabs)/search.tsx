@@ -1,5 +1,6 @@
 import { ProductCard, ProductCardSkeleton } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,6 +38,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ category?: string; categoryName?: string }>();
+  const tabBarHeight = useBottomTabBarHeight();
   const locale = useLocale();
   const t = useTranslations();
   const [query, setQuery] = useState("");
@@ -195,7 +197,7 @@ export default function SearchScreen() {
       </View>
 
       {showDiscovery ? (
-        <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} keyboardShouldPersistTaps="handled">
           {recentSearches.length > 0 ? (
             <View className="gap-2 px-4 pb-6">
               <View className="flex-row items-center justify-between">
@@ -269,7 +271,7 @@ export default function SearchScreen() {
           data={items}
           keyExtractor={(item) => item.productCode}
           numColumns={2}
-          contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: tabBarHeight + 32 }}
           onEndReachedThreshold={0.4}
           onEndReached={onLoadMore}
           ListEmptyComponent={
