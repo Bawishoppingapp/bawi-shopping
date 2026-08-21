@@ -1,8 +1,9 @@
 import { ProductCard } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
 
 import {
   type CategoryNode,
@@ -260,12 +261,11 @@ export default function SearchScreen() {
           <ActivityIndicator color="#151210" />
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={items}
           keyExtractor={(item) => item.productCode}
           numColumns={2}
-          columnWrapperStyle={{ gap: 16, paddingHorizontal: 16 }}
-          contentContainerStyle={{ gap: 16, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 32 }}
           onEndReachedThreshold={0.4}
           onEndReached={onLoadMore}
           ListEmptyComponent={
@@ -277,7 +277,7 @@ export default function SearchScreen() {
           }
           ListFooterComponent={loadingMore ? <ActivityIndicator className="py-4" color="#151210" /> : null}
           renderItem={({ item }) => (
-            <View className="flex-1">
+            <View className="flex-1 px-2 pb-4">
               <ProductCard product={toProductCardData(item)} onPress={() => goToProduct(item.productCode)} />
             </View>
           )}

@@ -1,8 +1,9 @@
 import { ProductCard } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
@@ -73,13 +74,13 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <FlatList
+      <FlashList
         data={newArrivals}
         keyExtractor={(item) => item.productCode}
         numColumns={2}
-        columnWrapperStyle={{ gap: 16, paddingHorizontal: 16 }}
-        contentContainerStyle={{ gap: 16, paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: 24 }}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListHeaderComponent={
           <View className="gap-6 pb-2">
             <View className="flex-row items-center justify-between px-4 pt-2">
@@ -144,7 +145,7 @@ export default function HomeScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <View className="flex-1">
+          <View className="flex-1 px-2 pb-4">
             <ProductCard
               product={toProductCardData(item)}
               onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
