@@ -24,6 +24,7 @@ import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { recordProductView } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
+import { type ShippingPolicy, getShippingPolicy } from "@/features/shipping-policy/services/shipping-policy-client";
 import { addToWishlist, listWishlist, removeFromWishlist } from "@/features/wishlist/services/wishlist-client";
 
 const RELATED_PRODUCTS_LIMIT = 8;
@@ -37,6 +38,7 @@ export default function ProductDetailScreen() {
   const t = useTranslations();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
   const [relatedProducts, setRelatedProducts] = useState<ProductHit[]>([]);
+  const [shippingPolicy, setShippingPolicy] = useState<ShippingPolicy | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const galleryRef = useRef<ScrollView>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -89,6 +91,16 @@ export default function ProductDetailScreen() {
       cancelled = true;
     };
   }, [code, locale]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getShippingPolicy().then((policy) => {
+      if (!cancelled) setShippingPolicy(policy);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!customer || !code) {
@@ -318,6 +330,25 @@ export default function ProductDetailScreen() {
             <View className="gap-1 pt-2">
               <Text className="text-body-sm font-medium text-ink-800">Details</Text>
               <Text className="text-body text-ink-700">{product.description}</Text>
+            </View>
+          ) : null}
+
+          {shippingPolicy ? (
+            <View className="gap-2 rounded-md border border-ink-100 p-3">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="cube-outline" size={18} color="#4A423B" />
+                <Text className="flex-1 text-body-sm text-ink-700">
+                  {price >= shippingPolicy.freeShippingThresholdCents
+                    ? "This item qualifies for free shipping"
+                    : `Free shipping on orders over ${formatUsd(shippingPolicy.freeShippingThresholdCents)} · otherwise ${formatUsd(shippingPolicy.standardShippingFeeCents)}`}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="return-up-back-outline" size={18} color="#4A423B" />
+                <Text className="flex-1 text-body-sm text-ink-700">
+                  Returns accepted within {shippingPolicy.returnWindowDays} days of delivery
+                </Text>
+              </View>
             </View>
           ) : null}
         </View>
