@@ -6,6 +6,8 @@ import type ProductListingModuleService from "../../../../modules/product-listin
 import { productDraftSchema } from "../../../../modules/product-listing/schemas"
 import { updateProductDraftWorkflow } from "../../../../workflows/update-product-draft"
 import { getOrCreateDefaultStockLocationId } from "../../../../workflows/shared/default-stock-location"
+import { SELLER_MODULE } from "../../../../modules/seller"
+import type SellerModuleService from "../../../../modules/seller/service"
 
 /**
  * A seller can only ever fetch/edit their own product listing - a listing
@@ -37,6 +39,9 @@ export async function GET(
     return
   }
 
+  const sellerModuleService: SellerModuleService = req.scope.resolve(SELLER_MODULE)
+  const seller = await sellerModuleService.retrieveSeller(vendorId, { select: ["id", "currency_code"] })
+
   const productModuleService = req.scope.resolve(Modules.PRODUCT)
   const product = await productModuleService.retrieveProduct(listing.product_id, {
     relations: ["variants", "variants.options", "options", "options.values", "images", "categories"],
@@ -67,9 +72,9 @@ export async function GET(
     inventoryByVariantId.set(variant.id as string, stocked)
 
     const prices = (variant.prices ?? []) as Array<{ amount: number; currency_code: string }>
-    const usdPrice = prices.find((price) => price.currency_code === "usd")
-    if (usdPrice) {
-      priceByVariantId.set(variant.id as string, usdPrice.amount)
+    const price = prices.find((p) => p.currency_code === seller.currency_code)
+    if (price) {
+      priceByVariantId.set(variant.id as string, price.amount)
     }
   }
 
@@ -150,6 +155,9 @@ export async function PUT(
 
   const stockLocationId = await getOrCreateDefaultStockLocationId(req.scope)
 
+  const sellerModuleService: SellerModuleService = req.scope.resolve(SELLER_MODULE)
+  const seller = await sellerModuleService.retrieveSeller(vendorId, { select: ["id", "currency_code"] })
+
   const { result } = await updateProductDraftWorkflow(req.scope).run({
     input: {
       productId: listing.product_id,
@@ -162,6 +170,7 @@ export async function PUT(
       variants: parsed.data.variants,
       stockLocationId,
       productCode: listing.product_code,
+      currencyCode: seller.currency_code,
     },
   })
 

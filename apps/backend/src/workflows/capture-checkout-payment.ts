@@ -228,6 +228,12 @@ const splitIntoVendorOrdersStep = createStep(
       const ledgerEntry = await sellerFinanceModuleService.createCommissionLedgerEntries({
         vendor_order_id: vendorOrder.id,
         vendor_id: vendorId,
+        // MarketplaceOrder.currency_code is a plain text column (it
+        // predates the seller-currency enum and stays free-text so a
+        // future third currency needs no migration there), but its value
+        // is always constrained transitively via Seller.currency_code -
+        // see cart-session.ts/cart-catalog.ts.
+        currency_code: order.currency_code as "usd" | "etb",
         reason: "order",
         commission_rate_basis_points,
         commission_amount,

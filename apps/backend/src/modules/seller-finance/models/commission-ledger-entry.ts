@@ -24,6 +24,13 @@ export const CommissionLedgerEntry = model.define("commission_ledger_entry", {
   id: model.id().primaryKey(),
   vendor_order_id: model.text(),
   vendor_id: model.text(),
+  // Stamped from the originating vendor_order's currency at creation -
+  // commission_rate_basis_points is a percentage (currency-independent),
+  // but the resulting amount fields are real money and must never be
+  // summed across currencies (see docs/DECISIONS.md's Ethiopian-market
+  // entry). Backfilled "usd" for every entry created before this column
+  // existed - all of which really were USD.
+  currency_code: model.enum(["usd", "etb"]).default("usd"),
   reason: model.enum(["order", "refund_reversal"]),
   commission_rate_basis_points: model.number(),
   commission_amount: model.number(),

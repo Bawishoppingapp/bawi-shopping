@@ -47,7 +47,26 @@ export async function POST(req: MedusaStoreRequest, res: MedusaResponse): Promis
   const header = req.headers[CART_ID_HEADER]
   const guestCartId = typeof header === "string" && header.length ? header : undefined
 
-  const { cart } = await resolveOrCreateCart(req.scope, customerId, guestCartId, expirationDays)
+  const { cart } = await resolveOrCreateCart(
+    req.scope,
+    customerId,
+    guestCartId,
+    expirationDays,
+    resolved.currencyCode
+  )
+
+  // A cart is single-currency (see docs/DECISIONS.md's Ethiopian-market
+  // entry) - reject before touching anything if this item's currency
+  // doesn't match a cart that already has items. A brand-new cart was
+  // just created above in this item's own currency, so this only ever
+  // fires for a genuinely mismatched addition, not a first item.
+  if (cart.items.length > 0 && cart.currency_code !== resolved.currencyCode) {
+    res.status(400).json({
+      message: `Your bag has ${cart.currency_code.toUpperCase()} items in it. Remove them before adding ${resolved.currencyCode.toUpperCase()} items.`,
+    })
+    return
+  }
+
   const cartModuleService = req.scope.resolve(Modules.CART)
 
   const existingItem = cart.items.find((item) => item.variant_id === resolved.variantId)

@@ -86,9 +86,9 @@ export async function GET(
     availabilityByVariantId.set(variant.id as string, available)
 
     const prices = (variant.prices ?? []) as Array<{ amount: number; currency_code: string }>
-    const usdPrice = prices.find((price) => price.currency_code === "usd")
-    if (usdPrice) {
-      priceByVariantId.set(variant.id as string, usdPrice.amount)
+    const price = prices.find((p) => p.currency_code === seller.currency_code)
+    if (price) {
+      priceByVariantId.set(variant.id as string, price.amount)
     }
   }
 
@@ -98,6 +98,7 @@ export async function GET(
       title: translatedTitle || product.title,
       description: translatedDescription || product.description,
       brand: resolvePublicBrand(seller),
+      currency_code: seller.currency_code,
       images: product.images?.map((image) => image.url) ?? [],
       thumbnail: product.thumbnail,
       colors: Array.from(

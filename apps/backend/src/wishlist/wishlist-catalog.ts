@@ -7,7 +7,7 @@ import { SELLER_MODULE } from "../modules/seller"
 import type SellerModuleService from "../modules/seller/service"
 import { resolvePublicBrand } from "../modules/seller/public-brand"
 
-type VariantAgg = { available: number; prices: number[] }
+type VariantAgg = { available: number; prices: number[]; currencyCode: string | null }
 
 /**
  * Batched resolution of saved product_codes into display-ready
@@ -80,13 +80,16 @@ export async function resolveWishlistHits(
       const levels = item.inventory?.location_levels ?? []
       return sum + levels.reduce((s, l) => s + (l.available_quantity ?? 0), 0)
     }, 0)
+    const listing = listingByProductId.get(productId)
+    const seller = listing ? sellerById.get(listing.vendor_id) : undefined
     const prices = (variant.prices ?? []) as Array<{ amount: number; currency_code: string }>
-    const usdAmount = prices.find((p) => p.currency_code === "usd")?.amount
+    const price = seller ? prices.find((p) => p.currency_code === seller.currency_code) : undefined
 
-    const agg = variantAggByProductId.get(productId) ?? { available: 0, prices: [] }
+    const agg = variantAggByProductId.get(productId) ?? { available: 0, prices: [], currencyCode: null }
     agg.available += available
-    if (usdAmount !== undefined) {
-      agg.prices.push(usdAmount)
+    if (price !== undefined) {
+      agg.prices.push(price.amount)
+      agg.currencyCode = seller!.currency_code
     }
     variantAggByProductId.set(productId, agg)
   }
@@ -102,7 +105,7 @@ export async function resolveWishlistHits(
       continue
     }
 
-    const agg = variantAggByProductId.get(product.id) ?? { available: 0, prices: [] }
+    const agg = variantAggByProductId.get(product.id) ?? { available: 0, prices: [], currencyCode: null }
     const priceMin = agg.prices.length ? Math.min(...agg.prices) : null
     const priceMax = agg.prices.length ? Math.max(...agg.prices) : null
 
@@ -113,6 +116,7 @@ export async function resolveWishlistHits(
       thumbnail: product.thumbnail ?? null,
       priceMin,
       priceMax,
+      currencyCode: agg.currencyCode,
       available: agg.available > 0,
       categoryIds: product.categories?.map((c) => c.id) ?? [],
     })

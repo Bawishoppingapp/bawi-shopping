@@ -106,6 +106,7 @@ export default async function seedDemoProducts({ container, args }: ExecArgs) {
         variants: p.variants,
         stockLocationId,
         productCode: p.productCode,
+        currencyCode: seller.currency_code,
       },
     })
 

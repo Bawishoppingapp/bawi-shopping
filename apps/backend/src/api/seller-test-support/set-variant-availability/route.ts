@@ -56,16 +56,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<voi
   }
 
   if (typeof body.price === "number") {
+    // A variant only ever has one price entry (its seller's single
+    // currency - see modules/seller/models/seller.ts), so there's no
+    // currency to filter by here anymore - just take whichever one exists.
     const prices = (variant.prices ?? []) as Array<{ id: string; currency_code: string }>
-    const usdPrice = prices.find((p) => p.currency_code === "usd")
-    if (usdPrice) {
+    const existingPrice = prices[0]
+    if (existingPrice) {
       await upsertVariantPricesWorkflow(req.scope).run({
         input: {
           variantPrices: [
             {
               variant_id: variant.id as string,
               product_id: variant.product_id as string,
-              prices: [{ id: usdPrice.id, amount: body.price }],
+              prices: [{ id: existingPrice.id, amount: body.price }],
             },
           ],
           // Despite the name, this is the list of variant ids that

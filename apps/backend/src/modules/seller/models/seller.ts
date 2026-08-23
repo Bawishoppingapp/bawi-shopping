@@ -20,5 +20,11 @@ export const Seller = model.define("seller", {
   // approval makes it publicly displayable (see docs/DECISIONS.md). This
   // is distinct from a normal product brand, which is already public.
   public_brand_display_approved: model.boolean().default(false),
+  // Currency the seller's whole catalog is priced in - a per-seller
+  // setting, not per-product, since a real seller operates in one market
+  // (see docs/DECISIONS.md's Ethiopian-market entry). Chosen at
+  // application time; defaults "usd" so every seller onboarded before
+  // this field existed is unaffected.
+  currency_code: model.enum(["usd", "etb"]).default("usd"),
   users: model.hasMany(() => SellerUser, { mappedBy: "seller" }),
 })

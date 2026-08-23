@@ -126,6 +126,8 @@ const processRefundStep = createStep(
       ledgerEntry = await sellerFinanceModuleService.createCommissionLedgerEntries({
         vendor_order_id: returnRequest.vendor_order_id,
         vendor_id: returnRequest.vendor_id,
+        // See capture-checkout-payment.ts's identical cast for why.
+        currency_code: marketplaceOrder.currency_code as "usd" | "etb",
         reason: "refund_reversal",
         commission_rate_basis_points: vendorOrder.commission_rate_basis_points,
         commission_amount: -calculation.commission_reversal_amount,

@@ -119,6 +119,7 @@ const refundCancelledVendorOrderStep = createStep(
       ledgerEntry = await sellerFinanceModuleService.createCommissionLedgerEntries({
         vendor_order_id: input.vendorOrderId,
         vendor_id: vendorOrder.vendor_id,
+        currency_code: originalLedgerEntry.currency_code,
         reason: "refund_reversal",
         commission_rate_basis_points: vendorOrder.commission_rate_basis_points,
         commission_amount: -vendorOrder.commission_amount,

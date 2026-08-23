@@ -93,7 +93,7 @@ export const DEFAULT_BUSINESS_CONFIG_ENTRIES: DefaultConfigEntry[] = [
     key: "standard_shipping_fee_cents",
     value: 699,
     value_type: "integer",
-    label: "Standard shipping fee (cents)",
+    label: "Standard shipping fee, USD sellers (cents)",
     is_placeholder: true,
   },
   {
@@ -101,7 +101,29 @@ export const DEFAULT_BUSINESS_CONFIG_ENTRIES: DefaultConfigEntry[] = [
     key: "free_shipping_threshold_cents",
     value: 7500,
     value_type: "integer",
-    label: "Free-shipping threshold (cents per order)",
+    label: "Free-shipping threshold, USD sellers (cents per order)",
+    is_placeholder: true,
+  },
+  // Separate ETB entries, not a rename of the two above - each currency's
+  // fee/threshold is a real, independent business decision, not a live
+  // FX conversion of the other (see docs/DECISIONS.md's Ethiopian-market
+  // entry). Same minor-unit convention as every other money field in this
+  // system (hundredths), so a formatter just picks the right key by
+  // currency rather than special-casing storage per currency.
+  {
+    category: "shipping",
+    key: "standard_shipping_fee_cents_etb",
+    value: 15000,
+    value_type: "integer",
+    label: "Standard shipping fee, ETB sellers (cents)",
+    is_placeholder: true,
+  },
+  {
+    category: "shipping",
+    key: "free_shipping_threshold_cents_etb",
+    value: 300000,
+    value_type: "integer",
+    label: "Free-shipping threshold, ETB sellers (cents per order)",
     is_placeholder: true,
   },
   {

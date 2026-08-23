@@ -80,6 +80,9 @@ export type UpdateProductDraftWorkflowInput = {
   variants: CreateProductDraftVariantInput[]
   stockLocationId: string
   productCode: string
+  // The seller's own currency - see create-product-draft.ts's identical
+  // field for why this isn't a per-product choice.
+  currencyCode: string
 }
 
 export const updateProductDraftWorkflowId = "update-product-draft"
@@ -135,7 +138,7 @@ export const updateProductDraftWorkflow = createWorkflow(
         prices: [
           {
             amount: variant.price ?? data.input.basePrice,
-            currency_code: "usd",
+            currency_code: data.input.currencyCode,
           },
         ],
       })),
