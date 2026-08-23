@@ -13,9 +13,14 @@ import {
   createProduct,
   listCategories,
 } from "@/features/seller-products/services/seller-products-client";
+import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
+const CURRENCY_SYMBOL: Record<string, string> = { usd: "$", etb: "Br" };
+
 export default function SellNewProductScreen() {
+  const { seller } = useSellerAuth();
+  const currencySymbol = CURRENCY_SYMBOL[seller?.seller.currency_code ?? "usd"] ?? "$";
   const [categories, setCategories] = useState<CategoryOption[] | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -102,7 +107,7 @@ export default function SellNewProductScreen() {
         )}
 
         <Input
-          label="Base price ($)"
+          label={`Base price (${currencySymbol})`}
           value={basePrice}
           onChangeText={setBasePrice}
           error={fieldErrors.base_price}
@@ -110,7 +115,7 @@ export default function SellNewProductScreen() {
           helperText="Used for any variant without its own price override."
         />
 
-        <VariantEditor variants={variants} onChange={setVariants} />
+        <VariantEditor variants={variants} onChange={setVariants} currencySymbol={currencySymbol} />
         {fieldErrors.variants ? <Text className="text-body-sm text-danger">{fieldErrors.variants}</Text> : null}
 
         <Button onPress={onSubmit} loading={submitting}>

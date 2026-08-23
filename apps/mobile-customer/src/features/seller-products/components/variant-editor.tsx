@@ -11,13 +11,19 @@ interface VariantEditorProps {
    * seller-products-client.ts's doc comment). Editing is still allowed
    * for combos already present when the product was created. */
   lockedColorsAndSizes?: { colors: Set<string>; sizes: Set<string> } | null;
+  currencySymbol?: string;
 }
 
 function emptyVariant(): ProductVariantInput {
   return { color: "", size: "", inventory_quantity: 0 };
 }
 
-export function VariantEditor({ variants, onChange, lockedColorsAndSizes }: VariantEditorProps) {
+export function VariantEditor({
+  variants,
+  onChange,
+  lockedColorsAndSizes,
+  currencySymbol = "$",
+}: VariantEditorProps) {
   function updateVariant(index: number, patch: Partial<ProductVariantInput>) {
     onChange(variants.map((v, i) => (i === index ? { ...v, ...patch } : v)));
   }
@@ -63,7 +69,7 @@ export function VariantEditor({ variants, onChange, lockedColorsAndSizes }: Vari
           <View className="flex-row gap-2">
             <View className="flex-1">
               <Input
-                label="Price override (optional, $)"
+                label={`Price override (optional, ${currencySymbol})`}
                 value={variant.price !== undefined ? String(variant.price / 100) : ""}
                 onChangeText={(text) => {
                   const dollars = Number(text);

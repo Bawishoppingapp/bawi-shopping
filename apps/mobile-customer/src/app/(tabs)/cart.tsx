@@ -9,7 +9,7 @@ import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } fr
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type ProductHit, searchProducts } from "@/features/discovery/services/discovery-client";
-import { formatUsd } from "@/features/discovery/utils/format-price";
+import { formatMoney } from "@/features/discovery/utils/format-price";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import type { CartItem } from "@/features/cart/services/cart-client";
@@ -20,6 +20,7 @@ const RECOMMENDATIONS_LIMIT = 8;
 
 function CartLineItem({
   item,
+  currencyCode,
   onIncrement,
   onDecrement,
   onRemove,
@@ -27,6 +28,7 @@ function CartLineItem({
   t,
 }: {
   item: CartItem;
+  currencyCode: string;
   onIncrement: () => void;
   onDecrement: () => void;
   onRemove: () => void;
@@ -81,7 +83,7 @@ function CartLineItem({
               <Text className="text-h3 text-ink-950">+</Text>
             </Pressable>
           </View>
-          <Text className="text-body-sm font-medium text-ink-950">{formatUsd(item.line_total)}</Text>
+          <Text className="text-body-sm font-medium text-ink-950">{formatMoney(item.line_total, currencyCode)}</Text>
         </View>
         <View className="flex-row gap-4">
           <Pressable accessibilityRole="button" onPress={onRemove}>
@@ -182,6 +184,7 @@ export default function CartScreen() {
           <CartLineItem
             key={item.id}
             item={item}
+            currencyCode={cart.currency_code}
             onIncrement={() => updateQuantity(item.id, Math.min(item.quantity + 1, item.max_quantity))}
             onDecrement={() =>
               item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeItem(item.id)
@@ -217,19 +220,19 @@ export default function CartScreen() {
       >
         {!cart.qualifies_for_free_shipping ? (
           <Text className="text-body-sm text-ink-500">
-            Add {formatUsd(cart.amount_remaining_for_free_shipping)} {t("cart.freeShippingProgress")}.
+            Add {formatMoney(cart.amount_remaining_for_free_shipping, cart.currency_code)} {t("cart.freeShippingProgress")}.
           </Text>
         ) : (
           <Text className="text-body-sm text-success">{t("cart.qualifiesForFreeShipping")}</Text>
         )}
         <View className="flex-row justify-between">
           <Text className="text-body text-ink-700">{t("cart.subtotal")}</Text>
-          <Text className="text-body text-ink-950">{formatUsd(cart.subtotal)}</Text>
+          <Text className="text-body text-ink-950">{formatMoney(cart.subtotal, cart.currency_code)}</Text>
         </View>
         <View className="flex-row justify-between">
           <Text className="text-body text-ink-700">{t("cart.shippingEstimate")}</Text>
           <Text className="text-body text-ink-950">
-            {cart.qualifies_for_free_shipping ? t("cart.free") : formatUsd(cart.shipping_estimate)}
+            {cart.qualifies_for_free_shipping ? t("cart.free") : formatMoney(cart.shipping_estimate, cart.currency_code)}
           </Text>
         </View>
 

@@ -26,9 +26,14 @@ import {
   updateProduct,
 } from "@/features/seller-products/services/seller-products-client";
 import { isProductEditable, productStatusBadge } from "@/features/seller-products/utils/status";
+import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
+const CURRENCY_SYMBOL: Record<string, string> = { usd: "$", etb: "Br" };
+
 export default function SellProductDetailScreen() {
+  const { seller } = useSellerAuth();
+  const currencySymbol = CURRENCY_SYMBOL[seller?.seller.currency_code ?? "usd"] ?? "$";
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<SellerProductDetail | null | undefined>(undefined);
   const [categories, setCategories] = useState<CategoryOption[] | null>(null);
@@ -222,7 +227,7 @@ export default function SellProductDetailScreen() {
         )}
 
         <Input
-          label="Base price ($)"
+          label={`Base price (${currencySymbol})`}
           value={basePrice}
           onChangeText={setBasePrice}
           error={fieldErrors.base_price}
@@ -236,6 +241,7 @@ export default function SellProductDetailScreen() {
               variants={variants}
               onChange={setVariants}
               lockedColorsAndSizes={{ colors: existingColors, sizes: existingSizes }}
+              currencySymbol={currencySymbol}
             />
             {fieldErrors.variants ? (
               <Text className="text-body-sm text-danger">{fieldErrors.variants}</Text>

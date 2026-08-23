@@ -19,7 +19,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type PublicProduct, getPublicProduct } from "@/features/products/services/products-client";
 import { type ProductHit, searchProducts } from "@/features/discovery/services/discovery-client";
-import { formatUsd } from "@/features/discovery/utils/format-price";
+import { formatMoney } from "@/features/discovery/utils/format-price";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { recordProductView } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
@@ -70,6 +70,7 @@ export default function ProductDetailScreen() {
             thumbnail: result.thumbnail,
             priceMin: prices.length ? Math.min(...prices) : result.base_price,
             priceMax: prices.length ? Math.max(...prices) : result.base_price,
+            currencyCode: result.currency_code,
             available: result.variants.some((v) => v.available_quantity > 0),
             categoryIds: [],
           });
@@ -93,14 +94,15 @@ export default function ProductDetailScreen() {
   }, [code, locale]);
 
   useEffect(() => {
+    if (!product) return;
     let cancelled = false;
-    getShippingPolicy().then((policy) => {
+    getShippingPolicy(product.currency_code).then((policy) => {
       if (!cancelled) setShippingPolicy(policy);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [product]);
 
   useEffect(() => {
     if (!customer || !code) {
@@ -259,7 +261,7 @@ export default function ProductDetailScreen() {
             <View className="flex-1 gap-1">
               <Text className="text-caption uppercase tracking-wide text-ink-500">{product.brand}</Text>
               <Text className="text-h1 text-ink-950">{product.title}</Text>
-              <Text className="text-h3 text-ink-950">{formatUsd(price)}</Text>
+              <Text className="text-h3 text-ink-950">{formatMoney(price, product.currency_code)}</Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -340,7 +342,7 @@ export default function ProductDetailScreen() {
                 <Text className="flex-1 text-body-sm text-ink-700">
                   {price >= shippingPolicy.freeShippingThresholdCents
                     ? "This item qualifies for free shipping"
-                    : `Free shipping on orders over ${formatUsd(shippingPolicy.freeShippingThresholdCents)} · otherwise ${formatUsd(shippingPolicy.standardShippingFeeCents)}`}
+                    : `Free shipping on orders over ${formatMoney(shippingPolicy.freeShippingThresholdCents, product.currency_code)} · otherwise ${formatMoney(shippingPolicy.standardShippingFeeCents, product.currency_code)}`}
                 </Text>
               </View>
               <View className="flex-row items-center gap-2">

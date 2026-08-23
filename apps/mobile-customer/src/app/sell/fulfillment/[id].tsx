@@ -3,7 +3,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
-import { formatUsd } from "@/features/discovery/utils/format-price";
+import { formatMoney } from "@/features/discovery/utils/format-price";
 import {
   type FulfillmentOrder,
   FulfillmentClientError,
@@ -12,9 +12,12 @@ import {
   markReadyForPickup,
 } from "@/features/fulfillment/services/fulfillment-client";
 import { fulfillmentStatusBadge } from "@/features/fulfillment/utils/status";
+import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
 export default function SellFulfillmentDetailScreen() {
+  const { seller } = useSellerAuth();
+  const currencyCode = seller?.seller.currency_code ?? "usd";
   const { id } = useLocalSearchParams<{ id: string }>();
   const [order, setOrder] = useState<FulfillmentOrder | null | undefined>(undefined);
   const [updating, setUpdating] = useState(false);
@@ -108,16 +111,16 @@ export default function SellFulfillmentDetailScreen() {
         <View className="gap-2 rounded-md border border-ink-100 p-4">
           <View className="flex-row justify-between">
             <Text className="text-body text-ink-700">Subtotal</Text>
-            <Text className="text-body text-ink-950">{formatUsd(order.subtotal)}</Text>
+            <Text className="text-body text-ink-950">{formatMoney(order.subtotal, currencyCode)}</Text>
           </View>
           <View className="flex-row justify-between">
             <Text className="text-body text-ink-700">Commission</Text>
-            <Text className="text-body text-ink-950">-{formatUsd(order.commission_amount)}</Text>
+            <Text className="text-body text-ink-950">-{formatMoney(order.commission_amount, currencyCode)}</Text>
           </View>
           <View className="flex-row justify-between border-t border-ink-100 pt-2">
             <Text className="text-body-sm font-medium text-ink-950">You earn</Text>
             <Text className="text-body-sm font-medium text-ink-950">
-              {formatUsd(order.total - order.commission_amount)}
+              {formatMoney(order.total - order.commission_amount, currencyCode)}
             </Text>
           </View>
         </View>

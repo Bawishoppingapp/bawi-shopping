@@ -3,12 +3,15 @@ import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
 
-import { formatUsd } from "@/features/discovery/utils/format-price";
+import { formatMoney } from "@/features/discovery/utils/format-price";
 import { type FulfillmentOrder, listFulfillmentOrders } from "@/features/fulfillment/services/fulfillment-client";
 import { fulfillmentStatusBadge } from "@/features/fulfillment/utils/status";
+import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
 export default function SellFulfillmentScreen() {
+  const { seller } = useSellerAuth();
+  const currencyCode = seller?.seller.currency_code ?? "usd";
   const [orders, setOrders] = useState<FulfillmentOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -79,7 +82,7 @@ export default function SellFulfillmentScreen() {
                   {itemCount} item{itemCount === 1 ? "" : "s"} · due{" "}
                   {new Date(item.fulfillment_deadline_at).toLocaleDateString()}
                 </Text>
-                <Text className="text-body-sm text-ink-950">{formatUsd(item.total)}</Text>
+                <Text className="text-body-sm text-ink-950">{formatMoney(item.total, currencyCode)}</Text>
               </View>
             </Pressable>
           );

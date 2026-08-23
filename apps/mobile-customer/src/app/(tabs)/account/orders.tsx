@@ -6,7 +6,7 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, T
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
-import { formatUsd } from "@/features/discovery/utils/format-price";
+import { formatMoney } from "@/features/discovery/utils/format-price";
 import { type OrderSummary, listOrders } from "@/features/orders/services/orders-client";
 import { orderStatusBadge } from "@/features/orders/utils/order-status";
 
@@ -99,7 +99,7 @@ export default function OrdersScreen() {
                 <Text className="text-caption text-ink-500">
                   {new Date(item.created_at).toLocaleDateString()}
                 </Text>
-                <Text className="text-body-sm text-ink-950">{formatUsd(item.total)}</Text>
+                <Text className="text-body-sm text-ink-950">{formatMoney(item.total, item.currency_code)}</Text>
               </View>
             </Pressable>
           );
