@@ -29,6 +29,10 @@ export const submitApplicationSchema = z.object({
     .union([z.string().trim().url("Enter a valid URL"), z.literal("")])
     .optional(),
   address: addressSchema,
+  // Optional, defaulting "usd" - the seller-portal web app doesn't send
+  // this field yet (mobile does), and a request that omits it should
+  // still work exactly as it did before this field existed.
+  currency_code: z.enum(["usd", "etb"]).optional().default("usd"),
   product_categories: z
     .array(z.string().trim().min(1))
     .min(1, "Select at least one product category"),

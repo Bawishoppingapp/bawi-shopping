@@ -140,6 +140,25 @@
           "enumItems": [],
           "mappedType": "json"
         },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'usd'",
+          "comment": null,
+          "enumItems": [
+            "usd",
+            "etb"
+          ],
+          "mappedType": "enum"
+        },
         "contact_first_name": {
           "name": "contact_first_name",
           "type": "text",

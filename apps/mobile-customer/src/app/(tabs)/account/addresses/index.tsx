@@ -99,7 +99,14 @@ export default function AddressesScreen() {
               {item.address_2 ? `, ${item.address_2}` : ""}
             </Text>
             <Text className="text-body-sm text-ink-700">
-              {[item.city, item.province, item.postal_code, countryName(item.country_code)]
+              {[
+                item.metadata?.sub_city,
+                item.metadata?.woreda ? `Woreda ${item.metadata.woreda}` : null,
+                item.city,
+                item.province,
+                item.postal_code,
+                countryName(item.country_code),
+              ]
                 .filter(Boolean)
                 .join(", ")}
             </Text>

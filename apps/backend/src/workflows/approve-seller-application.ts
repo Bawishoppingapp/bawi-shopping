@@ -28,7 +28,7 @@ import { sellerApplicationApprovedTemplate } from "../notifications/templates"
  * application record pointing at it. See docs/DECISIONS.md.
  */
 
-type CreateApprovedSellerInput = { storeName: string; slug: string }
+type CreateApprovedSellerInput = { storeName: string; slug: string; currencyCode: "usd" | "etb" }
 
 const createApprovedSellerStep = createStep(
   "create-approved-seller",
@@ -38,6 +38,7 @@ const createApprovedSellerStep = createStep(
       name: input.storeName,
       slug: input.slug,
       status: "approved",
+      currency_code: input.currencyCode,
     })
     return new StepResponse(seller, seller.id)
   },
@@ -179,6 +180,7 @@ export type ApproveSellerApplicationWorkflowInput = {
   businessEmail: string
   adminUserId: string
   previousStatus: SellerApplicationStatus
+  currencyCode: "usd" | "etb"
 }
 
 export const approveSellerApplicationWorkflowId = "approve-seller-application"
@@ -189,6 +191,7 @@ export const approveSellerApplicationWorkflow = createWorkflow(
     const seller = createApprovedSellerStep({
       storeName: input.storeName,
       slug: input.slug,
+      currencyCode: input.currencyCode,
     })
 
     const sellerUser = createSellerUserForOwnerStep({

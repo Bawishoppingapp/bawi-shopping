@@ -25,6 +25,10 @@ export class AddressesClientError extends Error {
 export interface AddressMetadata {
   landmark?: string;
   delivery_notes?: string;
+  // Ethiopian addressing concepts (sub-city/kifle-ketema, woreda) - same
+  // "no dedicated column, lives in metadata" treatment as landmark above.
+  sub_city?: string;
+  woreda?: string;
 }
 
 export interface CustomerAddress {

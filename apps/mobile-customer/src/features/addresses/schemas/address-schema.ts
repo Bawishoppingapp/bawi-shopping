@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { findCountry } from "../data/countries";
+import { isValidEthiopianPhone } from "../utils/phone-format";
 
 // International address model: postal code isn't required by every
 // country (superRefine below checks the selected country's own
@@ -22,6 +23,8 @@ export const addressSchema = z
     postal_code: z.string().trim().optional(),
     country_code: z.string().trim().min(2, "Select a country"),
     phone: z.string().trim().optional(),
+    sub_city: z.string().trim().optional(),
+    woreda: z.string().trim().optional(),
     landmark: z.string().trim().optional(),
     delivery_notes: z.string().trim().optional(),
     is_default_shipping: z.boolean(),
@@ -33,6 +36,15 @@ export const addressSchema = z
         code: "custom",
         path: ["postal_code"],
         message: "Postal code is required for this country",
+      });
+    }
+    // Only Ethiopian numbers get real format validation - every other
+    // country's phone field stays free-text (see phone-format.ts).
+    if (data.country_code === "et" && data.phone && !isValidEthiopianPhone(data.phone)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["phone"],
+        message: "Enter a valid Ethiopian mobile number (e.g. 0911234567)",
       });
     }
   });

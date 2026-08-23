@@ -35,6 +35,7 @@ export default function SellApplyScreen() {
   const [legalBusinessName, setLegalBusinessName] = useState("");
   const [storeName, setStoreName] = useState("");
   const [businessType, setBusinessType] = useState<string | null>(null);
+  const [currencyCode, setCurrencyCode] = useState<"usd" | "etb" | null>(null);
   const [contactFirstName, setContactFirstName] = useState(customer?.first_name ?? "");
   const [contactLastName, setContactLastName] = useState(customer?.last_name ?? "");
   const [businessEmail, setBusinessEmail] = useState(customer?.email ?? "");
@@ -66,6 +67,7 @@ export default function SellApplyScreen() {
       legal_business_name: legalBusinessName,
       store_name: storeName,
       business_type: businessType,
+      currency_code: currencyCode,
       contact_first_name: contactFirstName,
       contact_last_name: contactLastName,
       business_email: businessEmail,
@@ -128,6 +130,20 @@ export default function SellApplyScreen() {
             ))}
           </View>
           {fieldErrors.business_type ? <Text className="text-body-sm text-danger">{fieldErrors.business_type}</Text> : null}
+        </View>
+
+        <View className="gap-2">
+          <Text className="text-body-sm font-medium text-ink-800">Currency</Text>
+          <Text className="text-caption text-ink-500">
+            Your whole catalog will be priced in this currency - it can&apos;t be changed per product later.
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            <Chip label="USD ($)" selected={currencyCode === "usd"} onPress={() => setCurrencyCode("usd")} />
+            <Chip label="ETB (Br)" selected={currencyCode === "etb"} onPress={() => setCurrencyCode("etb")} />
+          </View>
+          {fieldErrors.currency_code ? (
+            <Text className="text-body-sm text-danger">{fieldErrors.currency_code}</Text>
+          ) : null}
         </View>
 
         <Input

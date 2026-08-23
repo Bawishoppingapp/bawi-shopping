@@ -12,6 +12,7 @@ import {
 import { CountryPicker } from "@/features/addresses/components/country-picker";
 import { findCountry } from "@/features/addresses/data/countries";
 import { addressSchema } from "@/features/addresses/schemas/address-schema";
+import { normalizeEthiopianPhone } from "@/features/addresses/utils/phone-format";
 
 export default function NewAddressScreen() {
   const [firstName, setFirstName] = useState("");
@@ -23,6 +24,8 @@ export default function NewAddressScreen() {
   const [postalCode, setPostalCode] = useState("");
   const [countryCode, setCountryCode] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
+  const [subCity, setSubCity] = useState("");
+  const [woreda, setWoreda] = useState("");
   const [landmark, setLandmark] = useState("");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [isDefaultShipping, setIsDefaultShipping] = useState(false);
@@ -32,6 +35,7 @@ export default function NewAddressScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const selectedCountry = findCountry(countryCode);
+  const isEthiopia = countryCode === "et";
 
   async function onSubmit() {
     setFormError(null);
@@ -44,7 +48,9 @@ export default function NewAddressScreen() {
       province,
       postal_code: postalCode,
       country_code: countryCode ?? "",
-      phone,
+      phone: isEthiopia && phone ? normalizeEthiopianPhone(phone) : phone,
+      sub_city: subCity,
+      woreda,
       landmark,
       delivery_notes: deliveryNotes,
       is_default_shipping: isDefaultShipping,
@@ -63,10 +69,21 @@ export default function NewAddressScreen() {
     setSubmitting(true);
     try {
       const token = await getSessionToken();
-      const { landmark: landmarkValue, delivery_notes: deliveryNotesValue, ...addressFields } = parsed.data;
+      const {
+        landmark: landmarkValue,
+        delivery_notes: deliveryNotesValue,
+        sub_city: subCityValue,
+        woreda: woredaValue,
+        ...addressFields
+      } = parsed.data;
       const metadata =
-        landmarkValue || deliveryNotesValue
-          ? { landmark: landmarkValue || undefined, delivery_notes: deliveryNotesValue || undefined }
+        landmarkValue || deliveryNotesValue || subCityValue || woredaValue
+          ? {
+              landmark: landmarkValue || undefined,
+              delivery_notes: deliveryNotesValue || undefined,
+              sub_city: subCityValue || undefined,
+              woreda: woredaValue || undefined,
+            }
           : undefined;
       await createAddress(token, { ...addressFields, metadata });
       router.back();
@@ -106,6 +123,17 @@ export default function NewAddressScreen() {
           onChangeText={setProvince}
           error={fieldErrors.province}
         />
+        {isEthiopia ? (
+          <>
+            <Input
+              label="Sub-city (optional)"
+              value={subCity}
+              onChangeText={setSubCity}
+              placeholder="e.g. Bole"
+            />
+            <Input label="Woreda (optional)" value={woreda} onChangeText={setWoreda} placeholder="e.g. 03" />
+          </>
+        ) : null}
         <Input
           label={selectedCountry?.postalCodeRequired === false ? "Postal code (optional)" : "Postal code"}
           value={postalCode}
