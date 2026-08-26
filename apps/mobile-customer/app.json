@@ -8,6 +8,7 @@
     "scheme": "mobilecustomer",
     "userInterfaceStyle": "automatic",
     "android": {
+      "package": "com.bawishopping.mobilecustomer",
       "adaptiveIcon": {
         "backgroundColor": "#FBF8F4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -54,6 +55,12 @@
         "projectId": "e30978d1-5eba-436c-a56d-f812fdd6e3f0"
       }
     },
-    "owner": "bawishopping"
+    "owner": "bawishopping",
+    "ios": {
+      "bundleIdentifier": "com.bawishopping.mobilecustomer",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
   }
 }
