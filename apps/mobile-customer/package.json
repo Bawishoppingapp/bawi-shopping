@@ -62,7 +62,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest --passWithNoTests",
-    "build": "expo export"
+    "build": "expo export --platform ios --platform android"
   },
   "private": true
 }

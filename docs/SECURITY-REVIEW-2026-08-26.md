@@ -32,15 +32,20 @@ penetration testing or an infrastructure review of the eventual host.
   line. This prevents npm prerelease range resolution from installing an
   incompatible canary native module, which caused the first Android dev client
   to terminate at launch.
+- Upgraded all four Next.js consumers in lockstep from 16.2.11 to 16.3.3 and
+  every Medusa 2.x package in lockstep from 2.17.2 to 2.19.0. Repository-wide
+  type checking, unit tests, lint, the three Next.js production builds, and the
+  backend production build pass after the upgrade.
 
 ## Findings requiring planned follow-up
 
-- `npm audit --omit=dev` currently reports 76 production-tree advisories: 55
-  moderate, 21 high, and 0 critical. Many are transitive framework/toolchain
-  advisories whose suggested fix crosses a major Expo version; Medusa and Next.js
-  advisories also require coordinated framework upgrades. Do not apply a bulk
-  forced upgrade immediately before launch. Schedule upgrades in isolated
-  branches and rerun integration and end-to-end tests.
+- After the coordinated Next.js and Medusa upgrades, `npm audit --omit=dev`
+  reports 46 production-tree findings: 24 moderate, 22 high, and 0 critical
+  (down from 76 total). The remaining findings are transitive, predominantly in
+  Expo/native or framework tooling; npm's suggested remediation crosses major
+  framework versions. Do not apply a bulk forced upgrade immediately before
+  launch. Handle the remaining Expo SDK migration in an isolated branch and
+  rebuild both native development clients.
 - Backend lint reports 25 existing warnings, primarily direct service mutations
   in route handlers that Medusa recommends moving into workflows. There are no
   lint errors. Refactor these incrementally with integration coverage rather than
