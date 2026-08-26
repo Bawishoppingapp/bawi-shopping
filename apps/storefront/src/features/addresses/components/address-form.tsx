@@ -37,8 +37,8 @@ export function AddressForm() {
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Country code (e.g. us, et)">
-          <Input name="country_code" required />
+        <FormField label="Country code (e.g. et, us)">
+          <Input name="country_code" defaultValue="et" required />
         </FormField>
         <FormField label="Phone">
           <Input name="phone" type="tel" />

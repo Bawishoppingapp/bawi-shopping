@@ -55,7 +55,7 @@ export function CheckoutFlow({ idempotencyKey }: { idempotencyKey: string }) {
 
       <div className="grid grid-cols-2 gap-4">
         <FormField label={t("checkout.country")} error={state.fieldErrors.countryCode}>
-          <Input name="countryCode" autoComplete="country" defaultValue="US" maxLength={2} />
+          <Input name="countryCode" autoComplete="country" defaultValue="ET" maxLength={2} />
         </FormField>
         <FormField label={t("checkout.phone")} error={state.fieldErrors.phone}>
           <Input name="phone" type="tel" autoComplete="tel" />
