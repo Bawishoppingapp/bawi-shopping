@@ -82,6 +82,7 @@ erDiagram
 | `notification` (native Medusa, implemented) | `notification` | No (platform-owned; native `NotificationDTO.receiver_id`/`resource_id` reference the recipient/subject) |
 | `notification_inbox` (implemented) | `notification_inbox_entry` | Nullable — set when the notification concerns a specific seller (`payout_sent`, `seller_application_approved`) |
 | `wishlist` (implemented) | `wishlist_item` | No (customer-owned; `product_code` is a plain reference to `product_listing.product_code`, same loose-coupling pattern as `seller_application.seller_id`) |
+| `device-push-token` (implemented) | `device_push_token` | No (customer/seller_user-owned via `recipient_type`/`recipient_id`; registration state only, not itself vendor data - see `PAYMENTS.md`/`CLAUDE.md`'s mobile section) |
 | `reporting` | (no owned tables — aggregation views/queries only) | n/a |
 | `audit-log` (implemented) | `audit_log` | Nullable — set when the logged action is seller-scoped |
 
@@ -169,6 +170,9 @@ Payment lives directly on this row rather than a separate `payment` table as ori
 
 **`wishlist_item`** *(migrated — `apps/backend/src/modules/wishlist/migrations`)*
 `id, customer_id (text), product_code (text — plain reference to product_listing.product_code, no hard FK), created_at, updated_at, deleted_at`. No DB-level unique constraint on `(customer_id, product_code)` — duplicate-save prevention is application-layer check-then-create (`POST /store/wishlist`), same pattern as `seller_application`'s pending-application-by-email check.
+
+**`device_push_token`** *(migrated — `apps/backend/src/modules/device-push-token/migrations`)*
+`id, recipient_type (customer|seller_user), recipient_id (text), expo_push_token (text, unique - one row per physical device, not per recipient; re-registering the same token overwrites recipient_type/recipient_id rather than creating a second row, since a device belongs to whoever is currently logged in on it), platform (ios|android, nullable), created_at, updated_at, deleted_at`. Registration state only - `apps/backend/src/notifications/send-push.ts` reads this to best-effort forward a notification to Expo's push API; nothing here guarantees delivery (see `CLAUDE.md`'s mobile section for what's still needed - a real EAS project and a physical device - to verify delivery end-to-end).
 
 **`audit_log`** *(migrated — `apps/backend/src/modules/audit-log/migrations`)*
 `id, actor_type (customer|seller_user|user|system|courier — `courier` added in the private-fulfillment slice), actor_id (nullable), action, entity_type, entity_id, vendor_id (nullable), before_state (jsonb, nullable), after_state (jsonb, nullable), ip_address (nullable), created_at, updated_at, deleted_at` — append-only *by convention* today: no application code path issues UPDATE/DELETE against it, but the DB role's grants aren't yet restricted to enforce this at the database level (still a documented future hardening step, see `docs/SECURITY.md` §6). Note the actor_type value is `user` (matching Medusa's actual native admin actor type name), not `admin_user` as originally sketched.
