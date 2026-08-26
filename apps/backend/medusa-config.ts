@@ -22,9 +22,22 @@ const redisUrl = process.env.REDIS_URL
 // overrides anything parsed from the connection string, defaulting to
 // `ssl: false` unless set here via databaseDriverOptions. Off by default
 // - AWS RDS (via infra/terraform) and local/CI Postgres need no change.
-const databaseDriverOptions =
+const databasePoolMax = Number(process.env.DATABASE_POOL_MAX)
+const hasDatabasePoolMax =
+  Number.isInteger(databasePoolMax) && databasePoolMax > 0
+const useRelaxedDatabaseTls =
   process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "false"
-    ? { connection: { ssl: { rejectUnauthorized: false } } }
+
+const databaseDriverOptions =
+  useRelaxedDatabaseTls || hasDatabasePoolMax
+    ? {
+        ...(useRelaxedDatabaseTls
+          ? { connection: { ssl: { rejectUnauthorized: false } } }
+          : {}),
+        ...(hasDatabasePoolMax
+          ? { pool: { min: 0, max: databasePoolMax } }
+          : {}),
+      }
     : undefined
 
 // "@medusajs/medusa/cache-redis" etc. are Medusa's own re-exports of the

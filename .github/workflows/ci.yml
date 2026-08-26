@@ -69,6 +69,10 @@ jobs:
       DB_PORT: 5544
       DB_USERNAME: bawishopping
       DB_PASSWORD: postgres
+      # Medusa initializes several database-backed modules. Keep their Knex
+      # pools small in the single Postgres CI container so server startup does
+      # not exhaust Postgres's connection limit before HTTP tests can run.
+      DATABASE_POOL_MAX: "2"
       JWT_SECRET: ci-only-not-a-real-secret
       COOKIE_SECRET: ci-only-not-a-real-secret
       AUTH_MFA_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
