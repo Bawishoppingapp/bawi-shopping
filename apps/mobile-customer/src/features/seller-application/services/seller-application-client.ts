@@ -34,7 +34,15 @@ export interface SellerApplicationSummary {
 }
 
 export async function submitSellerApplication(input: ApplicationInput): Promise<SellerApplicationSummary> {
-  const { address_line1, address_line2, address_city, address_state, address_postal_code, ...rest } = input;
+  const {
+    address_line1,
+    address_line2,
+    address_city,
+    address_state,
+    address_postal_code,
+    address_country,
+    ...rest
+  } = input;
 
   const response = await fetch(`${MEDUSA_BACKEND_URL}/seller-applications`, {
     method: "POST",
@@ -47,7 +55,7 @@ export async function submitSellerApplication(input: ApplicationInput): Promise<
         city: address_city,
         state: address_state,
         postal_code: address_postal_code,
-        country: "US",
+        country: address_country,
       },
     }),
   });

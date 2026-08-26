@@ -5,6 +5,8 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { CountryPicker } from "@/features/addresses/components/country-picker";
+import { findCountry } from "@/features/addresses/data/countries";
 import {
   BUSINESS_TYPES,
   PRODUCT_CATEGORIES,
@@ -35,7 +37,7 @@ export default function SellApplyScreen() {
   const [legalBusinessName, setLegalBusinessName] = useState("");
   const [storeName, setStoreName] = useState("");
   const [businessType, setBusinessType] = useState<string | null>(null);
-  const [currencyCode, setCurrencyCode] = useState<"usd" | "etb" | null>(null);
+  const [currencyCode, setCurrencyCode] = useState<"usd" | "etb" | null>("etb");
   const [contactFirstName, setContactFirstName] = useState(customer?.first_name ?? "");
   const [contactLastName, setContactLastName] = useState(customer?.last_name ?? "");
   const [businessEmail, setBusinessEmail] = useState(customer?.email ?? "");
@@ -46,6 +48,7 @@ export default function SellApplyScreen() {
   const [addressCity, setAddressCity] = useState("");
   const [addressState, setAddressState] = useState("");
   const [addressPostalCode, setAddressPostalCode] = useState("");
+  const [addressCountry, setAddressCountry] = useState<string | null>("et");
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [businessDescription, setBusinessDescription] = useState("");
   const [estimatedProductCount, setEstimatedProductCount] = useState("");
@@ -78,6 +81,7 @@ export default function SellApplyScreen() {
       address_city: addressCity,
       address_state: addressState,
       address_postal_code: addressPostalCode,
+      address_country: addressCountry ?? "",
       product_categories: productCategories,
       business_description: businessDescription,
       estimated_product_count: estimatedProductCount,
@@ -138,8 +142,8 @@ export default function SellApplyScreen() {
             Your whole catalog will be priced in this currency - it can&apos;t be changed per product later.
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            <Chip label="USD ($)" selected={currencyCode === "usd"} onPress={() => setCurrencyCode("usd")} />
             <Chip label="ETB (Br)" selected={currencyCode === "etb"} onPress={() => setCurrencyCode("etb")} />
+            <Chip label="USD ($)" selected={currencyCode === "usd"} onPress={() => setCurrencyCode("usd")} />
           </View>
           {fieldErrors.currency_code ? (
             <Text className="text-body-sm text-danger">{fieldErrors.currency_code}</Text>
@@ -196,11 +200,22 @@ export default function SellApplyScreen() {
         />
 
         <Text className="text-h2 text-ink-950">Business address</Text>
+        <CountryPicker
+          selectedCode={addressCountry}
+          onSelect={(country) => setAddressCountry(country.code)}
+          error={fieldErrors.address_country}
+        />
         <Input label="Address line 1" value={addressLine1} onChangeText={setAddressLine1} error={fieldErrors.address_line1} />
         <Input label="Address line 2 (optional)" value={addressLine2} onChangeText={setAddressLine2} />
         <Input label="City" value={addressCity} onChangeText={setAddressCity} error={fieldErrors.address_city} />
-        <Input label="State" value={addressState} onChangeText={setAddressState} error={fieldErrors.address_state} />
-        <Input label="Postal code" value={addressPostalCode} onChangeText={setAddressPostalCode} error={fieldErrors.address_postal_code} keyboardType="number-pad" />
+        <Input label="State (optional)" value={addressState} onChangeText={setAddressState} error={fieldErrors.address_state} />
+        <Input
+          label={findCountry(addressCountry)?.postalCodeRequired === false ? "Postal code (optional)" : "Postal code"}
+          value={addressPostalCode}
+          onChangeText={setAddressPostalCode}
+          error={fieldErrors.address_postal_code}
+          keyboardType="number-pad"
+        />
 
         <Pressable
           accessibilityRole="checkbox"

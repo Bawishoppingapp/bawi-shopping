@@ -22,7 +22,7 @@ export default function NewAddressScreen() {
   const [city, setCity] = useState("");
   const [province, setProvince] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [countryCode, setCountryCode] = useState<string | null>(null);
+  const [countryCode, setCountryCode] = useState<string | null>("et");
   const [phone, setPhone] = useState("");
   const [subCity, setSubCity] = useState("");
   const [woreda, setWoreda] = useState("");
