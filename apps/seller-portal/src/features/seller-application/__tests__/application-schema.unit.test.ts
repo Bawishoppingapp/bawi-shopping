@@ -15,6 +15,7 @@ const validInput = {
   address_city: "Austin",
   address_state: "TX",
   address_postal_code: "78701",
+  address_country: "US",
   currency_code: "usd",
   product_categories: ["Accessories"],
   business_description: "We make quality denim.",
@@ -76,5 +77,29 @@ describe("applicationSchema", () => {
   test("accepts an empty website URL", () => {
     const result = applicationSchema.safeParse({ ...validInput, website_url: "" })
     expect(result.success).toBe(true)
+  })
+
+  test("rejects an invalid country code", () => {
+    const result = applicationSchema.safeParse({ ...validInput, address_country: "USA" })
+    expect(result.success).toBe(false)
+  })
+
+  test("accepts an Ethiopian address with no postal code", () => {
+    const result = applicationSchema.safeParse({
+      ...validInput,
+      address_country: "ET",
+      address_state: "",
+      address_postal_code: "",
+    })
+    expect(result.success).toBe(true)
+  })
+
+  test("rejects a US address with no postal code", () => {
+    const result = applicationSchema.safeParse({
+      ...validInput,
+      address_country: "US",
+      address_postal_code: "",
+    })
+    expect(result.success).toBe(false)
   })
 })

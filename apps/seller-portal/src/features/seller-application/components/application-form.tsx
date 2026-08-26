@@ -35,12 +35,9 @@ export function ApplicationForm() {
           </Select>
         </FormField>
         <FormField label="Currency" error={state.fieldErrors.currency_code}>
-          <Select name="currency_code" defaultValue="">
-            <option value="" disabled>
-              Select a currency
-            </option>
-            <option value="usd">USD ($)</option>
+          <Select name="currency_code" defaultValue="etb">
             <option value="etb">ETB (Br)</option>
+            <option value="usd">USD ($)</option>
           </Select>
         </FormField>
         <p className="-mt-2 text-xs text-neutral-500">
@@ -104,7 +101,7 @@ export function ApplicationForm() {
 
       <fieldset className="flex flex-col gap-4">
         <legend className="text-lg font-semibold text-neutral-900">
-          Business address (United States)
+          Business address
         </legend>
         <FormField label="Address line 1" error={state.fieldErrors.address_line1}>
           <Input name="address_line1" autoComplete="address-line1" />
@@ -116,13 +113,25 @@ export function ApplicationForm() {
           <FormField label="City" error={state.fieldErrors.address_city}>
             <Input name="address_city" autoComplete="address-level2" />
           </FormField>
-          <FormField label="State" error={state.fieldErrors.address_state}>
+          <FormField label="State (optional)" error={state.fieldErrors.address_state}>
             <Input name="address_state" autoComplete="address-level1" />
           </FormField>
-          <FormField label="Postal code" error={state.fieldErrors.address_postal_code}>
+          <FormField label="Postal code (optional)" error={state.fieldErrors.address_postal_code}>
             <Input name="address_postal_code" autoComplete="postal-code" />
           </FormField>
         </div>
+        <FormField label="Country" error={state.fieldErrors.address_country}>
+          <Input
+            name="address_country"
+            autoComplete="country"
+            defaultValue="ET"
+            maxLength={2}
+            className="uppercase"
+          />
+        </FormField>
+        <p className="-mt-2 text-xs text-neutral-500">
+          Two-letter country code (e.g. ET for Ethiopia, US for United States).
+        </p>
       </fieldset>
 
       <label className="flex items-start gap-2 text-sm text-neutral-700">
