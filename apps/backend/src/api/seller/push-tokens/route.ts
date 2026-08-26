@@ -1,12 +1,7 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { z } from "@medusajs/framework/zod"
 import { DEVICE_PUSH_TOKEN_MODULE } from "../../../modules/device-push-token"
 import type DevicePushTokenModuleService from "../../../modules/device-push-token/service"
-
-const registerPushTokenSchema = z.object({
-  expo_push_token: z.string().trim().min(1),
-  platform: z.enum(["ios", "android"]).optional(),
-})
+import { registerPushTokenSchema, unregisterPushTokenSchema } from "../../../notifications/push-token-schema"
 
 /** Mirrors store/push-tokens/route.ts exactly, scoped to seller_user
  * instead of customer - see that file's comments for the shared
@@ -43,10 +38,6 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
 
   res.status(200).json({ success: true })
 }
-
-const unregisterPushTokenSchema = z.object({
-  expo_push_token: z.string().trim().min(1),
-})
 
 export async function DELETE(req: AuthenticatedMedusaRequest, res: MedusaResponse): Promise<void> {
   const parsed = unregisterPushTokenSchema.safeParse(req.body)

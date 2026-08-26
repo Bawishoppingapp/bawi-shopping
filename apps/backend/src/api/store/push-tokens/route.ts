@@ -1,12 +1,7 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { z } from "@medusajs/framework/zod"
 import { DEVICE_PUSH_TOKEN_MODULE } from "../../../modules/device-push-token"
 import type DevicePushTokenModuleService from "../../../modules/device-push-token/service"
-
-const registerPushTokenSchema = z.object({
-  expo_push_token: z.string().trim().min(1),
-  platform: z.enum(["ios", "android"]).optional(),
-})
+import { registerPushTokenSchema, unregisterPushTokenSchema } from "../../../notifications/push-token-schema"
 
 /**
  * Registers (or re-registers) a device for push notifications. A device
@@ -46,10 +41,6 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
 
   res.status(200).json({ success: true })
 }
-
-const unregisterPushTokenSchema = z.object({
-  expo_push_token: z.string().trim().min(1),
-})
 
 /** Called on logout, while the session token is still valid, so a stale
  * token doesn't keep receiving pushes for an account no longer signed in
