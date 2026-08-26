@@ -49,9 +49,11 @@
       "typedRoutes": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "REPLACE_WITH_REAL_EAS_PROJECT_ID"
+        "projectId": "e30978d1-5eba-436c-a56d-f812fdd6e3f0"
       }
-    }
+    },
+    "owner": "bawishopping"
   }
 }
