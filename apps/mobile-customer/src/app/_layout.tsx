@@ -1,3 +1,4 @@
+import { StripeProvider } from "@stripe/stripe-react-native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -6,7 +7,10 @@ import "@/global.css";
 import { AuthProvider } from "@/features/auth/hooks/use-auth";
 import { CartProvider } from "@/features/cart/hooks/use-cart";
 import { LocaleProvider } from "@/features/i18n/hooks/use-locale";
+import { PushNotificationRegistrar } from "@/features/push-notifications/components/push-notification-registrar";
 import { SellerAuthProvider } from "@/features/seller-auth/hooks/use-seller-auth";
+
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,17 +28,23 @@ export default function RootLayout() {
       <AuthProvider>
         <SellerAuthProvider>
           <CartProvider>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="login"
-                options={{ presentation: "modal", title: "Log in" }}
-              />
-              <Stack.Screen
-                name="register"
-                options={{ presentation: "modal", title: "Create account" }}
-              />
-            </Stack>
+            {/* No merchantIdentifier set - Apple Pay stays disabled until a
+                real Apple merchant id is registered and added here; card
+                payment via the Payment Sheet works without it. */}
+            <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} urlScheme="mobilecustomer">
+              <PushNotificationRegistrar />
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="login"
+                  options={{ presentation: "modal", title: "Log in" }}
+                />
+                <Stack.Screen
+                  name="register"
+                  options={{ presentation: "modal", title: "Create account" }}
+                />
+              </Stack>
+            </StripeProvider>
           </CartProvider>
         </SellerAuthProvider>
       </AuthProvider>

@@ -236,10 +236,16 @@ export default function CartScreen() {
           </Text>
         </View>
 
-        <Button disabled>Checkout - coming soon</Button>
-        <Text className="pb-2 text-center text-caption text-ink-500">
-          Checkout is being finished in the next update. Your bag is saved.
-        </Text>
+        {cart.checkout_blocked ? (
+          <>
+            <Button disabled>Checkout unavailable</Button>
+            <Text className="pb-2 text-center text-caption text-ink-500">
+              Something in your bag needs attention before you can check out - see the notes above.
+            </Text>
+          </>
+        ) : (
+          <Button onPress={() => router.push(customer ? "/checkout" : "/login")}>Checkout</Button>
+        )}
       </View>
     </SafeAreaView>
   );
