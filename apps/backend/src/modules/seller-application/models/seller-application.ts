@@ -19,10 +19,9 @@ export const SellerApplication = model.define("seller_application", {
   address: model.json(), // { line1, line2?, city, state, postal_code, country }
   // Applicant's chosen currency - carried onto the real Seller record at
   // approval time (see Seller.currency_code, workflows/approve-seller-
-  // application.ts). Defaults "usd" so a pre-existing application (before
-  // this column existed) doesn't need special handling in the approval
-  // workflow.
-  currency_code: model.enum(["usd", "etb"]).default("usd"),
+  // application.ts). Defaults "etb", matching Seller.currency_code's own
+  // default now that Ethiopia is the platform's primary market.
+  currency_code: model.enum(["usd", "etb"]).default("etb"),
 
   // Contact
   contact_first_name: model.text(),

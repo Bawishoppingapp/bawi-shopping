@@ -151,7 +151,7 @@
           "length": null,
           "precision": null,
           "scale": null,
-          "default": "'usd'",
+          "default": "'etb'",
           "comment": null,
           "enumItems": [
             "usd",

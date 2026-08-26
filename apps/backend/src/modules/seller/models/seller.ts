@@ -23,8 +23,9 @@ export const Seller = model.define("seller", {
   // Currency the seller's whole catalog is priced in - a per-seller
   // setting, not per-product, since a real seller operates in one market
   // (see docs/DECISIONS.md's Ethiopian-market entry). Chosen at
-  // application time; defaults "usd" so every seller onboarded before
-  // this field existed is unaffected.
-  currency_code: model.enum(["usd", "etb"]).default("usd"),
+  // application time. Defaults "etb" - the platform's current primary
+  // market is Ethiopia; USD/US stays fully supported, just no longer
+  // the assumed default (see CLAUDE.md's "Currency and market" section).
+  currency_code: model.enum(["usd", "etb"]).default("etb"),
   users: model.hasMany(() => SellerUser, { mappedBy: "seller" }),
 })
