@@ -32,13 +32,13 @@ export function AddressForm() {
         <FormField label="State / Province">
           <Input name="province" />
         </FormField>
-        <FormField label="ZIP / postal code">
-          <Input name="postal_code" required />
+        <FormField label="ZIP / postal code (if applicable)">
+          <Input name="postal_code" />
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Country code (e.g. us)">
-          <Input name="country_code" defaultValue="us" required />
+        <FormField label="Country code (e.g. et, us)">
+          <Input name="country_code" defaultValue="et" required />
         </FormField>
         <FormField label="Phone">
           <Input name="phone" type="tel" />

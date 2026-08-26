@@ -45,8 +45,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Standard fetch-on-mount - runs once, not a cascading-render loop.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh().finally(() => setIsLoading(false));
   }, [refresh]);
 
@@ -99,6 +97,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [cart, isLoading, addItem, updateQuantity, removeItem, refresh]
   );
 
+  // Known TS false positive: see the identical comment on
+  // AuthProvider's return in features/auth/hooks/use-auth.tsx.
+  // @ts-expect-error - see comment above
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 

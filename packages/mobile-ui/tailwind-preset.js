@@ -1,6 +1,5 @@
-// Shared Tailwind preset for both mobile apps, so `apps/mobile-customer`
-// and `apps/mobile-seller` render the same Bawi brand tokens via
-// NativeWind. Consumed as:
+// Shared Tailwind preset for the mobile app, so `apps/mobile-customer`
+// renders the same Bawi brand tokens via NativeWind. Consumed as:
 //   presets: [require("nativewind/preset"), require("@bawi/mobile-ui/tailwind-preset")]
 // Colors here mirror ./src/theme.ts - keep the two in sync by hand (no
 // build step ties them together; this package ships raw TS/JS, consumed

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 import { getSessionToken } from "@/features/auth/services/token-storage";
-import { formatUsd } from "@/features/discovery/utils/format-price";
+import { formatMoney } from "@/features/discovery/utils/format-price";
 import { type OrderDetail, getOrder } from "@/features/orders/services/orders-client";
 import { orderStatusBadge } from "@/features/orders/utils/order-status";
 
@@ -86,7 +86,7 @@ export default function OrderDetailScreen() {
                         {[item.color, item.size].filter(Boolean).join(" · ")} × {item.quantity}
                       </Text>
                     </View>
-                    <Text className="text-body-sm font-medium text-ink-950">{formatUsd(item.line_total)}</Text>
+                    <Text className="text-body-sm font-medium text-ink-950">{formatMoney(item.line_total, order.currency_code)}</Text>
                   </View>
                 ))}
               </View>
@@ -109,19 +109,19 @@ export default function OrderDetailScreen() {
         <View className="gap-2 rounded-md border border-ink-100 p-4">
           <View className="flex-row justify-between">
             <Text className="text-body text-ink-700">Subtotal</Text>
-            <Text className="text-body text-ink-950">{formatUsd(order.subtotal)}</Text>
+            <Text className="text-body text-ink-950">{formatMoney(order.subtotal, order.currency_code)}</Text>
           </View>
           <View className="flex-row justify-between">
             <Text className="text-body text-ink-700">Shipping</Text>
-            <Text className="text-body text-ink-950">{formatUsd(order.shipping)}</Text>
+            <Text className="text-body text-ink-950">{formatMoney(order.shipping, order.currency_code)}</Text>
           </View>
           <View className="flex-row justify-between">
             <Text className="text-body text-ink-700">Tax</Text>
-            <Text className="text-body text-ink-950">{formatUsd(order.tax)}</Text>
+            <Text className="text-body text-ink-950">{formatMoney(order.tax, order.currency_code)}</Text>
           </View>
           <View className="flex-row justify-between border-t border-ink-100 pt-2">
             <Text className="text-body-sm font-medium text-ink-950">Total</Text>
-            <Text className="text-body-sm font-medium text-ink-950">{formatUsd(order.total)}</Text>
+            <Text className="text-body-sm font-medium text-ink-950">{formatMoney(order.total, order.currency_code)}</Text>
           </View>
         </View>
 

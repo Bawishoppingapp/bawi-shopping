@@ -31,11 +31,11 @@ function item(overrides: Partial<CartItem> = {}): CartItem {
   }
 }
 
-function renderRow(overrides: Partial<CartItem> = {}, warnings: CartWarning[] = []) {
+function renderRow(overrides: Partial<CartItem> = {}, warnings: CartWarning[] = [], currencyCode = "usd") {
   return render(
     <LocaleProvider locale="en-US">
       <ul>
-        <CartItemRow item={item(overrides)} warnings={warnings} />
+        <CartItemRow item={item(overrides)} warnings={warnings} currencyCode={currencyCode} />
       </ul>
     </LocaleProvider>
   )
@@ -49,6 +49,11 @@ describe("CartItemRow", () => {
     expect(screen.getByText("Blue / M")).toBeInTheDocument()
     expect(screen.getByText("BW-ABC123")).toBeInTheDocument()
     expect(screen.getByText("$100.00")).toBeInTheDocument()
+  })
+
+  test("renders an ETB line total in Birr, not dollars", () => {
+    renderRow({ line_total: 500000 }, [], "etb")
+    expect(screen.getByText("Br 5,000")).toBeInTheDocument()
   })
 
   test("never renders a vendor_id or seller field, even implicitly", () => {

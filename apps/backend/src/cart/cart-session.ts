@@ -61,12 +61,18 @@ export async function findActiveCart(
 }
 
 /** Only called from the add-item route - every other route only ever acts
- * on a cart that already exists. */
+ * on a cart that already exists. `currencyCode` is the currency of the
+ * item about to be added (the caller already resolved it before calling
+ * this) - it only matters for a brand-new cart, which otherwise has no
+ * items to derive a currency from yet (see docs/DECISIONS.md's
+ * Ethiopian-market entry: a cart is single-currency, set by its first
+ * item). */
 export async function resolveOrCreateCart(
   container: MedusaContainer,
   customerId: string | undefined,
   guestCartId: string | undefined,
-  expirationDays: number
+  expirationDays: number,
+  currencyCode: string
 ): Promise<{ cart: RawCart; isNew: boolean }> {
   const existing = await findActiveCart(container, customerId, guestCartId, expirationDays)
   if (existing) {
@@ -75,7 +81,7 @@ export async function resolveOrCreateCart(
 
   const cartModuleService = container.resolve(Modules.CART)
   const created = await cartModuleService.createCarts({
-    currency_code: "usd",
+    currency_code: currencyCode,
     customer_id: customerId,
   })
   const cart = await cartModuleService.retrieveCart(created.id, { relations: LINE_ITEM_RELATIONS })

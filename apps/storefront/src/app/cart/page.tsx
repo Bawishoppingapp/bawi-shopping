@@ -5,12 +5,9 @@ import { Button } from "@bawi/ui"
 import { getCart } from "@/features/cart/services/cart-client"
 import { CartItemRow } from "@/features/cart/components/cart-item-row"
 import { clearCartAction } from "@/features/cart/actions/clear-cart"
+import { formatMoney } from "@/features/discovery/utils/format-price"
 
 export const dynamic = "force-dynamic"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 export default async function CartPage() {
   const locale = await getLocale()
@@ -36,7 +33,7 @@ export default async function CartPage() {
         <h1 className="mb-6 text-2xl font-semibold text-neutral-900">{t("cart.title")}</h1>
         <ul>
           {cart.items.map((item) => (
-            <CartItemRow key={item.id} item={item} warnings={cart.warnings} />
+            <CartItemRow key={item.id} item={item} warnings={cart.warnings} currencyCode={cart.currency_code} />
           ))}
         </ul>
         <form action={clearCartAction} className="mt-4">
@@ -49,12 +46,12 @@ export default async function CartPage() {
       <aside className="flex w-full flex-col gap-3 rounded-md border border-neutral-200 p-4 md:w-72">
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("cart.subtotal")}</span>
-          <span className="font-medium text-neutral-900">{formatUsd(cart.subtotal)}</span>
+          <span className="font-medium text-neutral-900">{formatMoney(cart.subtotal, cart.currency_code)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("cart.shippingEstimate")}</span>
           <span className="font-medium text-neutral-900">
-            {cart.shipping_estimate === 0 ? t("cart.free") : formatUsd(cart.shipping_estimate)}
+            {cart.shipping_estimate === 0 ? t("cart.free") : formatMoney(cart.shipping_estimate, cart.currency_code)}
           </span>
         </div>
 
@@ -62,7 +59,7 @@ export default async function CartPage() {
           <p className="text-sm text-green-700">{t("cart.qualifiesForFreeShipping")}</p>
         ) : (
           <p className="text-sm text-neutral-500">
-            {formatUsd(cart.amount_remaining_for_free_shipping)} {t("cart.freeShippingProgress")}
+            {formatMoney(cart.amount_remaining_for_free_shipping, cart.currency_code)} {t("cart.freeShippingProgress")}
           </p>
         )}
 

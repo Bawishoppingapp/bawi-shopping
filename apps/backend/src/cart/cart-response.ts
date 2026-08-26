@@ -112,8 +112,17 @@ export async function refreshAndShapeCart(
     businessConfigModuleService.getCategoryValues("shipping"),
   ])
   const maxQuantityPerLineItem = Number(cartConfig.max_quantity_per_line_item ?? 10)
-  const standardShippingFeeCents = Number(shippingConfig.standard_shipping_fee_cents ?? 0)
-  const freeShippingThresholdCents = Number(shippingConfig.free_shipping_threshold_cents ?? 0)
+  // USD keys stay unsuffixed (see defaults.ts); every other currency gets
+  // its own explicit key rather than a live FX conversion of the USD
+  // value - shipping cost is a real, independent business decision per
+  // currency, not a currency-converted number.
+  const shippingKeySuffix = cart.currency_code === "usd" ? "" : `_${cart.currency_code}`
+  const standardShippingFeeCents = Number(
+    shippingConfig[`standard_shipping_fee_cents${shippingKeySuffix}`] ?? 0
+  )
+  const freeShippingThresholdCents = Number(
+    shippingConfig[`free_shipping_threshold_cents${shippingKeySuffix}`] ?? 0
+  )
 
   const vendorIds = Array.from(
     new Set(cart.items.map((item) => lineItemVendorId(item)).filter((id): id is string => !!id))

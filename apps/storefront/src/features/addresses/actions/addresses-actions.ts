@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { createAddress, deleteAddress, AddressesClientError } from "../services/addresses-client"
+import { isPostalCodeRequired } from "../utils/postal-code-required"
 
 export interface AddressFormState {
   status: "idle" | "error"
@@ -19,8 +20,11 @@ export async function createAddressAction(
   const postalCode = String(formData.get("postal_code") ?? "").trim()
   const countryCode = String(formData.get("country_code") ?? "").trim()
 
-  if (!firstName || !lastName || !address1 || !city || !postalCode || !countryCode) {
+  if (!firstName || !lastName || !address1 || !city || !countryCode) {
     return { status: "error", formError: "Please fill in all required fields" }
+  }
+  if (!postalCode && isPostalCodeRequired(countryCode.toLowerCase())) {
+    return { status: "error", formError: "Postal code is required for this country" }
   }
 
   try {
@@ -31,7 +35,7 @@ export async function createAddressAction(
       address_2: String(formData.get("address_2") ?? "").trim() || undefined,
       city,
       province: String(formData.get("province") ?? "").trim() || undefined,
-      postal_code: postalCode,
+      postal_code: postalCode || undefined,
       country_code: countryCode.toLowerCase(),
       phone: String(formData.get("phone") ?? "").trim() || undefined,
       is_default_shipping: formData.get("is_default_shipping") === "on",

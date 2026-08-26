@@ -38,7 +38,7 @@ export interface AddressInput {
   address_2?: string
   city: string
   province?: string
-  postal_code: string
+  postal_code?: string
   country_code: string
   phone?: string
   is_default_shipping?: boolean

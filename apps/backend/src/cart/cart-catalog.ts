@@ -2,6 +2,8 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { PRODUCT_LISTING_MODULE } from "../modules/product-listing"
 import type ProductListingModuleService from "../modules/product-listing/service"
+import { SELLER_MODULE } from "../modules/seller"
+import type SellerModuleService from "../modules/seller/service"
 
 export interface CartVariantInfo {
   variantId: string
@@ -13,6 +15,10 @@ export interface CartVariantInfo {
   color: string | null
   size: string | null
   unitPriceCents: number | null
+  // The seller's own currency (see Seller.currency_code) - a cart may
+  // only ever contain items sharing one currency, enforced where items
+  // are added (see api/store/cart/items/route.ts).
+  currencyCode: string
   availableQuantity: number
   // The variant's underlying inventory_item id - checkout's inventory
   // reservation step needs this (see src/orders/); null if the variant
@@ -37,7 +43,8 @@ const VARIANT_FIELDS = [
 function toCartVariantInfo(
   variant: Record<string, unknown>,
   vendorId: string,
-  productCode: string
+  productCode: string,
+  currencyCode: string
 ): CartVariantInfo {
   const inventoryItems = (variant.inventory_items ?? []) as Array<{
     inventory?: { id?: string; location_levels?: Array<{ available_quantity?: number }> }
@@ -49,7 +56,7 @@ function toCartVariantInfo(
   const inventoryItemId = inventoryItems[0]?.inventory?.id ?? null
 
   const prices = (variant.prices ?? []) as Array<{ amount: number; currency_code: string }>
-  const usdPrice = prices.find((price) => price.currency_code === "usd")
+  const price = prices.find((p) => p.currency_code === currencyCode)
 
   const options = (variant.options ?? []) as Array<{
     value: string
@@ -69,7 +76,8 @@ function toCartVariantInfo(
     thumbnail: product?.thumbnail ?? null,
     color,
     size,
-    unitPriceCents: usdPrice ? usdPrice.amount : null,
+    unitPriceCents: price ? price.amount : null,
+    currencyCode,
     availableQuantity,
     inventoryItemId,
   }
@@ -117,15 +125,30 @@ export async function resolveCartVariants(
   })
   const listingByProductId = new Map(listings.map((listing) => [listing.product_id, listing]))
 
+  const vendorIds = Array.from(new Set(listings.map((listing) => listing.vendor_id)))
+  const sellerModuleService: SellerModuleService = container.resolve(SELLER_MODULE)
+  const sellers = vendorIds.length
+    ? await sellerModuleService.listSellers({ id: vendorIds }, { select: ["id", "currency_code"] })
+    : []
+  const currencyByVendorId = new Map(sellers.map((seller) => [seller.id, seller.currency_code]))
+
   const result = new Map<string, CartVariantInfo>()
   for (const variant of variants as Record<string, unknown>[]) {
     const listing = listingByProductId.get(variant.product_id as string)
     if (!listing) {
       continue
     }
+    // A seller with no resolvable currency_code (shouldn't happen - the
+    // column defaults "usd" - but stays honest rather than assuming) is
+    // simply excluded, same "absent, not erroring" convention as an
+    // unapproved listing above.
+    const currencyCode = currencyByVendorId.get(listing.vendor_id)
+    if (!currencyCode) {
+      continue
+    }
     result.set(
       variant.id as string,
-      toCartVariantInfo(variant, listing.vendor_id, listing.product_code)
+      toCartVariantInfo(variant, listing.vendor_id, listing.product_code, currencyCode)
     )
   }
   return result

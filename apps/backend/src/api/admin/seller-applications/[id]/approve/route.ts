@@ -75,6 +75,7 @@ export async function POST(
       businessEmail: application.business_email,
       adminUserId,
       previousStatus,
+      currencyCode: application.currency_code,
     },
   })
 

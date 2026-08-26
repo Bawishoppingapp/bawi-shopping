@@ -11,6 +11,7 @@ function hit(overrides: Partial<ProductHit> = {}): ProductHit {
     thumbnail: "https://example.test/jacket.jpg",
     priceMin: 4999,
     priceMax: 4999,
+    currencyCode: "usd",
     available: true,
     categoryIds: ["cat_1"],
     ...overrides,
@@ -28,6 +29,13 @@ describe("ProductCardItem", () => {
   test("renders a price range when variants differ in price", () => {
     render(<ProductCardItem item={hit({ priceMin: 2000, priceMax: 5000 })} soldOutLabel="Sold out" />)
     expect(screen.getByText("$20.00 – $50.00")).toBeInTheDocument()
+  })
+
+  test("renders an ETB-priced product in Birr, not dollars", () => {
+    render(
+      <ProductCardItem item={hit({ priceMin: 250000, priceMax: 250000, currencyCode: "etb" })} soldOutLabel="Sold out" />
+    )
+    expect(screen.getByText("Br 2,500")).toBeInTheDocument()
   })
 
   test("shows the sold-out badge when unavailable", () => {

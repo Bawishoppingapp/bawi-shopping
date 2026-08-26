@@ -14,7 +14,7 @@ Bawi Shopping is a multi-vendor fashion marketplace where independent clothing b
 
 ## 3. Non-goals (for this document)
 
-- No international launch (US only for v1).
+- No international launch beyond US + Ethiopia (see `CLAUDE.md`'s "Currency and market" section) — no other countries/currencies for v1.
 - No marketplaces for services, digital goods, or non-fashion categories.
 - No custom payment rails — Stripe Connect only.
 - No microservices — see [`ARCHITECTURE.md`](ARCHITECTURE.md).
@@ -57,6 +57,7 @@ In scope for v1 (detailed specs in §9):
 
 - Email/password authentication for customers, sellers, and admins; role-based access control.
 - Customer registration, profile, addresses, order history.
+- Customer wishlist: save/unsave products for later viewing.
 - Seller application, review/approval, Stripe Connect onboarding.
 - Catalog: categories, products, variants (size/color), images, inventory counts, pricing.
 - Postgres-backed keyword search with filters (category, price, size, color).
@@ -127,7 +128,7 @@ Each feature below maps to one or more of the required domain modules. For every
 - **Acceptance criteria:** Create/edit profile and shipping/billing addresses; view past and current orders across all sellers; view order status per vendor sub-order.
 - **Data ownership:** `customer`, `customer_address` (Medusa customer module). Owned by the customer; not seller-scoped.
 - **Authorization rules:** A customer may only read/write their own profile, addresses, and orders. Admins may read (not silently write) customer data for support purposes, logged via audit log.
-- **Validation requirements:** Valid US address format (state, ZIP); required fields for checkout eligibility.
+- **Validation requirements:** Valid address format for the selected country (state/province and postal code required or not, per-country — see `apps/backend/src/orders/postal-code-required.ts`); required fields for checkout eligibility.
 - **Failure states:** Duplicate address save is idempotent (update, not duplicate row); malformed address blocks checkout with field-level errors.
 - **Security risks:** PII exposure (addresses, order history) if authorization checks are missed; admin over-access without audit trail.
 - **Tests:**
@@ -291,7 +292,7 @@ Each feature below maps to one or more of the required domain modules. For every
 - **Acceptance criteria:** Single address/shipping-method entry per shippable group (see shipping); single payment authorization for the full cart total; order confirmation summarizes per-vendor sub-orders and their individual shipping/return terms.
 - **Data ownership:** Checkout is an orchestration workflow, not a standalone owned table set — it reads cart/pricing/inventory and writes to `order` + `payment` (see §9.13, §9.14).
 - **Authorization rules:** Only the owning customer can execute checkout on their own cart; server re-validates every price/inventory/tax figure — the client never supplies authoritative totals.
-- **Validation requirements:** All cart items still available and priced correctly at submit time; valid US shipping address; valid payment method.
+- **Validation requirements:** All cart items still available and priced correctly at submit time; valid shipping address for the order's country (province/postal code required or not per-country — see `apps/backend/src/orders/postal-code-required.ts`); valid payment method.
 - **Failure states:** Partial inventory failure (one seller's item sold out mid-checkout) blocks checkout for that line item only, with a prompt to remove/adjust before retrying — never a partially-charged customer.
 - **Security risks:** Double-submission creating duplicate orders/charges (idempotency key required per checkout attempt); price/total tampering from client; abandoned-checkout payment retries creating orphaned holds.
 - **Tests:**

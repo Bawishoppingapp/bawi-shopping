@@ -33,6 +33,10 @@ export interface ProductSearchHit {
   thumbnail: string | null
   priceMin: number | null
   priceMax: number | null
+  // The selling seller's currency (see apps/backend's Seller.currency_code)
+  // - null only for a hit with no resolvable price (priceMin/priceMax
+  // both null), same "absent, not guessed" convention as those fields.
+  currencyCode: string | null
   available: boolean
   categoryIds: string[]
 }

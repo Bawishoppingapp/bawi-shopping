@@ -6,17 +6,16 @@ import { Button, Input } from "@bawi/ui"
 import { updateQuantity } from "../actions/update-quantity"
 import { removeItem } from "../actions/remove-item"
 import { initialCartActionState, type CartItem, type CartWarning } from "../constants"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
+import { formatMoney } from "@/features/discovery/utils/format-price"
 
 export function CartItemRow({
   item,
   warnings,
+  currencyCode,
 }: {
   item: CartItem
   warnings: CartWarning[]
+  currencyCode: string
 }) {
   const [state, formAction, pending] = useActionState(updateQuantity, initialCartActionState)
   const t = useTranslations()
@@ -108,7 +107,7 @@ export function CartItemRow({
       </div>
 
       <div className="text-right font-medium text-neutral-900">
-        {formatUsd(item.line_total)}
+        {formatMoney(item.line_total, currencyCode)}
       </div>
     </li>
   )

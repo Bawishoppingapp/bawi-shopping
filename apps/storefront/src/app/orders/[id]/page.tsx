@@ -9,12 +9,9 @@ import { getCurrentCustomer } from "@/features/auth/services/medusa-auth-client"
 import { getOrder } from "@/features/orders/services/orders-client"
 import { CancelOrderButton } from "@/features/returns/components/cancel-order-button"
 import { ReturnRequestForm } from "@/features/returns/components/return-request-form"
+import { formatMoney } from "@/features/discovery/utils/format-price"
 
 export const dynamic = "force-dynamic"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 /**
  * Doubles as both the order-confirmation page (right after checkout) and
@@ -86,7 +83,7 @@ export default async function OrderDetailPage({
                     {item.size ? ` / ${item.size}` : ""} × {item.quantity}
                   </span>
                   <span className="font-medium text-neutral-900">
-                    {formatUsd(item.line_total)}
+                    {formatMoney(item.line_total, order.currency_code)}
                   </span>
                 </div>
                 {vendorOrder.status === "delivered" && (
@@ -125,19 +122,19 @@ export default async function OrderDetailPage({
       <aside className="flex flex-col gap-2 rounded-md border border-neutral-200 p-4">
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("checkout.subtotal")}</span>
-          <span className="font-medium text-neutral-900">{formatUsd(order.subtotal)}</span>
+          <span className="font-medium text-neutral-900">{formatMoney(order.subtotal, order.currency_code)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("checkout.shipping")}</span>
-          <span className="font-medium text-neutral-900">{formatUsd(order.shipping)}</span>
+          <span className="font-medium text-neutral-900">{formatMoney(order.shipping, order.currency_code)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("checkout.tax")}</span>
-          <span className="font-medium text-neutral-900">{formatUsd(order.tax)}</span>
+          <span className="font-medium text-neutral-900">{formatMoney(order.tax, order.currency_code)}</span>
         </div>
         <div className="flex justify-between border-t border-neutral-200 pt-2 text-sm font-semibold">
           <span className="text-neutral-900">{t("checkout.total")}</span>
-          <span className="text-neutral-900">{formatUsd(order.total)}</span>
+          <span className="text-neutral-900">{formatMoney(order.total, order.currency_code)}</span>
         </div>
       </aside>
 

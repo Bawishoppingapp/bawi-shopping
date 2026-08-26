@@ -70,6 +70,10 @@ export type CreateProductDraftWorkflowInput = {
   variants: CreateProductDraftVariantInput[]
   stockLocationId: string
   productCode: string
+  // The seller's own currency (see modules/seller/models/seller.ts) -
+  // every price on this product is written in it. Not a per-product
+  // choice - a seller's whole catalog shares one currency.
+  currencyCode: string
 }
 
 function variantSku(productCode: string, color: string, size: string): string {
@@ -127,7 +131,7 @@ export const createProductDraftWorkflow = createWorkflow(
         prices: [
           {
             amount: variant.price ?? data.input.basePrice,
-            currency_code: "usd",
+            currency_code: data.input.currencyCode,
           },
         ],
       })),

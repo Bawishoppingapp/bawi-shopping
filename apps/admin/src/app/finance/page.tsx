@@ -5,12 +5,9 @@ import { ADMIN_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentAdmin } from "@/features/auth/services/medusa-auth-client"
 import { getFinanceOverview } from "@/features/finance/services/finance-client"
 import { TriggerPayoutForm } from "@/features/finance/components/trigger-payout-form"
+import { formatMoney } from "@/features/finance/utils/format-price"
 
 export const dynamic = "force-dynamic"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 export default async function FinancePage() {
   const cookieStore = await cookies()
@@ -23,12 +20,9 @@ export default async function FinancePage() {
 
   const overview = await getFinanceOverview(sessionToken)
 
-  const totalsBuckets: Array<{ label: string; value: number }> = [
-    { label: "Pending", value: overview.platform_totals.pending },
-    { label: "Available", value: overview.platform_totals.available },
-    { label: "Paid out", value: overview.platform_totals.paid },
-    { label: "Disputed", value: overview.platform_totals.disputed },
-  ]
+  // One totals row per currency present - never blended, see
+  // finance-client.ts's FinanceOverview doc comment.
+  const totalsByCurrency = Object.entries(overview.platform_totals)
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-12">
@@ -76,16 +70,30 @@ export default async function FinancePage() {
         </div>
       </div>
 
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {totalsBuckets.map((bucket) => (
-          <div key={bucket.label} className="rounded-md border border-neutral-200 p-4">
-            <p className="text-xs text-neutral-500">{bucket.label}</p>
-            <p className="mt-1 text-lg font-semibold text-neutral-900">
-              {formatUsd(bucket.value)}
-            </p>
+      {totalsByCurrency.map(([currencyCode, totals]) => (
+        <section key={currencyCode} className="flex flex-col gap-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            {currencyCode} totals
+          </p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {(
+              [
+                ["Pending", totals.pending],
+                ["Available", totals.available],
+                ["Paid out", totals.paid],
+                ["Disputed", totals.disputed],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="rounded-md border border-neutral-200 p-4">
+                <p className="text-xs text-neutral-500">{label}</p>
+                <p className="mt-1 text-lg font-semibold text-neutral-900">
+                  {formatMoney(value, currencyCode)}
+                </p>
+              </div>
+            ))}
           </div>
-        ))}
-      </section>
+        </section>
+      ))}
 
       {overview.sellers.length === 0 ? (
         <p className="rounded-md border border-neutral-200 bg-neutral-50 p-8 text-center text-sm text-neutral-500">
@@ -97,6 +105,7 @@ export default async function FinancePage() {
             <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
               <tr>
                 <th className="px-4 py-2 font-medium">Seller</th>
+                <th className="px-4 py-2 font-medium">Currency</th>
                 <th className="px-4 py-2 font-medium">Pending</th>
                 <th className="px-4 py-2 font-medium">Available</th>
                 <th className="px-4 py-2 font-medium">Paid</th>
@@ -110,15 +119,18 @@ export default async function FinancePage() {
                   <td className="px-4 py-3 font-medium text-neutral-900">
                     {row.vendor_name ?? row.vendor_id}
                   </td>
+                  <td className="px-4 py-3 text-neutral-500 uppercase">{row.currency_code}</td>
                   <td className="px-4 py-3 text-neutral-700">
-                    {formatUsd(row.balance.pending)}
+                    {formatMoney(row.balance.pending, row.currency_code)}
                   </td>
                   <td className="px-4 py-3 text-neutral-700">
-                    {formatUsd(row.balance.available)}
+                    {formatMoney(row.balance.available, row.currency_code)}
                   </td>
-                  <td className="px-4 py-3 text-neutral-700">{formatUsd(row.balance.paid)}</td>
                   <td className="px-4 py-3 text-neutral-700">
-                    {formatUsd(row.balance.disputed)}
+                    {formatMoney(row.balance.paid, row.currency_code)}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-700">
+                    {formatMoney(row.balance.disputed, row.currency_code)}
                   </td>
                   <td className="px-4 py-3">
                     <TriggerPayoutForm

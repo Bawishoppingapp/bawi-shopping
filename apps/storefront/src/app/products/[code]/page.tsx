@@ -3,10 +3,7 @@ import { translate } from "@bawi/i18n"
 import { getLocale } from "@bawi/i18n/server"
 import { getPublicProduct } from "@/features/products/services/products-client"
 import { AddToCartForm } from "@/features/cart/components/add-to-cart-form"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
+import { formatMoney } from "@/features/discovery/utils/format-price"
 
 export default async function ProductDetailPage({
   params,
@@ -48,7 +45,7 @@ export default async function ProductDetailPage({
         <p className="text-sm text-neutral-500">
           {translate(locale, "product.soldBy")} {product.brand}
         </p>
-        <p className="text-xl text-neutral-900">{formatUsd(product.base_price)}</p>
+        <p className="text-xl text-neutral-900">{formatMoney(product.base_price, product.currency_code)}</p>
         <p className="text-sm text-neutral-600">{product.description}</p>
 
         <div className="flex flex-col gap-1 text-sm">

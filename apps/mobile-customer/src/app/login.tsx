@@ -77,6 +77,9 @@ export default function LoginScreen() {
         <Button onPress={onSubmit} loading={submitting}>
           Log in
         </Button>
+        <Link href="/forgot-password" asChild>
+          <Text className="text-center text-body-sm text-ink-500">Forgot password?</Text>
+        </Link>
         <Link href="/register" replace asChild>
           <Text className="text-center text-body-sm text-ink-500">
             Don&apos;t have an account? <Text className="font-medium text-ink-950">Sign up</Text>

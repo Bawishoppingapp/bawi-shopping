@@ -15,6 +15,8 @@ export interface PublicProduct {
   title: string;
   description: string | null;
   brand: string;
+  // The selling seller's currency (see apps/backend's Seller.currency_code).
+  currency_code: string;
   images: string[];
   thumbnail: string | null;
   colors: string[];

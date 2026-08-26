@@ -23,7 +23,7 @@ export const MarketplaceOrder = model.define("marketplace_order", {
   // never used for authorization (every route still checks customer_id).
   display_id: model.text().unique(),
   customer_id: model.text(),
-  currency_code: model.text().default("usd"),
+  currency_code: model.text().default("etb"),
   status: model
     .enum(["pending_payment", "paid", "payment_failed", "cancelled"])
     .default("pending_payment"),

@@ -12,6 +12,15 @@ export const Payout = model.define("payout", {
   id: model.id().primaryKey(),
   vendor_id: model.text(),
   idempotency_key: model.text().unique(),
+  // A seller only ever has one currency (see Seller.currency_code), so
+  // every ledger entry a batch pulls in already shares this value -
+  // stamped here too so a batch can never silently mix currencies if
+  // that assumption is ever violated. Existing rows (all USD, from
+  // before this column existed) were backfilled "usd"; the column
+  // default is "etb" going forward now that Ethiopia is the platform's
+  // primary market - every real write stamps an explicit value either
+  // way, so this only matters as a last-resort fallback.
+  currency_code: model.enum(["usd", "etb"]).default("etb"),
   amount: model.number(),
   status: model.enum(["pending", "paid", "failed"]).default("pending"),
   stripe_transfer_id: model.text().unique().nullable(),

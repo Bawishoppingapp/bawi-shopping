@@ -19,7 +19,7 @@ export async function POST(
     return
   }
 
-  const { name, slug, email, password } = req.body as Record<string, string>
+  const { name, slug, email, password, currency_code } = req.body as Record<string, string>
 
   const sellerModuleService: SellerModuleService = req.scope.resolve(
     SELLER_MODULE
@@ -30,6 +30,9 @@ export async function POST(
     name,
     slug,
     status: "approved",
+    // Optional - omitting it keeps the model's "usd" default, same as
+    // every seller provisioned before this field existed.
+    ...(currency_code ? { currency_code: currency_code as "usd" | "etb" } : {}),
   })
 
   const { success, error, authIdentity } = await authModuleService.register(

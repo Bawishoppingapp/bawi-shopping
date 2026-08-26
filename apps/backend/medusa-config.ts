@@ -179,6 +179,12 @@ module.exports = defineConfig({
       resolve: "./src/modules/product-translation",
     },
     {
+      resolve: "./src/modules/wishlist",
+    },
+    {
+      resolve: "./src/modules/device-push-token",
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: emailProviders,

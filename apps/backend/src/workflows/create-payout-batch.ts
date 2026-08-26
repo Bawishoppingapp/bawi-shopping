@@ -100,6 +100,7 @@ const createPayoutAndTransferStep = createStep(
     const payout = await sellerFinanceModuleService.createPayouts({
       vendor_id: input.vendorId,
       idempotency_key: idempotencyKey,
+      currency_code: seller.currency_code,
       amount: totalAmount,
       status: "paid",
       stripe_transfer_id: transfer.id,

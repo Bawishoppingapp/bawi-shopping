@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { Button, StatusBadge } from "@bawi/ui"
 import { SELLER_SESSION_COOKIE } from "@/features/auth/constants"
+import { getCurrentSeller } from "@/features/auth/services/medusa-auth-client"
 import {
   getMyProduct,
   listCategories,
@@ -29,6 +30,11 @@ export default async function EditProductPage({
   const cookieStore = await cookies()
   const sessionToken = cookieStore.get(SELLER_SESSION_COOKIE)?.value
   if (!sessionToken) {
+    redirect("/login")
+  }
+
+  const seller = await getCurrentSeller(sessionToken)
+  if (!seller) {
     redirect("/login")
   }
 
@@ -103,6 +109,7 @@ export default async function EditProductPage({
           action={boundUpdateAction}
           categories={categories}
           submitLabel="Save changes"
+          currencyCode={seller.seller.currency_code}
           initialValues={{
             title: product.title,
             description: product.description ?? "",

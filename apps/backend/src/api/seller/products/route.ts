@@ -7,6 +7,8 @@ import { productDraftSchema } from "../../../modules/product-listing/schemas"
 import { generateUniqueProductCode } from "../../../modules/product-listing/utils"
 import { createProductDraftWorkflow } from "../../../workflows/create-product-draft"
 import { getOrCreateDefaultStockLocationId } from "../../../workflows/shared/default-stock-location"
+import { SELLER_MODULE } from "../../../modules/seller"
+import type SellerModuleService from "../../../modules/seller/service"
 
 /**
  * A seller's own products, scoped to their vendor id (never a client-
@@ -46,6 +48,9 @@ export async function POST(
 
   const stockLocationId = await getOrCreateDefaultStockLocationId(req.scope)
 
+  const sellerModuleService: SellerModuleService = req.scope.resolve(SELLER_MODULE)
+  const seller = await sellerModuleService.retrieveSeller(vendorId, { select: ["id", "currency_code"] })
+
   const { result } = await createProductDraftWorkflow(req.scope).run({
     input: {
       vendorId,
@@ -56,6 +61,7 @@ export async function POST(
       variants: parsed.data.variants,
       stockLocationId,
       productCode,
+      currencyCode: seller.currency_code,
     },
   })
 

@@ -79,6 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [customer, isLoading, login, register, logout]
   );
 
+  // Known TS false positive: Context.Provider's exotic component type
+  // intermittently fails TS's JSX element-type check under this
+  // @types/react version in this monorepo (see mobile-seller's identical
+  // suppression for the same symptom). Runtime behavior is unaffected.
+  // @ts-expect-error - see comment above
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

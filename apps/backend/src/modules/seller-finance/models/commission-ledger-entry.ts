@@ -24,6 +24,16 @@ export const CommissionLedgerEntry = model.define("commission_ledger_entry", {
   id: model.id().primaryKey(),
   vendor_order_id: model.text(),
   vendor_id: model.text(),
+  // Stamped from the originating vendor_order's currency at creation -
+  // commission_rate_basis_points is a percentage (currency-independent),
+  // but the resulting amount fields are real money and must never be
+  // summed across currencies (see docs/DECISIONS.md's Ethiopian-market
+  // entry). Existing rows (all USD, from before this column existed)
+  // were backfilled "usd"; the column default is "etb" going forward
+  // now that Ethiopia is the platform's primary market - every real
+  // write stamps an explicit value either way, so this only matters as
+  // a last-resort fallback.
+  currency_code: model.enum(["usd", "etb"]).default("etb"),
   reason: model.enum(["order", "refund_reversal"]),
   commission_rate_basis_points: model.number(),
   commission_amount: model.number(),

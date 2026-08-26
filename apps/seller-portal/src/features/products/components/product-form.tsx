@@ -7,11 +7,14 @@ import { initialProductFormState, type VariantRow } from "../constants"
 import type { CategoryOption } from "../services/products-client"
 import type { ProductFormState } from "../constants"
 
+const CURRENCY_LABEL: Record<string, string> = { usd: "USD cents, e.g. 4999 = $49.99", etb: "ETB cents, e.g. 250000 = Br 2,500" }
+
 export function ProductForm({
   action,
   categories,
   submitLabel,
   initialValues,
+  currencyCode = "usd",
 }: {
   action: (state: ProductFormState, formData: FormData) => Promise<ProductFormState>
   categories: CategoryOption[]
@@ -23,6 +26,7 @@ export function ProductForm({
     base_price: string
     variants: VariantRow[]
   }
+  currencyCode?: string
 }) {
   const [state, formAction, pending] = useActionState(action, initialProductFormState)
 
@@ -49,7 +53,10 @@ export function ProductForm({
         </Select>
       </FormField>
 
-      <FormField label="Base price (USD cents, e.g. 4999 = $49.99)" error={state.fieldErrors.base_price}>
+      <FormField
+        label={`Base price (${CURRENCY_LABEL[currencyCode] ?? CURRENCY_LABEL.usd})`}
+        error={state.fieldErrors.base_price}
+      >
         <Input
           name="base_price"
           inputMode="numeric"

@@ -1,50 +1,68 @@
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
+import { StyleSheet } from "react-native";
+
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 const ICON_SIZE = 24;
 
 export default function TabsLayout() {
+  const t = useTranslations();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#151210",
         tabBarInactiveTintColor: "#8C8175",
-        tabBarStyle: { backgroundColor: "#FFFFFF", borderTopColor: "#E3DCD1" },
+        // Floating/translucent tab bar - the bar sits above scrolling
+        // content instead of pushing it up, so each tab screen adds its
+        // own bottom inset via useBottomTabBarHeight() to keep content
+        // clear of the glass. Border replaces the old opaque
+        // backgroundColor's implicit separation from content behind it.
+        tabBarStyle: { position: "absolute", borderTopColor: "#E3DCD1" },
+        tabBarBackground: () => (
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        ),
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t("nav.home"),
           tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: "Search",
+          title: t("nav.search"),
           tabBarIcon: ({ color }) => <Ionicons name="search-outline" size={ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="cart"
         options={{
-          title: "Cart",
+          title: t("nav.cart"),
           tabBarIcon: ({ color }) => <Ionicons name="bag-outline" size={ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="orders"
+        name="wishlist"
         options={{
-          title: "Orders",
-          tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={ICON_SIZE} color={color} />,
+          // No dedicated catalog key yet - Wishlist is a mobile-only
+          // concept the web nav never had (see CLAUDE.md's mobile
+          // section). Left in English rather than guessing a
+          // translation for a genuinely new term.
+          title: "Wishlist",
+          tabBarIcon: ({ color }) => <Ionicons name="heart-outline" size={ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="account"
         options={{
-          title: "Account",
+          title: t("nav.account"),
           tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={ICON_SIZE} color={color} />,
         }}
       />

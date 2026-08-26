@@ -4,6 +4,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 
 import { MedusaAuthError, useAuth } from "@/features/auth/hooks/use-auth";
+import { PasswordRequirements } from "@/features/auth/components/password-requirements";
 import { registerSchema } from "@/features/auth/schemas/register-schema";
 
 export default function RegisterScreen() {
@@ -12,13 +13,15 @@ export default function RegisterScreen() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit() {
     setFormError(null);
-    const parsed = registerSchema.safeParse({ firstName, lastName, email, password });
+    const parsed = registerSchema.safeParse({ firstName, lastName, email, password, confirmPassword });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -41,7 +44,11 @@ export default function RegisterScreen() {
             : error.message
         );
       } else {
-        setFormError("Something went wrong. Please try again.");
+        // Not a MedusaAuthError means the fetch itself threw (no
+        // connection, server unreachable) rather than the server
+        // responding with an error - a distinct failure mode from a
+        // rejected registration.
+        setFormError("Couldn't reach the server. Check your connection and try again.");
       }
     } finally {
       setSubmitting(false);
@@ -100,10 +107,22 @@ export default function RegisterScreen() {
           value={password}
           onChangeText={setPassword}
           error={fieldErrors.password}
-          helperText={fieldErrors.password ? undefined : "At least 8 characters, with a lowercase letter, uppercase letter, and number."}
+          onFocus={() => setPasswordFocused(true)}
           secureTextEntry
           autoComplete="password-new"
           textContentType="newPassword"
+        />
+        {passwordFocused || password.length > 0 ? <PasswordRequirements password={password} /> : null}
+        <Input
+          label="Confirm password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          error={fieldErrors.confirmPassword}
+          secureTextEntry
+          autoComplete="password-new"
+          textContentType="newPassword"
+          onSubmitEditing={onSubmit}
+          returnKeyType="done"
         />
         <Button onPress={onSubmit} loading={submitting}>
           Create account

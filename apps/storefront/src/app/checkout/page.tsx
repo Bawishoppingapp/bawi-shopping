@@ -7,12 +7,9 @@ import { CUSTOMER_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentCustomer } from "@/features/auth/services/medusa-auth-client"
 import { getCart } from "@/features/cart/services/cart-client"
 import { CheckoutFlow } from "@/features/checkout/components/checkout-flow"
+import { formatMoney } from "@/features/discovery/utils/format-price"
 
 export const dynamic = "force-dynamic"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 /**
  * No guest checkout in v1 (order.customer_id is NOT NULL by design - see
@@ -52,12 +49,12 @@ export default async function CheckoutPage() {
         <h2 className="text-lg font-medium text-neutral-900">{t("checkout.orderSummary")}</h2>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("checkout.subtotal")}</span>
-          <span className="font-medium text-neutral-900">{formatUsd(cart.subtotal)}</span>
+          <span className="font-medium text-neutral-900">{formatMoney(cart.subtotal, cart.currency_code)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("checkout.shipping")}</span>
           <span className="font-medium text-neutral-900">
-            {cart.shipping_estimate === 0 ? t("cart.free") : formatUsd(cart.shipping_estimate)}
+            {cart.shipping_estimate === 0 ? t("cart.free") : formatMoney(cart.shipping_estimate, cart.currency_code)}
           </span>
         </div>
       </aside>

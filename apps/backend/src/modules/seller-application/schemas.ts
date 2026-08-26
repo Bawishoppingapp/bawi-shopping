@@ -1,13 +1,24 @@
 import { z } from "@medusajs/framework/zod"
+import { isPostalCodeRequired } from "../../orders/postal-code-required"
 
-const addressSchema = z.object({
-  line1: z.string().trim().min(1, "Address line 1 is required"),
-  line2: z.string().trim().optional(),
-  city: z.string().trim().min(1, "City is required"),
-  state: z.string().trim().min(1, "State is required"),
-  postal_code: z.string().trim().min(1, "Postal code is required"),
-  country: z.string().trim().min(2, "Country is required"),
-})
+// state/postal_code aren't required by every country's addressing model
+// (see isPostalCodeRequired, same source of truth checkout's own address
+// schema already uses) - this used to unconditionally require both,
+// which would reject a real Ethiopian business address.
+const addressSchema = z
+  .object({
+    line1: z.string().trim().min(1, "Address line 1 is required"),
+    line2: z.string().trim().optional(),
+    city: z.string().trim().min(1, "City is required"),
+    state: z.string().trim().optional(),
+    postal_code: z.string().trim().optional(),
+    country: z.string().trim().min(2, "Country is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (isPostalCodeRequired(data.country) && !data.postal_code) {
+      ctx.addIssue({ code: "custom", path: ["postal_code"], message: "Postal code is required for this country" })
+    }
+  })
 
 export const BUSINESS_TYPES = [
   "sole_proprietorship",
@@ -29,6 +40,10 @@ export const submitApplicationSchema = z.object({
     .union([z.string().trim().url("Enter a valid URL"), z.literal("")])
     .optional(),
   address: addressSchema,
+  // Optional, defaulting "etb" now that Ethiopia is the platform's
+  // primary market. Stays optional so any client that doesn't send this
+  // field still works.
+  currency_code: z.enum(["usd", "etb"]).optional().default("etb"),
   product_categories: z
     .array(z.string().trim().min(1))
     .min(1, "Select at least one product category"),
