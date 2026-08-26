@@ -51,28 +51,36 @@ for (const pkg of packages) {
   }
 }
 
-// react-native's own internal code does `require("react")` from wherever
-// react-native itself physically lives - which, when npm hoists it to the
-// workspace root, is NOT the same place our three app dirs resolve
-// "react" from (root has its own separate react copy for the Next.js
-// apps). Give react-native its own nested "react" so its internal
-// resolution finds the correct (Expo-blessed) copy first, regardless of
-// where npm decided to put react-native this time.
-try {
-  const reactNativePkgJson = anchorRequire.resolve("react-native/package.json");
-  const reactNativeDir = path.dirname(reactNativePkgJson);
-  const reactPkgJson = anchorRequire.resolve("react/package.json");
-  const reactDir = path.dirname(reactPkgJson);
-  const nestedReactTarget = path.join(reactNativeDir, "node_modules", "react");
+// Some packages do `require("react")` from wherever *they* physically
+// live, which - when npm hoists them to the workspace root - is NOT the
+// same place our three app dirs resolve "react" from (root has its own
+// separate react copy for the Next.js apps). Give each of these packages
+// its own nested "react" so its internal resolution finds the correct
+// (Expo-blessed) copy first, regardless of where npm decided to put it
+// this time. react-native needs this for the app to run at all;
+// test-renderer needs the identical fix for jest (@testing-library/
+// react-native's renderHook/render) to avoid a "two React instances"
+// invalid-hook-call error - same root cause, same fix.
+function nestReactInto(packageName) {
+  try {
+    const pkgJsonPath = anchorRequire.resolve(`${packageName}/package.json`);
+    const pkgDir = path.dirname(pkgJsonPath);
+    const reactPkgJson = anchorRequire.resolve("react/package.json");
+    const reactDir = path.dirname(reactPkgJson);
+    const nestedReactTarget = path.join(pkgDir, "node_modules", "react");
 
-  if (
-    !fs.existsSync(nestedReactTarget) ||
-    fs.realpathSync(nestedReactTarget) !== fs.realpathSync(reactDir)
-  ) {
-    fs.mkdirSync(path.dirname(nestedReactTarget), { recursive: true });
-    fs.rmSync(nestedReactTarget, { recursive: true, force: true });
-    fs.symlinkSync(reactDir, nestedReactTarget, "dir");
+    if (
+      !fs.existsSync(nestedReactTarget) ||
+      fs.realpathSync(nestedReactTarget) !== fs.realpathSync(reactDir)
+    ) {
+      fs.mkdirSync(path.dirname(nestedReactTarget), { recursive: true });
+      fs.rmSync(nestedReactTarget, { recursive: true, force: true });
+      fs.symlinkSync(reactDir, nestedReactTarget, "dir");
+    }
+  } catch {
+    // Not resolvable from mobile-customer - nothing to fix.
   }
-} catch {
-  // react-native not resolvable from mobile-customer - nothing to fix.
 }
+
+nestReactInto("react-native");
+nestReactInto("test-renderer");
