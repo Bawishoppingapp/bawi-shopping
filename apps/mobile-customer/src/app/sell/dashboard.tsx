@@ -1,5 +1,6 @@
 import { Button, StatusBadge } from "@bawi/mobile-ui";
 import { router, useFocusEffect } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 
@@ -7,11 +8,17 @@ import { listFulfillmentOrders } from "@/features/fulfillment/services/fulfillme
 import { listReturnRequests } from "@/features/returns/services/returns-client";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
+import {
+  StripeOnboardingError,
+  createOnboardingLink,
+} from "@/features/stripe-onboarding/services/stripe-onboarding-client";
 
 export default function SellDashboardScreen() {
-  const { seller, logout } = useSellerAuth();
+  const { seller, logout, refresh } = useSellerAuth();
   const [awaitingPreparation, setAwaitingPreparation] = useState<number | null>(null);
   const [pendingReturns, setPendingReturns] = useState<number | null>(null);
+  const [connectingStripe, setConnectingStripe] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,6 +44,30 @@ export default function SellDashboardScreen() {
   async function onLogout() {
     await logout();
     router.replace("/sell");
+  }
+
+  async function onConnectStripe() {
+    setStripeError(null);
+    setConnectingStripe(true);
+    try {
+      const token = await getSellerSessionToken();
+      if (!token) throw new StripeOnboardingError("You're not signed in.");
+      const url = await createOnboardingLink(token);
+      // Opens Stripe's hosted onboarding flow in an in-app browser session,
+      // then resolves once the seller closes/returns from it - status
+      // (charges_enabled/payouts_enabled) is only updated on Bawi's side
+      // asynchronously via a Stripe webhook, so refresh() re-fetches
+      // seller/me rather than trusting anything about how the browser
+      // session ended.
+      await WebBrowser.openBrowserAsync(url);
+      await refresh();
+    } catch (error) {
+      setStripeError(
+        error instanceof StripeOnboardingError ? error.message : "Could not open Stripe onboarding."
+      );
+    } finally {
+      setConnectingStripe(false);
+    }
   }
 
   if (!seller) return null;
@@ -88,10 +119,28 @@ export default function SellDashboardScreen() {
             <Text className="text-body-sm font-medium text-ink-950">Stripe payouts</Text>
             <StatusBadge label={stripeReady ? "Ready" : "Setup needed"} tone={stripeReady ? "success" : "warning"} />
           </View>
-          {!stripeReady ? (
+          {!stripeReady && seller.seller.currency_code === "etb" ? (
+            // Stripe has zero support for Ethiopia (not merchant accounts,
+            // not Connect) - offering an onboarding button here would just
+            // fail against Stripe's API. This is a known external gap
+            // (see CLAUDE.md's "Currency and market" section), not
+            // something this screen can work around.
             <Text className="text-body-sm text-ink-500">
-              Finish connecting Stripe from the Bawi seller website to receive payouts.
+              Stripe payouts aren&apos;t available for Ethiopian Birr sellers yet - Stripe doesn&apos;t support
+              payouts to Ethiopia. An Ethiopian payment option is planned.
             </Text>
+          ) : !stripeReady ? (
+            <>
+              <Text className="text-body-sm text-ink-500">
+                {seller.seller.stripe.connected
+                  ? "Finish connecting Stripe to start receiving payouts."
+                  : "Connect Stripe to start receiving payouts."}
+              </Text>
+              <Button size="md" onPress={onConnectStripe} loading={connectingStripe}>
+                {seller.seller.stripe.connected ? "Finish connecting payouts" : "Connect payouts"}
+              </Button>
+              {stripeError ? <Text className="text-body-sm text-danger">{stripeError}</Text> : null}
+            </>
           ) : null}
         </View>
 
@@ -151,6 +200,15 @@ export default function SellDashboardScreen() {
             className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
           >
             <Text className="text-body text-ink-800">Notifications</Text>
+            <Text className="text-body-sm text-ink-500">{">"}</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/sell/team")}
+            className="flex-row items-center justify-between rounded-md border border-ink-100 p-4 active:bg-ink-100"
+          >
+            <Text className="text-body text-ink-800">Team</Text>
             <Text className="text-body-sm text-ink-500">{">"}</Text>
           </Pressable>
         </View>
