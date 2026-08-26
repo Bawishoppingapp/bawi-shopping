@@ -2,6 +2,7 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
 import { NOTIFICATION_INBOX_MODULE } from "../modules/notification-inbox"
 import type NotificationInboxModuleService from "../modules/notification-inbox/service"
+import { sendPushForRecipient } from "./send-push"
 
 /**
  * Every event this platform notifies a party about - see docs/PRD.md
@@ -87,5 +88,16 @@ export async function recordNotification(
     // already-existing notification rather than creating a new one, so an
     // inbox entry (unique on notification_id) already exists too - not a
     // real error, just the dedup path.
+  }
+
+  if (input.recipientType === "customer" || input.recipientType === "seller_user") {
+    // Fire-and-forget - see send-push.ts for why this never affects the
+    // notification-send path that triggered it.
+    void sendPushForRecipient(container, {
+      recipientType: input.recipientType,
+      recipientId: input.recipientId,
+      title: input.subject,
+      body: input.body,
+    })
   }
 }
