@@ -19,10 +19,10 @@ const SERVER_LOG_PATH = path.join(os.tmpdir(), "medusa-test-server.log")
  * talk to it exactly like production traffic would: real HTTP, real
  * signed JWTs, real Postgres - nothing mocked.
  *
- * `medusa develop` runs its own watcher/supervisor process tree, so killing
- * only the immediate child can leave the actual server orphaned holding the
- * port. Freeing the port by PID (before starting, and after stopping) is
- * more reliable here than trying to track/kill the exact process tree.
+ * The HTTP-test script builds once before Jest starts, then each suite runs
+ * Medusa's production server. This deliberately avoids `medusa develop`:
+ * its file/type watchers can outlive a suite, retain database connections,
+ * and exhaust the small Postgres service used in CI.
  */
 function freePort() {
   try {
@@ -33,7 +33,7 @@ function freePort() {
 }
 
 /**
- * `medusa develop` spawns a `cli.js start --types` type-watcher
+ * Older test runs used `medusa develop`, which spawns a type-watcher
  * sub-process that does not listen on any port, so freePort() (kill by
  * port) never catches it - and it has been observed to survive even
  * `process.kill(-child.pid, "SIGTERM")` on the process group, leaking one
@@ -41,7 +41,9 @@ function freePort() {
  * these accumulate and can exhaust enough memory/DB connections to crash
  * a later test run outright. A targeted, unambiguous kill-by-command-line
  * pattern is the reliable cleanup - this exact command line has no
- * legitimate reason to exist outside a `medusa develop` invocation.
+ * legitimate reason to exist outside a `medusa develop` invocation. Keep
+ * this cleanup temporarily so a previously interrupted local run cannot
+ * interfere with the production-style server below.
  */
 function killStrayTypeWatchers() {
   try {
@@ -57,7 +59,7 @@ function startTestServer() {
   killStrayTypeWatchers()
 
   return new Promise((resolve, reject) => {
-    const child = spawn("npx", ["medusa", "develop"], {
+    const child = spawn("npx", ["medusa", "start", "--port", String(PORT), "--no-color"], {
       cwd: BACKEND_ROOT,
       detached: true,
       env: {
@@ -65,7 +67,10 @@ function startTestServer() {
         NODE_ENV: "test",
         ENABLE_TEST_SUPPORT_ROUTES: "true",
         PORT: String(PORT),
+        // Preserve CI's authenticated URL. The fallback matches the
+        // passwordless local Postgres.app setup documented for this repo.
         DATABASE_URL:
+          process.env.DATABASE_URL ??
           "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test",
         JWT_SECRET: "test-secret",
         COOKIE_SECRET: "test-secret",
