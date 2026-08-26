@@ -46,12 +46,17 @@ export interface SellerBalance {
 export interface FinanceOverviewRow {
   vendor_id: string
   vendor_name: string | null
+  // The selling seller's currency (see apps/backend's Seller.currency_code).
+  currency_code: string
   payouts_enabled: boolean
   balance: SellerBalance
 }
 
 export interface FinanceOverview {
-  platform_totals: SellerBalance
+  // Keyed by currency ("usd" | "etb", ...) - never one blended total, since
+  // summing a USD seller's cents with an ETB seller's cents would be
+  // meaningless. Only currencies with at least one seller present appear.
+  platform_totals: Record<string, SellerBalance>
   sellers: FinanceOverviewRow[]
 }
 
