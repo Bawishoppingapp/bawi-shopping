@@ -15,6 +15,9 @@ export interface ProductHit {
   thumbnail: string | null
   priceMin: number | null
   priceMax: number | null
+  // The selling seller's currency (see apps/backend's Seller.currency_code)
+  // - null only alongside priceMin/priceMax both null (no resolvable price).
+  currencyCode: string | null
   available: boolean
   categoryIds: string[]
 }

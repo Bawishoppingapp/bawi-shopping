@@ -6,12 +6,9 @@ import { getLocale } from "@bawi/i18n/server"
 import { CUSTOMER_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentCustomer } from "@/features/auth/services/medusa-auth-client"
 import { listOrders } from "@/features/orders/services/orders-client"
+import { formatMoney } from "@/features/discovery/utils/format-price"
 
 export const dynamic = "force-dynamic"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 export default async function OrdersPage() {
   const locale = await getLocale()
@@ -46,7 +43,7 @@ export default async function OrdersPage() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <span className="font-medium text-neutral-900">{formatUsd(order.total)}</span>
+                <span className="font-medium text-neutral-900">{formatMoney(order.total, order.currency_code)}</span>
                 <Link
                   href={`/orders/${order.id}`}
                   className="text-sm font-medium text-neutral-700 hover:underline"
