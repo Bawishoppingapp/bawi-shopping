@@ -2,6 +2,7 @@ import { cookies } from "next/headers"
 import { redirect, notFound } from "next/navigation"
 import { Button, StatusBadge } from "@bawi/ui"
 import { SELLER_SESSION_COOKIE } from "@/features/auth/constants"
+import { getCurrentSeller } from "@/features/auth/services/medusa-auth-client"
 import {
   getFulfillmentOrder,
   FulfillmentClientError,
@@ -10,12 +11,9 @@ import {
   markPreparingAction,
   markReadyForPickupAction,
 } from "@/features/fulfillment/actions/fulfillment-actions"
+import { formatMoney } from "@/features/finance/utils/format-price"
 
 export const dynamic = "force-dynamic"
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 /**
  * Never shows the customer's name, phone, email, or delivery address -
@@ -36,6 +34,12 @@ export default async function FulfillmentOrderPage({
   if (!sessionToken) {
     redirect("/login")
   }
+
+  const seller = await getCurrentSeller(sessionToken)
+  if (!seller) {
+    redirect("/login")
+  }
+  const currencyCode = seller.seller.currency_code
 
   let order
   try {
@@ -79,11 +83,11 @@ export default async function FulfillmentOrderPage({
         <h2 className="mb-3 text-sm font-medium text-neutral-900">Your earnings</h2>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">Subtotal</span>
-          <span className="text-neutral-900">{formatUsd(order.subtotal)}</span>
+          <span className="text-neutral-900">{formatMoney(order.subtotal, currencyCode)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">Commission</span>
-          <span className="text-neutral-900">-{formatUsd(order.commission_amount)}</span>
+          <span className="text-neutral-900">-{formatMoney(order.commission_amount, currencyCode)}</span>
         </div>
       </section>
 

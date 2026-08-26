@@ -67,6 +67,7 @@ export interface SellerMe {
     name: string
     slug: string
     status: string
+    currency_code: string
     stripe: {
       connected: boolean
       charges_enabled: boolean

@@ -15,6 +15,7 @@ const validInput = {
   address_city: "Austin",
   address_state: "TX",
   address_postal_code: "78701",
+  currency_code: "usd",
   product_categories: ["Accessories"],
   business_description: "We make quality denim.",
   estimated_product_count: 50,
@@ -34,6 +35,16 @@ describe("applicationSchema", () => {
 
   test("rejects an invalid business type", () => {
     const result = applicationSchema.safeParse({ ...validInput, business_type: "hobbyist" })
+    expect(result.success).toBe(false)
+  })
+
+  test("accepts ETB as a currency choice", () => {
+    const result = applicationSchema.safeParse({ ...validInput, currency_code: "etb" })
+    expect(result.success).toBe(true)
+  })
+
+  test("rejects an unsupported currency", () => {
+    const result = applicationSchema.safeParse({ ...validInput, currency_code: "eur" })
     expect(result.success).toBe(false)
   })
 

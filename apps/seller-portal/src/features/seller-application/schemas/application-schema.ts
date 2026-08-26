@@ -42,6 +42,7 @@ export const applicationSchema = z.object({
   address_city: z.string().trim().min(1, "City is required"),
   address_state: z.string().trim().min(1, "State is required"),
   address_postal_code: z.string().trim().min(1, "Postal code is required"),
+  currency_code: z.enum(["usd", "etb"], { message: "Select a currency" }),
   product_categories: z
     .array(z.string())
     .min(1, "Select at least one product category"),

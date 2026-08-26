@@ -34,6 +34,18 @@ export function ApplicationForm() {
             ))}
           </Select>
         </FormField>
+        <FormField label="Currency" error={state.fieldErrors.currency_code}>
+          <Select name="currency_code" defaultValue="">
+            <option value="" disabled>
+              Select a currency
+            </option>
+            <option value="usd">USD ($)</option>
+            <option value="etb">ETB (Br)</option>
+          </Select>
+        </FormField>
+        <p className="-mt-2 text-xs text-neutral-500">
+          Your whole catalog will be priced in this currency - it can&apos;t be changed per product later.
+        </p>
         <FormField
           label="Business description"
           error={state.fieldErrors.business_description}

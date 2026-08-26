@@ -26,6 +26,7 @@ export async function submitApplication(
     address_city: formData.get("address_city"),
     address_state: formData.get("address_state"),
     address_postal_code: formData.get("address_postal_code"),
+    currency_code: formData.get("currency_code"),
     product_categories: formData.getAll("product_categories"),
     business_description: formData.get("business_description"),
     estimated_product_count: formData.get("estimated_product_count"),

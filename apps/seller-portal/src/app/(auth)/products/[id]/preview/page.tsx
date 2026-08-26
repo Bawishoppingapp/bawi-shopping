@@ -2,16 +2,13 @@ import { cookies } from "next/headers"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { SELLER_SESSION_COOKIE } from "@/features/auth/constants"
+import { getCurrentSeller } from "@/features/auth/services/medusa-auth-client"
 import { getMyProduct, ProductsClientError } from "@/features/products/services/products-client"
+import { formatMoney } from "@/features/finance/utils/format-price"
 
 // Same reasoning as the edit page - never cache a URL whose authorized
 // content depends on which seller's session requested it.
 export const dynamic = "force-dynamic"
-
-function formatUsd(cents: number | null): string {
-  if (cents == null) return "—"
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 export default async function ProductPreviewPage({
   params,
@@ -24,6 +21,13 @@ export default async function ProductPreviewPage({
   if (!sessionToken) {
     redirect("/login")
   }
+
+  const seller = await getCurrentSeller(sessionToken)
+  if (!seller) {
+    redirect("/login")
+  }
+  const currencyCode = seller.seller.currency_code
+  const formatPrice = (cents: number | null) => (cents == null ? "—" : formatMoney(cents, currencyCode))
 
   let data
   try {
@@ -85,7 +89,7 @@ export default async function ProductPreviewPage({
 
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-neutral-900">{product.title}</h1>
-        <p className="text-lg text-neutral-900">{formatUsd(lowestPrice)}</p>
+        <p className="text-lg text-neutral-900">{formatPrice(lowestPrice)}</p>
         <p className="text-sm text-neutral-600">{product.description}</p>
         <p className="text-xs text-neutral-400">Product code: {listing.product_code}</p>
       </div>
