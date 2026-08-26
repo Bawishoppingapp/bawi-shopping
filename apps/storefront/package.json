@@ -16,7 +16,7 @@
     "@bawi/ui": "*",
     "@stripe/react-stripe-js": "^3.0.0",
     "@stripe/stripe-js": "^5.0.0",
-    "next": "16.2.11",
+    "next": "16.3.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "server-only": "^0.0.1",
