@@ -91,6 +91,39 @@ describe("submitApplicationSchema", () => {
     const { website_url, ...rest } = validApplication
     expect(submitApplicationSchema.safeParse(rest).success).toBe(true)
   })
+
+  test("defaults currency_code to etb when omitted", () => {
+    const result = submitApplicationSchema.safeParse(validApplication)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.currency_code).toBe("etb")
+    }
+  })
+
+  test("accepts an Ethiopian address with no state or postal code", () => {
+    const result = submitApplicationSchema.safeParse({
+      ...validApplication,
+      address: {
+        line1: "Bole Road",
+        city: "Addis Ababa",
+        country: "ET",
+      },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  test("rejects a US address with no postal code", () => {
+    const result = submitApplicationSchema.safeParse({
+      ...validApplication,
+      address: {
+        line1: "123 Main St",
+        city: "Austin",
+        state: "TX",
+        country: "US",
+      },
+    })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe("rejectApplicationSchema", () => {
