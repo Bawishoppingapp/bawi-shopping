@@ -1,3 +1,4 @@
+import { useThemeColors } from "@bawi/mobile-ui";
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -15,11 +16,13 @@ const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
 
 SplashScreen.preventAutoHideAsync();
 
-// v1 is deliberately light-mode only (matches the web app's own
-// documented decision, docs/DESIGN-SYSTEM.md #2) - React Navigation's
-// native-stack defaults to a light theme already, so no explicit theme
-// wiring is needed.
+// Follows the system color scheme (see global.css's dark-mode media query) -
+// native-stack's header chrome isn't a className/CSS-variable-driven
+// element, so it needs its own explicit theme-aware screenOptions here,
+// same reason ThemedIcon/useThemeColors exist for other non-className props.
 export default function RootLayout() {
+  const themeColors = useThemeColors();
+
   useEffect(() => {
     SplashScreen.hideAsync();
   }, []);
@@ -35,7 +38,12 @@ export default function RootLayout() {
             <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} urlScheme="mobilecustomer">
               <PushNotificationRegistrar />
               <ToastProvider>
-                <Stack>
+                <Stack
+                  screenOptions={{
+                    headerStyle: { backgroundColor: themeColors.surface },
+                    headerTintColor: themeColors.ink950,
+                  }}
+                >
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen
                     name="login"

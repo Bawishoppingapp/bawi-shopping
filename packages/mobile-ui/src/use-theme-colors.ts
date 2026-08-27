@@ -15,6 +15,7 @@ export interface ThemeColors {
   ink500: string;
   ink400: string;
   gold600: string;
+  surface: string;
 }
 
 const LIGHT: ThemeColors = {
@@ -24,6 +25,7 @@ const LIGHT: ThemeColors = {
   ink500: "#6F655B",
   ink400: "#8C8175",
   gold600: "#B8863B",
+  surface: "#FFFFFF",
 };
 
 const DARK: ThemeColors = {
@@ -33,6 +35,7 @@ const DARK: ThemeColors = {
   ink500: "#8F8577",
   ink400: "#6E6459",
   gold600: "#D3A15B",
+  surface: "#211D17",
 };
 
 /** Reactive to the system color scheme (React Native's Appearance API) -
