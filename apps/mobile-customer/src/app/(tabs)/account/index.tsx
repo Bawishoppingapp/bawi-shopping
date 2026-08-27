@@ -95,6 +95,14 @@ export default function AccountScreen() {
           <Button variant="secondary" onPress={() => router.push("/register")}>
             Create account
           </Button>
+          <AccountSection title="Preferences">
+            <AccountRow
+              icon="language-outline"
+              label="Language"
+              value={LOCALE_NAMES[locale]}
+              onPress={() => router.push("/(tabs)/account/language")}
+            />
+          </AccountSection>
           <LegalSection />
         </ScrollView>
       </SafeAreaView>

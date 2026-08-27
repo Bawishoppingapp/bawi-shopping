@@ -104,10 +104,20 @@ export default function HomeScreen() {
           <View className="gap-6 pb-2">
             <View className="flex-row items-center justify-between px-4 pt-2">
               <View className="gap-1">
-                <Text className="text-display text-ink-950">Bawi</Text>
+                <Text className="text-display text-ink-950">
+                  {customer?.first_name ? `Welcome, ${customer.first_name}` : "Bawi"}
+                </Text>
                 <Text className="text-body text-ink-500">Fashion, from independent brands.</Text>
               </View>
               <View className="flex-row items-center">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Change language"
+                  onPress={() => router.push("/(tabs)/account/language")}
+                  className="p-2"
+                >
+                  <Ionicons name="language-outline" size={24} color="#151210" />
+                </Pressable>
                 {customer ? (
                   <Pressable
                     accessibilityRole="button"
