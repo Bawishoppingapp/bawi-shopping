@@ -32,13 +32,6 @@
       ],
       "expo-secure-store",
       [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.bawishopping.app",
-          "enableGooglePay": false
-        }
-      ],
-      [
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
