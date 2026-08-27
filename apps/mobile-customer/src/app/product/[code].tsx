@@ -24,6 +24,7 @@ import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { recordProductView } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
+import { useToast } from "@/features/toast/use-toast";
 import { type ShippingPolicy, getShippingPolicy } from "@/features/shipping-policy/services/shipping-policy-client";
 import { addToWishlist, listWishlist, removeFromWishlist } from "@/features/wishlist/services/wishlist-client";
 
@@ -36,6 +37,7 @@ export default function ProductDetailScreen() {
   const { addItem } = useCart();
   const locale = useLocale();
   const t = useTranslations();
+  const toast = useToast();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
   const [relatedProducts, setRelatedProducts] = useState<ProductHit[]>([]);
   const [shippingPolicy, setShippingPolicy] = useState<ShippingPolicy | null>(null);
@@ -150,8 +152,16 @@ export default function ProductDetailScreen() {
       await addItem(variantId, 1);
       setLastAddResult({ variantId, status: "added" });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      setLastAddResult({ variantId, status: "error", message: "Couldn't add this to your bag. Please try again." });
+      toast.show(`Added to bag${product ? ` · ${product.title}` : ""}`, {
+        actionLabel: "View bag",
+        onPress: () => router.push("/(tabs)/cart"),
+      });
+    } catch (error) {
+      setLastAddResult({
+        variantId,
+        status: "error",
+        message: error instanceof Error ? error.message : "Couldn't add this to your bag. Please try again.",
+      });
     } finally {
       setAdding(false);
     }

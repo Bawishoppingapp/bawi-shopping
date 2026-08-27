@@ -61,11 +61,23 @@ async function cartRequest(
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 
+  const text = await response.text();
+  const data = (() => {
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return {};
+    }
+  })();
+
   if (!response.ok) {
-    throw new Error(`Cart request failed (${response.status})`);
+    // The backend returns a specific, actionable message for known
+    // failure cases (e.g. the single-currency-cart rule) - surface that
+    // to the shopper instead of a generic "something went wrong."
+    throw new Error(data.message || `Cart request failed (${response.status})`);
   }
 
-  return response.json();
+  return data;
 }
 
 /** GET /store/cart never creates a cart - returns an empty public cart

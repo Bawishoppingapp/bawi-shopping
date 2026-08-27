@@ -9,6 +9,7 @@ import { CartProvider } from "@/features/cart/hooks/use-cart";
 import { LocaleProvider } from "@/features/i18n/hooks/use-locale";
 import { PushNotificationRegistrar } from "@/features/push-notifications/components/push-notification-registrar";
 import { SellerAuthProvider } from "@/features/seller-auth/hooks/use-seller-auth";
+import { ToastProvider } from "@/features/toast/use-toast";
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
@@ -33,17 +34,19 @@ export default function RootLayout() {
                 payment via the Payment Sheet works without it. */}
             <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} urlScheme="mobilecustomer">
               <PushNotificationRegistrar />
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="login"
-                  options={{ presentation: "modal", title: "Log in" }}
-                />
-                <Stack.Screen
-                  name="register"
-                  options={{ presentation: "modal", title: "Create account" }}
-                />
-              </Stack>
+              <ToastProvider>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="login"
+                    options={{ presentation: "modal", title: "Log in" }}
+                  />
+                  <Stack.Screen
+                    name="register"
+                    options={{ presentation: "modal", title: "Create account" }}
+                  />
+                </Stack>
+              </ToastProvider>
             </StripeProvider>
           </CartProvider>
         </SellerAuthProvider>

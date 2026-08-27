@@ -10,7 +10,7 @@ describe("cart-client", () => {
   beforeEach(() => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ cart: { id: "cart_1", items: [] } }),
+      text: () => Promise.resolve(JSON.stringify({ cart: { id: "cart_1", items: [] } })),
     });
   });
 
@@ -72,7 +72,21 @@ describe("cart-client", () => {
   });
 
   test("throws when the response is not ok", async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 409 });
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 409, text: () => Promise.resolve("") });
     await expect(getCart("cart_1", null)).rejects.toThrow("Cart request failed (409)");
+  });
+
+  test("throws with the server's specific message when the response body has one", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({ message: "Your bag has USD items in it. Remove them before adding ETB items." })
+        ),
+    });
+    await expect(getCart("cart_1", null)).rejects.toThrow(
+      "Your bag has USD items in it. Remove them before adding ETB items."
+    );
   });
 });
