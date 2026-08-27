@@ -19,7 +19,7 @@ const BUCKETS: { key: keyof SellerBalance; label: string }[] = [
 
 export default function SellFinanceScreen() {
   const { seller } = useSellerAuth();
-  const currencyCode = seller?.seller.currency_code ?? "usd";
+  const currencyCode = seller?.seller.currency_code ?? "etb";
   const [balance, setBalance] = useState<SellerBalance | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);

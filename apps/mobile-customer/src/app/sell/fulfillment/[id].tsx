@@ -17,7 +17,7 @@ import { getSellerSessionToken } from "@/features/seller-auth/services/seller-to
 
 export default function SellFulfillmentDetailScreen() {
   const { seller } = useSellerAuth();
-  const currencyCode = seller?.seller.currency_code ?? "usd";
+  const currencyCode = seller?.seller.currency_code ?? "etb";
   const { id } = useLocalSearchParams<{ id: string }>();
   const [order, setOrder] = useState<FulfillmentOrder | null | undefined>(undefined);
   const [updating, setUpdating] = useState(false);

@@ -32,7 +32,7 @@ const CURRENCY_SYMBOL: Record<string, string> = { usd: "$", etb: "Br" };
 
 export default function SellProductDetailScreen() {
   const { seller } = useSellerAuth();
-  const currencySymbol = CURRENCY_SYMBOL[seller?.seller.currency_code ?? "usd"] ?? "$";
+  const currencySymbol = CURRENCY_SYMBOL[seller?.seller.currency_code ?? "etb"] ?? "Br";
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<SellerProductDetail | null | undefined>(undefined);
   const [categories, setCategories] = useState<CategoryOption[] | null>(null);

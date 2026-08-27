@@ -20,7 +20,7 @@ const CURRENCY_SYMBOL: Record<string, string> = { usd: "$", etb: "Br" };
 
 export default function SellNewProductScreen() {
   const { seller } = useSellerAuth();
-  const currencySymbol = CURRENCY_SYMBOL[seller?.seller.currency_code ?? "usd"] ?? "$";
+  const currencySymbol = CURRENCY_SYMBOL[seller?.seller.currency_code ?? "etb"] ?? "Br";
   const [categories, setCategories] = useState<CategoryOption[] | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
