@@ -1,6 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
+import { ThemedIcon } from "@bawi/mobile-ui";
 import { useMemo, useState } from "react";
-import { FlatList, Modal, Pressable, SafeAreaView, Text, TextInput, View } from "react-native";
+import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { COUNTRIES, type Country } from "../data/countries";
 
@@ -37,12 +38,12 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
         onPress={() => setOpen(true)}
         className={`h-12 flex-row items-center justify-between rounded-md border px-3 ${
           error ? "border-danger" : "border-ink-200"
-        } bg-white`}
+        } bg-surface`}
       >
         <Text className={selected ? "text-body text-ink-950" : "text-body text-ink-400"}>
           {selected ? selected.name : "Select a country"}
         </Text>
-        <Ionicons name="chevron-down" size={18} color="#8C8175" />
+        <ThemedIcon name="chevron-down" size={18} tone="ink400" />
       </Pressable>
       {error ? <Text className="text-body-sm text-danger">{error}</Text> : null}
 
@@ -51,7 +52,7 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
           <View className="flex-row items-center justify-between border-b border-ink-100 px-4 py-3">
             <Text className="text-h2 text-ink-950">Select country</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setOpen(false)} className="p-1">
-              <Ionicons name="close" size={24} color="#151210" />
+              <ThemedIcon name="close" size={24} />
             </Pressable>
           </View>
           <TextInput
@@ -61,7 +62,7 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
             placeholderTextColor="#8C8175"
             autoCapitalize="none"
             autoFocus
-            className="m-4 h-12 rounded-md border border-ink-200 bg-white px-3 text-body text-ink-950"
+            className="m-4 h-12 rounded-md border border-ink-200 bg-surface px-3 text-body text-ink-950"
           />
           <FlatList
             data={filtered}
@@ -83,7 +84,7 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
                 className="flex-row items-center justify-between px-4 py-3 active:bg-ink-100"
               >
                 <Text className="text-body text-ink-950">{item.name}</Text>
-                {item.code === selectedCode ? <Ionicons name="checkmark" size={20} color="#151210" /> : null}
+                {item.code === selectedCode ? <ThemedIcon name="checkmark" size={20} /> : null}
               </Pressable>
             )}
           />

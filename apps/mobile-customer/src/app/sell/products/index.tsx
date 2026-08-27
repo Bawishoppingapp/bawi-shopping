@@ -1,8 +1,9 @@
-import { Button, StatusBadge } from "@bawi/mobile-ui";
+import { Button, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { type SellerProductSummary, listMyProducts } from "@/features/seller-products/services/seller-products-client";
 import { productStatusBadge } from "@/features/seller-products/utils/status";
@@ -37,7 +38,7 @@ export default function SellProductsScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <Stack.Screen options={{ headerShown: true, title: "Products" }} />
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

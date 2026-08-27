@@ -10,4 +10,55 @@
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
+
+  /* Bawi brand tokens, as space-separated RGB triplets (required for
+     Tailwind's `rgb(var(--x) / <alpha-value>)` opacity syntax - see
+     tailwind-preset.js). Mirrors packages/mobile-ui/src/theme.ts's
+     light values exactly - keep the two in sync by hand, same
+     no-build-step convention as everywhere else color tokens are
+     duplicated in this monorepo. */
+  --color-ink-950: 21 18 16;
+  --color-ink-800: 49 43 38;
+  --color-ink-700: 74 66 59;
+  --color-ink-500: 111 101 91;
+  --color-ink-400: 140 129 117;
+  --color-ink-200: 227 220 209;
+  --color-ink-100: 239 233 224;
+  --color-paper: 251 248 244;
+  --color-surface: 255 255 255;
+  --color-gold-600: 184 134 59;
+  --color-gold-500: 199 154 84;
+  --color-gold-100: 245 233 211;
+  --color-success: 47 122 77;
+  --color-warning: 194 65 12;
+  --color-danger: 179 38 30;
+  --color-info: 59 91 219;
+}
+
+/* Dark mode follows the device's system setting (no manual toggle) -
+   same warm-neutral "quiet luxury" identity as light mode, just
+   inverted: near-black background, near-white text, borders/fills
+   darkened instead of lightened. Semantic colors (success/warning/
+   danger/info) are brightened slightly so they keep enough contrast
+   against a dark background. Gold stays close to its light-mode value -
+   it already reads well on both. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink-950: 243 238 230;
+    --color-ink-800: 216 208 195;
+    --color-ink-700: 184 174 158;
+    --color-ink-500: 143 133 119;
+    --color-ink-400: 110 100 89;
+    --color-ink-200: 58 53 46;
+    --color-ink-100: 42 38 32;
+    --color-paper: 23 20 15;
+    --color-surface: 33 29 23;
+    --color-gold-600: 211 161 91;
+    --color-gold-500: 220 174 112;
+    --color-gold-100: 59 46 26;
+    --color-success: 76 175 116;
+    --color-warning: 228 105 30;
+    --color-danger: 214 69 59;
+    --color-info: 108 134 232;
+  }
 }

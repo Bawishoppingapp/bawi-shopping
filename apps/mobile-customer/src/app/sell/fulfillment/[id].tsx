@@ -1,7 +1,7 @@
-import { Button, StatusBadge } from "@bawi/mobile-ui";
+import { Button, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 import { formatMoney } from "@/features/discovery/utils/format-price";
 import {
@@ -67,7 +67,7 @@ export default function SellFulfillmentDetailScreen() {
   if (order === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </View>
     );
   }

@@ -1,5 +1,5 @@
 import { LOCALES, LOCALE_NAMES, type Locale } from "@bawi/i18n/locales";
-import { Ionicons } from "@expo/vector-icons";
+import { ThemedIcon } from "@bawi/mobile-ui";
 import { Pressable, Text, View } from "react-native";
 
 interface LanguageListProps {
@@ -22,7 +22,7 @@ export function LanguageList({ selected, onSelect }: LanguageListProps) {
           className="flex-row items-center justify-between rounded-md px-3 py-3 active:bg-ink-100"
         >
           <Text className="text-body text-ink-950">{LOCALE_NAMES[code]}</Text>
-          {code === selected ? <Ionicons name="checkmark" size={20} color="#151210" /> : null}
+          {code === selected ? <ThemedIcon name="checkmark" size={20} /> : null}
         </Pressable>
       ))}
     </View>

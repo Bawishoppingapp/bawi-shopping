@@ -20,7 +20,7 @@ export function CategoryPicker({ categories, selectedId, onSelect, error }: Cate
             accessibilityRole="button"
             onPress={() => onSelect(category.id)}
             className={`rounded-full border px-3 py-1.5 ${
-              selectedId === category.id ? "border-ink-950 bg-ink-950" : "border-ink-200"
+              selectedId === category.id ? "border-ink-solid bg-ink-solid" : "border-ink-200"
             }`}
           >
             <Text className={`text-body-sm ${selectedId === category.id ? "text-white" : "text-ink-700"}`}>

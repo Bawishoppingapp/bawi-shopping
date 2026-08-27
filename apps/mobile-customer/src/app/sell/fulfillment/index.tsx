@@ -1,7 +1,8 @@
-import { StatusBadge } from "@bawi/mobile-ui";
+import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { formatMoney } from "@/features/discovery/utils/format-price";
 import { type FulfillmentOrder, listFulfillmentOrders } from "@/features/fulfillment/services/fulfillment-client";
@@ -40,7 +41,7 @@ export default function SellFulfillmentScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <Stack.Screen options={{ headerShown: true, title: "Fulfillment" }} />
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

@@ -92,7 +92,7 @@ function ToastView({
       <Pressable
         accessibilityRole={options?.onPress ? "button" : "text"}
         onPress={options?.onPress}
-        className="flex-row items-center justify-between gap-3 rounded-lg bg-ink-950 px-4 py-3.5"
+        className="flex-row items-center justify-between gap-3 rounded-lg bg-ink-solid px-4 py-3.5"
       >
         <Text className="flex-1 text-body-sm text-white">{message}</Text>
         {options?.actionLabel ? (

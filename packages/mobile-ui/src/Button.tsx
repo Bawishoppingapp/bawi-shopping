@@ -1,6 +1,8 @@
 import * as Haptics from "expo-haptics";
 import { ActivityIndicator, Pressable, Text, type PressableProps } from "react-native";
 
+import { useThemeColors } from "./use-theme-colors";
+
 type Variant = "primary" | "secondary" | "ghost" | "destructive";
 type Size = "md" | "lg";
 
@@ -12,7 +14,7 @@ interface ButtonProps extends Omit<PressableProps, "children"> {
 }
 
 const containerByVariant: Record<Variant, string> = {
-  primary: "bg-ink-950 active:bg-ink-800",
+  primary: "bg-ink-solid active:opacity-90",
   secondary: "bg-transparent border border-ink-200 active:bg-ink-100",
   ghost: "bg-transparent active:bg-ink-100",
   destructive: "bg-danger active:bg-danger/90",
@@ -46,6 +48,7 @@ export function Button({
   onPress,
   ...props
 }: ButtonProps) {
+  const themeColors = useThemeColors();
   const isDisabled = disabled || loading;
   return (
     <Pressable
@@ -64,7 +67,7 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "secondary" || variant === "ghost" ? "#151210" : "#FFFFFF"} />
+        <ActivityIndicator color={variant === "secondary" || variant === "ghost" ? themeColors.ink950 : "#FFFFFF"} />
       ) : (
         <Text className={`font-medium ${textByVariant[variant]} ${sizeClasses[size].text}`}>{children}</Text>
       )}

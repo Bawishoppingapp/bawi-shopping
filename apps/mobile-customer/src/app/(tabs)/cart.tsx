@@ -1,10 +1,11 @@
-import { Button, ProductCard } from "@bawi/mobile-ui";
+import { Button, ProductCard, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
@@ -148,7 +149,7 @@ export default function CartScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

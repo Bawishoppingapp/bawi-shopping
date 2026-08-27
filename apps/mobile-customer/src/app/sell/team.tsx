@@ -1,7 +1,8 @@
-import { Button, Input, StatusBadge } from "@bawi/mobile-ui";
+import { Button, Input, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
@@ -22,7 +23,7 @@ function RoleChip({ label, selected, onPress }: { label: string; selected: boole
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      className={`rounded-full border px-3 py-2 ${selected ? "border-ink-950 bg-ink-950" : "border-ink-200 bg-white"}`}
+      className={`rounded-full border px-3 py-2 ${selected ? "border-ink-solid bg-ink-solid" : "border-ink-200 bg-surface"}`}
     >
       <Text className={`text-body-sm ${selected ? "text-white" : "text-ink-950"}`}>{label}</Text>
     </Pressable>
@@ -104,7 +105,7 @@ export default function TeamScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <Stack.Screen options={{ headerShown: true, title: "Team" }} />
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

@@ -1,8 +1,9 @@
-import { Button, StatusBadge } from "@bawi/mobile-ui";
+import { Button, StatusBadge, useThemeColors } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import {
@@ -15,6 +16,7 @@ import { countryName } from "@/features/addresses/data/countries";
 
 export default function AddressesScreen() {
   const tabBarHeight = useBottomTabBarHeight();
+  const themeColors = useThemeColors();
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function AddressesScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <Stack.Screen options={{ headerShown: true, title: "Addresses" }} />
-        <ActivityIndicator color="#151210" />
+        <ActivityIndicator color={themeColors.ink950} />
       </SafeAreaView>
     );
   }

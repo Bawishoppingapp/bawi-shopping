@@ -1,6 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useState, type Ref } from "react";
 import { Pressable, Text, TextInput, View, type TextInputProps } from "react-native";
+
+import { ThemedIcon } from "./ThemedIcon";
 
 interface InputProps extends TextInputProps {
   label: string;
@@ -66,7 +67,7 @@ export function Input({
             className="absolute right-3 h-6 w-6 items-center justify-center"
             hitSlop={8}
           >
-            <Ionicons name={revealed ? "eye-off-outline" : "eye-outline"} size={20} color="#8C8175" />
+            <ThemedIcon name={revealed ? "eye-off-outline" : "eye-outline"} size={20} tone="ink400" />
           </Pressable>
         ) : null}
       </View>

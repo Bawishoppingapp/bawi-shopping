@@ -1,5 +1,4 @@
-import { Button, Input } from "@bawi/mobile-ui";
-import { Ionicons } from "@expo/vector-icons";
+import { Button, Input, ThemedIcon } from "@bawi/mobile-ui";
 import { Stack, router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
@@ -24,7 +23,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      className={`rounded-full border px-3 py-2 ${selected ? "border-ink-950 bg-ink-950" : "border-ink-200 bg-white"}`}
+      className={`rounded-full border px-3 py-2 ${selected ? "border-ink-solid bg-ink-solid" : "border-ink-200 bg-surface"}`}
     >
       <Text className={`text-body-sm ${selected ? "text-white" : "text-ink-950"}`}>{label}</Text>
     </Pressable>
@@ -223,7 +222,7 @@ export default function SellApplyScreen() {
           onPress={() => setAgreedToTerms((v) => !v)}
           className="flex-row items-start gap-2 py-2"
         >
-          <Ionicons name={agreedToTerms ? "checkbox" : "square-outline"} size={22} color="#151210" />
+          <ThemedIcon name={agreedToTerms ? "checkbox" : "square-outline"} size={22} />
           <Text className="flex-1 text-body-sm text-ink-700">
             I agree to Bawi&apos;s seller terms and confirm the information above is accurate.
           </Text>

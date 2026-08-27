@@ -1,8 +1,8 @@
-import { StatusBadge } from "@bawi/mobile-ui";
+import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { formatMoney } from "@/features/discovery/utils/format-price";
@@ -28,7 +28,7 @@ export default function OrderDetailScreen() {
   if (order === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </View>
     );
   }

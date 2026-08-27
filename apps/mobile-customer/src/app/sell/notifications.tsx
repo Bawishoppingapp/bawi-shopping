@@ -1,6 +1,8 @@
+import { ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { notificationEventBadge } from "@/features/notifications/utils/event-labels";
 import {
@@ -47,7 +49,7 @@ export default function SellNotificationsScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <Stack.Screen options={{ headerShown: true, title: "Notifications" }} />
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }
@@ -82,7 +84,7 @@ export default function SellNotificationsScreen() {
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-2">
-                  {unread ? <View className="h-2 w-2 rounded-full bg-ink-950" /> : null}
+                  {unread ? <View className="h-2 w-2 rounded-full bg-ink-solid" /> : null}
                   <Text className={`text-body-sm ${unread ? "font-semibold" : "font-medium"} text-ink-950`}>
                     {item.subject}
                   </Text>

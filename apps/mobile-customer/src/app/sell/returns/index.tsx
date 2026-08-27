@@ -1,7 +1,8 @@
-import { StatusBadge } from "@bawi/mobile-ui";
+import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { type ReturnRequest, listReturnRequests } from "@/features/returns/services/returns-client";
 import { returnReasonLabel, returnStatusBadge } from "@/features/returns/utils/status";
@@ -36,7 +37,7 @@ export default function SellReturnsScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <Stack.Screen options={{ headerShown: true, title: "Returns" }} />
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

@@ -1,6 +1,7 @@
 import { Button } from "@bawi/mobile-ui";
 import { router } from "expo-router";
-import { Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 

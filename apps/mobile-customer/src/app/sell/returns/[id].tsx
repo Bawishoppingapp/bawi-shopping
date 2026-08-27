@@ -1,7 +1,7 @@
-import { Button, Input, StatusBadge } from "@bawi/mobile-ui";
+import { Button, Input, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 import {
   type ReturnRequest,
@@ -71,7 +71,7 @@ export default function SellReturnDetailScreen() {
   if (returnRequest === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </View>
     );
   }

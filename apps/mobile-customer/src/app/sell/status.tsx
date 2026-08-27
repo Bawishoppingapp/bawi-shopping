@@ -1,7 +1,8 @@
-import { Button, StatusBadge } from "@bawi/mobile-ui";
+import { Button, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   clearPendingApplicationId,
@@ -73,7 +74,7 @@ export default function SellStatusScreen() {
   if (application === undefined || application === null) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

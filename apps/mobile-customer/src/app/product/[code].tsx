@@ -1,11 +1,9 @@
-import { Button, ProductCard } from "@bawi/mobile-ui";
-import { Ionicons } from "@expo/vector-icons";
+import { Button, ProductCard, ThemedActivityIndicator, ThemedIcon } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
@@ -170,7 +168,7 @@ export default function ProductDetailScreen() {
   if (product === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </View>
     );
   }
@@ -280,7 +278,7 @@ export default function ProductDetailScreen() {
               disabled={savingWishlist}
               className="p-2"
             >
-              <Ionicons name={saved ? "heart" : "heart-outline"} size={26} color="#151210" />
+              <ThemedIcon name={saved ? "heart" : "heart-outline"} size={26} />
             </Pressable>
           </View>
 
@@ -294,7 +292,7 @@ export default function ProductDetailScreen() {
                     onPress={() => setSelectedColor(color)}
                     className={`rounded-full border px-3 py-1.5 text-body-sm ${
                       selectedColor === color
-                        ? "border-ink-950 bg-ink-950 text-white"
+                        ? "border-ink-solid bg-ink-solid text-white"
                         : "border-ink-200 text-ink-700"
                     }`}
                   >
@@ -315,7 +313,7 @@ export default function ProductDetailScreen() {
                     onPress={() => setSelectedSize(size)}
                     className={`rounded-full border px-3 py-1.5 text-body-sm ${
                       selectedSize === size
-                        ? "border-ink-950 bg-ink-950 text-white"
+                        ? "border-ink-solid bg-ink-solid text-white"
                         : "border-ink-200 text-ink-700"
                     }`}
                   >
@@ -348,7 +346,7 @@ export default function ProductDetailScreen() {
           {shippingPolicy ? (
             <View className="gap-2 rounded-md border border-ink-100 p-3">
               <View className="flex-row items-center gap-2">
-                <Ionicons name="cube-outline" size={18} color="#4A423B" />
+                <ThemedIcon name="cube-outline" size={18} tone="ink700" />
                 <Text className="flex-1 text-body-sm text-ink-700">
                   {price >= shippingPolicy.freeShippingThresholdCents
                     ? "This item qualifies for free shipping"
@@ -356,7 +354,7 @@ export default function ProductDetailScreen() {
                 </Text>
               </View>
               <View className="flex-row items-center gap-2">
-                <Ionicons name="return-up-back-outline" size={18} color="#4A423B" />
+                <ThemedIcon name="return-up-back-outline" size={18} tone="ink700" />
                 <Text className="flex-1 text-body-sm text-ink-700">
                   Returns accepted within {shippingPolicy.returnWindowDays} days of delivery
                 </Text>

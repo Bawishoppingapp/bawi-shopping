@@ -1,9 +1,9 @@
-import { ProductCard, ProductCardSkeleton } from "@bawi/mobile-ui";
-import { Ionicons } from "@expo/vector-icons";
+import { ProductCard, ProductCardSkeleton, ThemedIcon } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
@@ -117,7 +117,7 @@ export default function HomeScreen() {
                     onPress={() => router.push("/(tabs)/account/language")}
                     className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
                   >
-                    <Ionicons name="language-outline" size={20} color="#151210" />
+                    <ThemedIcon name="language-outline" size={20} />
                   </Pressable>
                   {customer ? (
                     <Pressable
@@ -127,7 +127,7 @@ export default function HomeScreen() {
                       className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
                     >
                       <View>
-                        <Ionicons name="notifications-outline" size={20} color="#151210" />
+                        <ThemedIcon name="notifications-outline" size={20} />
                         {unreadCount > 0 ? (
                           <View className="absolute -right-1.5 -top-1.5 h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1">
                             <Text className="text-[10px] font-medium text-white">
@@ -144,7 +144,7 @@ export default function HomeScreen() {
                     onPress={() => router.push("/sell")}
                     className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
                   >
-                    <Ionicons name="storefront-outline" size={20} color="#151210" />
+                    <ThemedIcon name="storefront-outline" size={20} />
                   </Pressable>
                 </View>
               </View>
@@ -160,7 +160,7 @@ export default function HomeScreen() {
                     <Pressable
                       accessibilityRole="button"
                       onPress={() => router.push({ pathname: "/(tabs)/search", params: { category: item.id, categoryName: item.name } })}
-                      className="rounded-full bg-white px-4 py-2.5 shadow-sm active:bg-ink-100"
+                      className="rounded-full bg-surface px-4 py-2.5 shadow-sm active:bg-ink-100"
                       style={{
                         shadowColor: "#151210",
                         shadowOpacity: 0.08,

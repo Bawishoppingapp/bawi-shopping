@@ -1,8 +1,7 @@
-import { Button, Input, StatusBadge } from "@bawi/mobile-ui";
+import { Button, Input, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -131,7 +130,7 @@ export default function SellProductDetailScreen() {
   if (detail === undefined || categories === null) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </View>
     );
   }

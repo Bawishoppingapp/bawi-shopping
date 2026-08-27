@@ -1,10 +1,10 @@
-import { ProductCard, ProductCardSkeleton } from "@bawi/mobile-ui";
-import { Ionicons } from "@expo/vector-icons";
+import { ProductCard, ProductCardSkeleton, ThemedActivityIndicator, ThemedIcon } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   type CategoryNode,
@@ -28,7 +28,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
       accessibilityRole="button"
       onPress={onPress}
       className={`rounded-full border px-3 py-1.5 ${
-        selected ? "border-ink-950 bg-ink-950" : "border-ink-200 bg-white"
+        selected ? "border-ink-solid bg-ink-solid" : "border-ink-200 bg-surface"
       }`}
     >
       <Text className={`text-body-sm ${selected ? "text-white" : "text-ink-700"}`}>{label}</Text>
@@ -157,8 +157,8 @@ export default function SearchScreen() {
     <SafeAreaView className="flex-1 bg-paper">
       <View className="gap-3 px-4 pb-3 pt-2">
         {params.categoryName ? <Text className="text-h2 text-ink-950">{params.categoryName}</Text> : null}
-        <View className="h-12 flex-row items-center rounded-md border border-ink-200 bg-white px-3">
-          <Ionicons name="search" size={18} color="#8C8175" />
+        <View className="h-12 flex-row items-center rounded-md border border-ink-200 bg-surface px-3">
+          <ThemedIcon name="search" size={18} tone="ink400" />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -170,7 +170,7 @@ export default function SearchScreen() {
           />
           {query.length > 0 ? (
             <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery("")}>
-              <Ionicons name="close-circle" size={18} color="#8C8175" />
+              <ThemedIcon name="close-circle" size={18} tone="ink400" />
             </Pressable>
           ) : null}
         </View>
@@ -223,7 +223,7 @@ export default function SearchScreen() {
                     key={c.id}
                     accessibilityRole="button"
                     onPress={() => router.setParams({ category: c.id, categoryName: c.name })}
-                    className="rounded-full border border-ink-200 bg-white px-4 py-2 active:bg-ink-100"
+                    className="rounded-full border border-ink-200 bg-surface px-4 py-2 active:bg-ink-100"
                   >
                     <Text className="text-body-sm text-ink-800">{c.name}</Text>
                   </Pressable>
@@ -276,12 +276,12 @@ export default function SearchScreen() {
           onEndReached={onLoadMore}
           ListEmptyComponent={
             <View className="items-center gap-2 px-6 pt-16">
-              <Ionicons name="search-outline" size={32} color="#8C8175" />
+              <ThemedIcon name="search-outline" size={32} tone="ink400" />
               <Text className="text-h3 text-ink-950">{t("search.noResults")}</Text>
               <Text className="text-center text-body-sm text-ink-500">{t("search.noResultsHint")}</Text>
             </View>
           }
-          ListFooterComponent={loadingMore ? <ActivityIndicator className="py-4" color="#151210" /> : null}
+          ListFooterComponent={loadingMore ? <ThemedActivityIndicator className="py-4" /> : null}
           renderItem={({ item }) => (
             <View className="flex-1 px-2 pb-4">
               <ProductCard product={toProductCardData(item)} onPress={() => goToProduct(item.productCode)} />

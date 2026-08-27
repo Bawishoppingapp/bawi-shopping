@@ -13,7 +13,7 @@ interface CardProps extends ViewProps {
 export function Card({ padded = true, className = "", children, ...props }: CardProps) {
   return (
     <View
-      className={`rounded-lg border border-ink-200 bg-white ${padded ? "p-4" : ""} ${className}`}
+      className={`rounded-lg border border-ink-200 bg-surface ${padded ? "p-4" : ""} ${className}`}
       {...props}
     >
       {children}

@@ -1,8 +1,9 @@
-import { Button, StatusBadge } from "@bawi/mobile-ui";
+import { Button, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { router, useFocusEffect } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { listFulfillmentOrders } from "@/features/fulfillment/services/fulfillment-client";
 import { listReturnRequests } from "@/features/returns/services/returns-client";
@@ -163,7 +164,7 @@ export default function SellDashboardScreen() {
           >
             <Text className="text-body text-ink-800">Awaiting preparation</Text>
             {awaitingPreparation === null ? (
-              <ActivityIndicator color="#151210" />
+              <ThemedActivityIndicator />
             ) : (
               <StatusBadge
                 label={String(awaitingPreparation)}
@@ -179,7 +180,7 @@ export default function SellDashboardScreen() {
           >
             <Text className="text-body text-ink-800">Return requests to review</Text>
             {pendingReturns === null ? (
-              <ActivityIndicator color="#151210" />
+              <ThemedActivityIndicator />
             ) : (
               <StatusBadge label={String(pendingReturns)} tone={pendingReturns > 0 ? "warning" : "neutral"} />
             )}

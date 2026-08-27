@@ -1,5 +1,4 @@
-import { Button, Input } from "@bawi/mobile-ui";
-import { Ionicons } from "@expo/vector-icons";
+import { Button, Input, ThemedIcon } from "@bawi/mobile-ui";
 import { Stack, router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
@@ -169,7 +168,7 @@ export default function NewAddressScreen() {
           onPress={() => setIsDefaultShipping((v) => !v)}
           className="flex-row items-center gap-2 py-2"
         >
-          <Ionicons name={isDefaultShipping ? "checkbox" : "square-outline"} size={22} color="#151210" />
+          <ThemedIcon name={isDefaultShipping ? "checkbox" : "square-outline"} size={22} />
           <Text className="text-body-sm text-ink-700">Set as default shipping address</Text>
         </Pressable>
 

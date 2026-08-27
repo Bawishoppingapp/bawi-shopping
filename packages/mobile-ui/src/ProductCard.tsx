@@ -1,6 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Pressable, Text, View, type PressableProps } from "react-native";
+
+import { ThemedIcon } from "./ThemedIcon";
 
 export interface ProductCardData {
   id: string;
@@ -45,7 +46,7 @@ export function ProductCard({ product, className = "", ...props }: ProductCardPr
           />
         ) : (
           <View className="h-full w-full items-center justify-center gap-1.5">
-            <Ionicons name="image-outline" size={22} color="#B8AD9F" />
+            <ThemedIcon name="image-outline" size={22} tone="ink400" />
             <Text className="text-caption text-ink-400">No image yet</Text>
           </View>
         )}

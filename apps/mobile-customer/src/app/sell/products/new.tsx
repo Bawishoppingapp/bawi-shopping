@@ -1,7 +1,7 @@
-import { Button, Input } from "@bawi/mobile-ui";
+import { Button, Input, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 
 import { CategoryPicker } from "@/features/seller-products/components/category-picker";
 import { VariantEditor } from "@/features/seller-products/components/variant-editor";
@@ -96,7 +96,7 @@ export default function SellNewProductScreen() {
         />
 
         {categories === null ? (
-          <ActivityIndicator color="#151210" />
+          <ThemedActivityIndicator />
         ) : (
           <CategoryPicker
             categories={categories}

@@ -1,5 +1,6 @@
 import { Stack, router } from "expo-router";
-import { SafeAreaView, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LanguageList } from "@/features/i18n/components/language-list";
 import { useLocale, useSetLocale } from "@/features/i18n/hooks/use-locale";

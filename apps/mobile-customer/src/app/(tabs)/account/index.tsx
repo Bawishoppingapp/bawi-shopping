@@ -1,8 +1,9 @@
-import { Button, Card } from "@bawi/mobile-ui";
+import { Button, Card, ThemedActivityIndicator, ThemedIcon } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router } from "expo-router";
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { LOCALE_NAMES } from "@bawi/i18n/locales";
@@ -35,10 +36,10 @@ function AccountRow({
       onPress={onPress}
       className="flex-row items-center gap-3 border-b border-ink-100 px-4 py-3.5 active:bg-ink-100"
     >
-      <Ionicons name={icon} size={20} color="#4A423B" />
+      <ThemedIcon name={icon} size={20} tone="ink700" />
       <Text className="flex-1 text-body text-ink-950">{label}</Text>
       {value ? <Text className="text-body-sm text-ink-500">{value}</Text> : null}
-      <Ionicons name="chevron-forward" size={18} color="#8C8175" />
+      <ThemedIcon name="chevron-forward" size={18} tone="ink400" />
     </Pressable>
   );
 }
@@ -78,7 +79,7 @@ export default function AccountScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

@@ -1,7 +1,8 @@
-import { StatusBadge } from "@bawi/mobile-ui";
+import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, RefreshControl, SafeAreaView, ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { formatMoney } from "@/features/discovery/utils/format-price";
 import { type Payout, type SellerBalance, getBalance, listPayouts } from "@/features/finance/services/finance-client";
@@ -49,7 +50,7 @@ export default function SellFinanceScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <Stack.Screen options={{ headerShown: true, title: "Finance" }} />
-        <ActivityIndicator color="#151210" />
+        <ThemedActivityIndicator />
       </SafeAreaView>
     );
   }

@@ -1,6 +1,7 @@
+import { ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
-import { ActivityIndicator, SafeAreaView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getPendingApplicationId } from "@/features/seller-application/services/pending-application-storage";
 import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
@@ -33,7 +34,7 @@ export default function SellGatekeeperScreen() {
 
   return (
     <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-      <ActivityIndicator color="#151210" />
+      <ThemedActivityIndicator />
     </SafeAreaView>
   );
 }

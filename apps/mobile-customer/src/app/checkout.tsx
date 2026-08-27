@@ -1,8 +1,8 @@
 import { useStripe } from "@stripe/stripe-react-native";
-import { Button, Input } from "@bawi/mobile-ui";
+import { Button, Input, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
@@ -287,7 +287,7 @@ export default function CheckoutScreen() {
 
         {phase === "starting" ? (
           <View className="items-center py-4">
-            <ActivityIndicator color="#151210" />
+            <ThemedActivityIndicator />
           </View>
         ) : null}
       </ScrollView>

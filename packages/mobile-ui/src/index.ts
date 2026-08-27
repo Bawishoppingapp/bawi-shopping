@@ -5,3 +5,6 @@ export { StatusBadge } from "./StatusBadge";
 export { ProductCard, type ProductCardData } from "./ProductCard";
 export { ProductCardSkeleton } from "./ProductCardSkeleton";
 export { colors, radius, fontSize, type IconTone } from "./theme";
+export { useThemeColors, type ThemeColors } from "./use-theme-colors";
+export { ThemedIcon } from "./ThemedIcon";
+export { ThemedActivityIndicator } from "./ThemedActivityIndicator";

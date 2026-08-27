@@ -1,7 +1,8 @@
+import { useThemeColors } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { StyleSheet } from "react-native";
+import { StyleSheet, useColorScheme } from "react-native";
 
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
@@ -9,21 +10,24 @@ const ICON_SIZE = 24;
 
 export default function TabsLayout() {
   const t = useTranslations();
+  const themeColors = useThemeColors();
+  const scheme = useColorScheme();
+  const isDark = scheme === "dark";
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#151210",
-        tabBarInactiveTintColor: "#8C8175",
+        tabBarActiveTintColor: themeColors.ink950,
+        tabBarInactiveTintColor: themeColors.ink400,
         // Floating/translucent tab bar - the bar sits above scrolling
         // content instead of pushing it up, so each tab screen adds its
         // own bottom inset via useBottomTabBarHeight() to keep content
         // clear of the glass. Border replaces the old opaque
         // backgroundColor's implicit separation from content behind it.
-        tabBarStyle: { position: "absolute", borderTopColor: "#E3DCD1" },
+        tabBarStyle: { position: "absolute", borderTopColor: isDark ? "#3A352E" : "#E3DCD1" },
         tabBarBackground: () => (
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
         ),
       }}
     >
