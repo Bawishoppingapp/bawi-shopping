@@ -1,7 +1,6 @@
 import { ProductCard, ProductCardSkeleton } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, SafeAreaView, Text, View } from "react-native";
@@ -94,7 +93,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <FlashList
+      <FlatList
         data={newArrivals}
         keyExtractor={(item) => item.productCode}
         numColumns={2}
