@@ -101,69 +101,83 @@ export default function HomeScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         ListHeaderComponent={
-          <View className="gap-6 pb-2">
-            <View className="flex-row items-center justify-between px-4 pt-2">
-              <View className="gap-1">
-                <Text className="text-display text-ink-950">
-                  {customer?.first_name ? `Welcome, ${customer.first_name}` : "Bawi"}
-                </Text>
-                <Text className="text-body text-ink-500">Fashion, from independent brands.</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Change language"
-                  onPress={() => router.push("/(tabs)/account/language")}
-                  className="p-2"
-                >
-                  <Ionicons name="language-outline" size={24} color="#151210" />
-                </Pressable>
-                {customer ? (
+          <View className="gap-7 pb-4">
+            <View className="gap-5 border-b border-ink-100 px-4 pb-5 pt-3">
+              <View className="flex-row items-center justify-between">
+                <View className="gap-1">
+                  <Text className="text-display text-ink-950">
+                    {customer?.first_name ? `Welcome, ${customer.first_name}` : "Bawi"}
+                  </Text>
+                  <Text className="text-body text-ink-500">Fashion, from independent brands.</Text>
+                </View>
+                <View className="flex-row items-center gap-1">
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-                    onPress={() => router.push("/(tabs)/account/notifications")}
-                    className="p-2"
+                    accessibilityLabel="Change language"
+                    onPress={() => router.push("/(tabs)/account/language")}
+                    className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
                   >
-                    <View>
-                      <Ionicons name="notifications-outline" size={24} color="#151210" />
-                      {unreadCount > 0 ? (
-                        <View className="absolute -right-0.5 -top-0.5 h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1">
-                          <Text className="text-[10px] font-medium text-white">
-                            {unreadCount > 9 ? "9+" : unreadCount}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
+                    <Ionicons name="language-outline" size={20} color="#151210" />
                   </Pressable>
-                ) : null}
-                <Pressable accessibilityRole="button" accessibilityLabel="Sell on Bawi" onPress={() => router.push("/sell")} className="p-2">
-                  <Ionicons name="storefront-outline" size={24} color="#151210" />
-                </Pressable>
+                  {customer ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+                      onPress={() => router.push("/(tabs)/account/notifications")}
+                      className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
+                    >
+                      <View>
+                        <Ionicons name="notifications-outline" size={20} color="#151210" />
+                        {unreadCount > 0 ? (
+                          <View className="absolute -right-1.5 -top-1.5 h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1">
+                            <Text className="text-[10px] font-medium text-white">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Sell on Bawi"
+                    onPress={() => router.push("/sell")}
+                    className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
+                  >
+                    <Ionicons name="storefront-outline" size={20} color="#151210" />
+                  </Pressable>
+                </View>
               </View>
+
+              {categories.length > 0 ? (
+                <FlatList
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  data={categories}
+                  keyExtractor={(c) => c.id}
+                  contentContainerClassName="gap-2.5"
+                  renderItem={({ item }) => (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => router.push({ pathname: "/(tabs)/search", params: { category: item.id, categoryName: item.name } })}
+                      className="rounded-full bg-white px-4 py-2.5 shadow-sm active:bg-ink-100"
+                      style={{
+                        shadowColor: "#151210",
+                        shadowOpacity: 0.08,
+                        shadowRadius: 6,
+                        shadowOffset: { width: 0, height: 2 },
+                        elevation: 2,
+                      }}
+                    >
+                      <Text className="text-body-sm font-medium text-ink-800">{item.name}</Text>
+                    </Pressable>
+                  )}
+                />
+              ) : null}
             </View>
 
-            {categories.length > 0 ? (
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                data={categories}
-                keyExtractor={(c) => c.id}
-                contentContainerClassName="gap-2 px-4"
-                renderItem={({ item }) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => router.push({ pathname: "/(tabs)/search", params: { category: item.id, categoryName: item.name } })}
-                    className="rounded-full border border-ink-200 bg-white px-4 py-2 active:bg-ink-100"
-                  >
-                    <Text className="text-body-sm text-ink-800">{item.name}</Text>
-                  </Pressable>
-                )}
-              />
-            ) : null}
-
             {recentlyViewed.length > 0 ? (
-              <View className="gap-2">
+              <View className="gap-3">
                 <Text className="px-4 text-h3 text-ink-950">Recently viewed</Text>
                 <FlatList
                   horizontal
@@ -172,7 +186,7 @@ export default function HomeScreen() {
                   keyExtractor={(item) => item.productCode}
                   contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}
                   renderItem={({ item }) => (
-                    <View style={{ width: 120 }}>
+                    <View style={{ width: 128 }}>
                       <ProductCard
                         product={toProductCardData(item)}
                         onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
@@ -183,7 +197,12 @@ export default function HomeScreen() {
               </View>
             ) : null}
 
-            <Text className="px-4 text-h3 text-ink-950">{t("home.newArrivals")}</Text>
+            <View className="flex-row items-center justify-between px-4">
+              <Text className="text-h3 text-ink-950">{t("home.newArrivals")}</Text>
+              <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/search")}>
+                <Text className="text-body-sm font-medium text-gold-600">See all</Text>
+              </Pressable>
+            </View>
 
             {error ? (
               <View className="px-4">

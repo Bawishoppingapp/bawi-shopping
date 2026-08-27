@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Pressable, Text, View, type PressableProps } from "react-native";
 
@@ -33,7 +34,7 @@ export function ProductCard({ product, className = "", ...props }: ProductCardPr
       className={`w-full ${className}`}
       {...props}
     >
-      <View className="aspect-[4/5] w-full overflow-hidden rounded-md bg-ink-100">
+      <View className="aspect-[4/5] w-full overflow-hidden rounded-md border border-ink-100 bg-ink-100/60">
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
@@ -43,8 +44,9 @@ export function ProductCard({ product, className = "", ...props }: ProductCardPr
             cachePolicy="disk"
           />
         ) : (
-          <View className="h-full w-full items-center justify-center">
-            <Text className="text-caption text-ink-400">No image</Text>
+          <View className="h-full w-full items-center justify-center gap-1.5">
+            <Ionicons name="image-outline" size={22} color="#B8AD9F" />
+            <Text className="text-caption text-ink-400">No image yet</Text>
           </View>
         )}
         {soldOut ? (
