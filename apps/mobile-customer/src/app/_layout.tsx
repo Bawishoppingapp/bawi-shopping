@@ -47,6 +47,8 @@ export default function RootLayout() {
                   name="register"
                   options={{ presentation: "modal", title: "Create account" }}
                 />
+                <Stack.Screen name="forgot-password" options={{ title: "Reset password" }} />
+                <Stack.Screen name="reset-password" options={{ title: "Reset password" }} />
               </Stack>
             </ToastProvider>
           </CartProvider>
