@@ -42,14 +42,6 @@ jest.mock("expo-web-browser", () => ({
   openBrowserAsync: jest.fn(() => Promise.resolve({ type: "dismiss" })),
 }));
 
-jest.mock("@stripe/stripe-react-native", () => ({
-  StripeProvider: ({ children }) => children,
-  useStripe: () => ({
-    initPaymentSheet: jest.fn(() => Promise.resolve({ error: undefined })),
-    presentPaymentSheet: jest.fn(() => Promise.resolve({ error: undefined })),
-  }),
-}));
-
 jest.mock("expo-notifications", () => ({
   getPermissionsAsync: jest.fn(() => Promise.resolve({ status: "granted" })),
   requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: "granted" })),

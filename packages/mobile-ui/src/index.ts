@@ -8,3 +8,4 @@ export { colors, radius, fontSize, type IconTone } from "./theme";
 export { useThemeColors, type ThemeColors } from "./use-theme-colors";
 export { ThemedIcon } from "./ThemedIcon";
 export { ThemedActivityIndicator } from "./ThemedActivityIndicator";
+export { Gradient } from "./Gradient";

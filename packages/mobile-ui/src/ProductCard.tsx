@@ -15,16 +15,22 @@ export interface ProductCardData {
 
 interface ProductCardProps extends Omit<PressableProps, "children"> {
   product: ProductCardData;
+  /** Overrides the default 4:5 image ratio - used by Home's masonry/
+   * editorial sections for deliberately varied card heights. Discovery
+   * grids should leave this unset (docs/DESIGN-SYSTEM.md §5's fixed
+   * ratio still applies there, for a grid that never looks jagged). */
+  imageAspectRatio?: number;
 }
 
 /**
- * Fixed 4:5 image ratio (docs/DESIGN-SYSTEM.md §5) so the discovery grid
- * never looks jagged regardless of which seller's photos are shown. No
- * badges/ribbons beyond a single "Sold out" state by default - product
- * photography carries the visual weight, not card decoration (matches
- * the design brief's "avoid clutter" direction).
+ * Fixed 4:5 image ratio by default (docs/DESIGN-SYSTEM.md §5) so the
+ * discovery grid never looks jagged regardless of which seller's photos
+ * are shown - pass `imageAspectRatio` to opt out where varied heights are
+ * the point. No badges/ribbons beyond a single "Sold out" state by
+ * default - product photography carries the visual weight, not card
+ * decoration (matches the design brief's "avoid clutter" direction).
  */
-export function ProductCard({ product, className = "", ...props }: ProductCardProps) {
+export function ProductCard({ product, className = "", imageAspectRatio = 4 / 5, ...props }: ProductCardProps) {
   const { title, brandName, imageUrl, priceLabel, compareAtPriceLabel, soldOut } = product;
   const onSale = Boolean(compareAtPriceLabel);
 
@@ -35,7 +41,9 @@ export function ProductCard({ product, className = "", ...props }: ProductCardPr
       className={`w-full ${className}`}
       {...props}
     >
-      <View className="aspect-[4/5] w-full overflow-hidden rounded-md border border-ink-100 bg-ink-100/60">
+      <View
+        style={{ aspectRatio: imageAspectRatio }}
+        className="w-full overflow-hidden rounded-md border border-ink-100 bg-ink-100/60">
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}

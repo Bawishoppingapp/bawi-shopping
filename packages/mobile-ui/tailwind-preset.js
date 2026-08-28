@@ -55,6 +55,10 @@ module.exports = {
         info: withOpacity("--color-info"),
       },
       fontSize: {
+        // Editorial-only display size (hero/campaign headlines) - bigger
+        // and set in font-serif, distinct from the functional `display`
+        // size below which stays sans-serif for the Home greeting etc.
+        hero: ["34px", { lineHeight: "38px", fontWeight: "500" }],
         display: ["28px", { lineHeight: "34px", fontWeight: "600" }],
         h1: ["24px", { lineHeight: "30px", fontWeight: "600" }],
         h2: ["20px", { lineHeight: "26px", fontWeight: "600" }],
@@ -62,6 +66,22 @@ module.exports = {
         body: ["15px", { lineHeight: "22px" }],
         "body-sm": ["13px", { lineHeight: "18px" }],
         caption: ["12px", { lineHeight: "16px", letterSpacing: "0.02em" }],
+        // Small uppercase label above an editorial headline ("NEW SEASON").
+        overline: ["11px", { lineHeight: "14px", letterSpacing: "0.14em", fontWeight: "600" }],
+      },
+      fontFamily: {
+        // System serif (Georgia on iOS, a serif fallback on Android) -
+        // theme.ts flagged a display/serif pairing for editorial moments
+        // as a deliberate next step once the brand direction was
+        // validated on-device; this is that step. No font files loaded
+        // (keeps bundle size/startup cost down, matters most on Android)
+        // - system serif is enough for the editorial-vs-functional-type
+        // contrast this needs. Sans stays the default (unchanged) for
+        // every functional UI string - prices, labels, buttons, body copy.
+        // A literal font stack rather than the `--font-serif` CSS var
+        // (unlike colors, react-native-css-interop's fontFamily support
+        // doesn't go through the same var()/rgb() resolution pipeline).
+        serif: ["Georgia", "Times New Roman", "serif"],
       },
     },
   },

@@ -27,7 +27,7 @@ const anchorRequire = createRequire(path.join(anchorDir, "package.json"));
 
 const targetDirs = [path.join(root, "packages/mobile-ui")];
 
-const packages = ["react", "react-native", "@types/react"];
+const packages = ["react", "react-native", "@types/react", "expo-linear-gradient"];
 
 for (const pkg of packages) {
   let sourceDir;
@@ -84,3 +84,35 @@ function nestReactInto(packageName) {
 
 nestReactInto("react-native");
 nestReactInto("test-renderer");
+
+// apps/mobile-customer/tsconfig.json's typeRoots deliberately only points
+// at its own local ./node_modules/@types now, not the workspace root's
+// (root's @types/react is pinned to a different major version for the
+// Next.js apps, and TypeScript's ambient-global merging can't tell those
+// two @types/react copies apart - "X cannot be used as a JSX component"
+// for any class-based RN component, e.g. expo-linear-gradient's
+// LinearGradient, once both get loaded). That means every @types
+// package mobile-customer's own code needs - including devDependencies
+// like @types/jest that npm may still hoist to the root instead of
+// installing locally - must actually exist locally too, or this
+// forces the exact opposite problem (nothing found at all). Anchor +
+// symlink, same strategy as react/react-native above.
+function localizeType(packageName) {
+  try {
+    const pkgJsonPath = anchorRequire.resolve(`@types/${packageName}/package.json`);
+    const sourceDir = path.dirname(pkgJsonPath);
+    const target = path.join(anchorDir, "node_modules", "@types", packageName);
+
+    if (fs.existsSync(target) && fs.realpathSync(target) === fs.realpathSync(sourceDir)) {
+      return; // already local (or already correctly aligned)
+    }
+
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.rmSync(target, { recursive: true, force: true });
+    fs.symlinkSync(sourceDir, target, "dir");
+  } catch {
+    // Not resolvable from mobile-customer - nothing to fix.
+  }
+}
+
+localizeType("jest");

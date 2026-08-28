@@ -11,6 +11,7 @@
     "@expo/vector-icons": "*",
     "expo-haptics": "*",
     "expo-image": "*",
+    "expo-linear-gradient": "*",
     "react": ">=19",
     "react-native": "*"
   },
