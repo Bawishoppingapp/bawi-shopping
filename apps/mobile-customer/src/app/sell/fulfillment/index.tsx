@@ -1,4 +1,4 @@
-import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { StatusBadge, ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
@@ -11,6 +11,7 @@ import { useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
 export default function SellFulfillmentScreen() {
+  const themeColors = useThemeColors();
   const { seller } = useSellerAuth();
   const currencyCode = seller?.seller.currency_code ?? "etb";
   const [orders, setOrders] = useState<FulfillmentOrder[]>([]);
@@ -64,7 +65,7 @@ export default function SellFulfillmentScreen() {
         data={orders}
         keyExtractor={(order) => order.id}
         contentContainerStyle={{ padding: 16, gap: 12 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
         renderItem={({ item }) => {
           const badge = fulfillmentStatusBadge(item.status);
           const itemCount = item.items.reduce((sum, i) => sum + i.quantity, 0);

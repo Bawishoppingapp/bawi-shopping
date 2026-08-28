@@ -1,4 +1,4 @@
-import { ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -14,6 +14,7 @@ import {
 } from "@/features/notifications/services/notifications-client";
 
 export default function NotificationsScreen() {
+  const themeColors = useThemeColors();
   const tabBarHeight = useBottomTabBarHeight();
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +75,7 @@ export default function NotificationsScreen() {
         data={notifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, gap: 12 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
         renderItem={({ item }) => {
           const unread = !item.read_at;
           const badge = notificationEventBadge(item.event_type);

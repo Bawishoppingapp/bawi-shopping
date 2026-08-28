@@ -1,4 +1,4 @@
-import { ThemedIcon } from "@bawi/mobile-ui";
+import { ThemedIcon, useThemeColors } from "@bawi/mobile-ui";
 import { useMemo, useState } from "react";
 import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,6 +22,7 @@ interface CountryPickerProps {
 export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const themeColors = useThemeColors();
 
   const selected = COUNTRIES.find((c) => c.code === selectedCode);
   const filtered = useMemo(() => {
@@ -59,7 +60,7 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
             value={query}
             onChangeText={setQuery}
             placeholder="Search countries"
-            placeholderTextColor="#8C8175"
+            placeholderTextColor={themeColors.ink400}
             autoCapitalize="none"
             autoFocus
             className="m-4 h-12 rounded-md border border-ink-200 bg-surface px-3 text-body text-ink-950"

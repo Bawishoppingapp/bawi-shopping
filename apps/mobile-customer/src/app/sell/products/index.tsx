@@ -1,4 +1,4 @@
-import { Button, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { Button, StatusBadge, ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -10,6 +10,7 @@ import { productStatusBadge } from "@/features/seller-products/utils/status";
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
 export default function SellProductsScreen() {
+  const themeColors = useThemeColors();
   const [products, setProducts] = useState<SellerProductSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,7 +51,7 @@ export default function SellProductsScreen() {
         data={products}
         keyExtractor={(item) => item.listing.id}
         contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
         ListHeaderComponent={
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-h1 text-ink-950">Products</Text>

@@ -2,6 +2,7 @@ import { useState, type Ref } from "react";
 import { Pressable, Text, TextInput, View, type TextInputProps } from "react-native";
 
 import { ThemedIcon } from "./ThemedIcon";
+import { useThemeColors } from "./use-theme-colors";
 
 interface InputProps extends TextInputProps {
   label: string;
@@ -36,6 +37,7 @@ export function Input({
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const isPasswordField = Boolean(secureTextEntry);
+  const themeColors = useThemeColors();
 
   return (
     <View className="gap-1.5">
@@ -46,7 +48,7 @@ export function Input({
           className={`h-12 rounded-md border px-3 text-body text-ink-950 ${
             isPasswordField ? "pr-11" : ""
           } ${error ? "border-danger" : focused ? "border-ink-950" : "border-ink-200"} ${className}`}
-          placeholderTextColor="#8C8175"
+          placeholderTextColor={themeColors.ink400}
           accessibilityLabel={label}
           secureTextEntry={isPasswordField ? !revealed : secureTextEntry}
           onFocus={(e) => {

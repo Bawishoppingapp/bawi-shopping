@@ -1,3 +1,4 @@
+import { useThemeColors } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 
@@ -12,6 +13,8 @@ interface PasswordRequirementsProps {
  * Zod validation uses, so this can never drift from what the backend
  * really requires. */
 export function PasswordRequirements({ password }: PasswordRequirementsProps) {
+  const themeColors = useThemeColors();
+
   return (
     <View className="gap-1 rounded-md bg-ink-100 p-3">
       {PASSWORD_RULES.map((rule) => {
@@ -21,7 +24,7 @@ export function PasswordRequirements({ password }: PasswordRequirementsProps) {
             <Ionicons
               name={met ? "checkmark-circle" : "ellipse-outline"}
               size={16}
-              color={met ? "#2F7A4D" : "#8C8175"}
+              color={met ? themeColors.success : themeColors.ink400}
             />
             <Text className={`text-body-sm ${met ? "text-success" : "text-ink-500"}`}>{rule.label}</Text>
           </View>

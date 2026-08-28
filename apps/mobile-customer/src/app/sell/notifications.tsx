@@ -1,4 +1,4 @@
-import { ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
@@ -13,6 +13,7 @@ import {
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
 export default function SellNotificationsScreen() {
+  const themeColors = useThemeColors();
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,7 +73,7 @@ export default function SellNotificationsScreen() {
         data={notifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, gap: 12 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
         renderItem={({ item }) => {
           const unread = !item.read_at;
           const badge = notificationEventBadge(item.event_type);

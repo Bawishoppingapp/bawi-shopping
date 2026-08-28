@@ -1,4 +1,4 @@
-import { ProductCard, ProductCardSkeleton, ThemedActivityIndicator, ThemedIcon } from "@bawi/mobile-ui";
+import { ProductCard, ProductCardSkeleton, ThemedActivityIndicator, ThemedIcon, useThemeColors } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -41,6 +41,7 @@ export default function SearchScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const locale = useLocale();
   const t = useTranslations();
+  const themeColors = useThemeColors();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sort, setSort] = useState<ProductSortOption>("newest");
@@ -163,7 +164,7 @@ export default function SearchScreen() {
             value={query}
             onChangeText={setQuery}
             placeholder={t("search.placeholder")}
-            placeholderTextColor="#8C8175"
+            placeholderTextColor={themeColors.ink400}
             returnKeyType="search"
             autoCapitalize="none"
             className="ml-2 flex-1 text-body text-ink-950"

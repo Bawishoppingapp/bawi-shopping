@@ -1,4 +1,4 @@
-import { Button, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { Button, StatusBadge, ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -12,6 +12,7 @@ import { type OrderSummary, listOrders } from "@/features/orders/services/orders
 import { orderStatusBadge } from "@/features/orders/utils/order-status";
 
 export default function OrdersScreen() {
+  const themeColors = useThemeColors();
   const { customer, isLoading: authLoading } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
@@ -83,7 +84,7 @@ export default function OrdersScreen() {
         data={orders}
         keyExtractor={(order) => order.id}
         contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, gap: 12 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
         renderItem={({ item }) => {
           const badge = orderStatusBadge(item.status);
           return (

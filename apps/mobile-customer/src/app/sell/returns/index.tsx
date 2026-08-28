@@ -1,4 +1,4 @@
-import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { StatusBadge, ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
@@ -9,6 +9,7 @@ import { returnReasonLabel, returnStatusBadge } from "@/features/returns/utils/s
 import { getSellerSessionToken } from "@/features/seller-auth/services/seller-token-storage";
 
 export default function SellReturnsScreen() {
+  const themeColors = useThemeColors();
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,7 +61,7 @@ export default function SellReturnsScreen() {
         data={returns}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, gap: 12 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
         renderItem={({ item }) => {
           const badge = returnStatusBadge(item.status);
           return (

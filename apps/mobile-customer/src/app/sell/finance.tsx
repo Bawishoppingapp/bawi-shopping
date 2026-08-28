@@ -1,4 +1,4 @@
-import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { StatusBadge, ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
@@ -18,6 +18,7 @@ const BUCKETS: { key: keyof SellerBalance; label: string }[] = [
 ];
 
 export default function SellFinanceScreen() {
+  const themeColors = useThemeColors();
   const { seller } = useSellerAuth();
   const currencyCode = seller?.seller.currency_code ?? "etb";
   const [balance, setBalance] = useState<SellerBalance | null>(null);
@@ -60,7 +61,7 @@ export default function SellFinanceScreen() {
       <Stack.Screen options={{ headerShown: true, title: "Finance" }} />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
       >
         <View className="flex-row flex-wrap gap-3">
           {BUCKETS.map((bucket) => (

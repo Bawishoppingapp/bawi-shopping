@@ -1,4 +1,4 @@
-import { Button, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { Button, StatusBadge, ThemedActivityIndicator, useThemeColors } from "@bawi/mobile-ui";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
@@ -30,6 +30,7 @@ function statusBadge(status: string): { label: string; tone: "neutral" | "warnin
 }
 
 export default function SellStatusScreen() {
+  const themeColors = useThemeColors();
   const [application, setApplication] = useState<SellerApplicationSummary | null | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -88,7 +89,7 @@ export default function SellStatusScreen() {
     <SafeAreaView className="flex-1 bg-paper">
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: "center", gap: 16 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#151210" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
       >
         <View className="items-center gap-3">
           <StatusBadge label={badge.label} tone={badge.tone} />
