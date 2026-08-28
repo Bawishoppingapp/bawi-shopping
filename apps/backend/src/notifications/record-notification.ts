@@ -20,6 +20,7 @@ export type NotificationEventType =
   | "payout_sent"
   | "seller_application_approved"
   | "seller_application_rejected"
+  | "password_reset"
 
 export interface RecordNotificationInput {
   /** Dedup key, e.g. `order_confirmation:${orderId}` - passed straight
