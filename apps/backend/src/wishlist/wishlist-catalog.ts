@@ -6,6 +6,9 @@ import type ProductListingModuleService from "../modules/product-listing/service
 import { SELLER_MODULE } from "../modules/seller"
 import type SellerModuleService from "../modules/seller/service"
 import { resolvePublicBrand } from "../modules/seller/public-brand"
+import { PRODUCT_TRANSLATION_MODULE } from "../modules/product-translation"
+import type ProductTranslationModuleService from "../modules/product-translation/service"
+import type { TranslatableLocale } from "../modules/category-translation/locales"
 
 type VariantAgg = { available: number; prices: number[]; currencyCode: string | null }
 
@@ -21,7 +24,8 @@ type VariantAgg = { available: number; prices: number[]; currencyCode: string | 
  */
 export async function resolveWishlistHits(
   container: MedusaContainer,
-  productCodes: string[]
+  productCodes: string[],
+  locale?: TranslatableLocale
 ): Promise<Map<string, ProductSearchHit>> {
   const uniqueCodes = Array.from(new Set(productCodes))
   if (!uniqueCodes.length) {
@@ -51,6 +55,21 @@ export async function resolveWishlistHits(
     { id: Array.from(listingByProductId.keys()) },
     { relations: ["categories", "variants"] }
   )
+
+  const translatedTitleByProductId = new Map<string, string>()
+  if (locale) {
+    const translationService: ProductTranslationModuleService = container.resolve(
+      PRODUCT_TRANSLATION_MODULE
+    )
+    const translations = await translationService.listProductTranslations({
+      product_id: Array.from(listingByProductId.keys()),
+      locale,
+      status: "approved",
+    })
+    for (const translation of translations) {
+      translatedTitleByProductId.set(translation.product_id, translation.title)
+    }
+  }
 
   const queryEngine = container.resolve(ContainerRegistrationKeys.QUERY)
   const variantIds = products.flatMap((product) => product.variants?.map((v) => v.id) ?? [])
@@ -111,7 +130,7 @@ export async function resolveWishlistHits(
 
     result.set(listing.product_code, {
       productCode: listing.product_code,
-      title: product.title,
+      title: translatedTitleByProductId.get(product.id) ?? product.title,
       brand: resolvePublicBrand(seller),
       thumbnail: product.thumbnail ?? null,
       priceMin,

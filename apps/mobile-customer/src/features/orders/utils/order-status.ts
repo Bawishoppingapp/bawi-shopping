@@ -20,20 +20,29 @@ const TONES: Record<string, Tone> = {
   payment_failed: "danger",
 };
 
-const LABELS: Record<string, string> = {
-  awaiting_preparation: "Awaiting preparation",
-  preparing: "Preparing",
-  ready_for_pickup: "Ready for pickup",
-  picked_up: "Picked up",
-  out_for_delivery: "Out for delivery",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-  returned: "Returned",
-  pending_payment: "Pending payment",
-  paid: "Paid",
-  payment_failed: "Payment failed",
+const LABEL_KEYS = {
+  awaiting_preparation: "status.awaitingPreparation",
+  preparing: "status.preparing",
+  ready_for_pickup: "status.readyForPickup",
+  picked_up: "status.pickedUp",
+  out_for_delivery: "status.outForDelivery",
+  delivered: "status.delivered",
+  cancelled: "status.cancelled",
+  returned: "status.returned",
+  pending_payment: "status.pendingPayment",
+  paid: "status.paid",
+  payment_failed: "status.paymentFailed",
+} as const;
+const ENGLISH_LABELS: Record<string, string> = {
+  awaiting_preparation: "Awaiting preparation", preparing: "Preparing", ready_for_pickup: "Ready for pickup",
+  picked_up: "Picked up", out_for_delivery: "Out for delivery", delivered: "Delivered", cancelled: "Cancelled",
+  returned: "Returned", pending_payment: "Pending payment", paid: "Paid", payment_failed: "Payment failed",
 };
 
-export function orderStatusBadge(status: string): { label: string; tone: Tone } {
-  return { label: LABELS[status] ?? status, tone: TONES[status] ?? "neutral" };
+export function orderStatusBadge(
+  status: string,
+  t?: (key: (typeof LABEL_KEYS)[keyof typeof LABEL_KEYS]) => string,
+): { label: string; tone: Tone } {
+  const key = LABEL_KEYS[status as keyof typeof LABEL_KEYS];
+  return { label: key && t ? t(key) : ENGLISH_LABELS[status] ?? status, tone: TONES[status] ?? "neutral" };
 }

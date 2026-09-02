@@ -10,12 +10,12 @@ import { z } from "zod";
 // below and the live checklist UI (password-requirements.tsx) - the
 // checklist must never show a rule the backend doesn't actually enforce,
 // so both read from the same array instead of duplicating regexes.
-export const PASSWORD_RULES: { key: string; label: string; test: (password: string) => boolean }[] = [
-  { key: "length", label: "At least 8 characters", test: (p) => p.length >= 8 },
-  { key: "lowercase", label: "One lowercase letter", test: (p) => /[a-z]/.test(p) },
-  { key: "uppercase", label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
-  { key: "number", label: "One number", test: (p) => /[0-9]/.test(p) },
-];
+export const PASSWORD_RULES = [
+  { key: "length", label: "At least 8 characters", labelKey: "auth.ruleLength", test: (p: string) => p.length >= 8 },
+  { key: "lowercase", label: "One lowercase letter", labelKey: "auth.ruleLowercase", test: (p: string) => /[a-z]/.test(p) },
+  { key: "uppercase", label: "One uppercase letter", labelKey: "auth.ruleUppercase", test: (p: string) => /[A-Z]/.test(p) },
+  { key: "number", label: "One number", labelKey: "auth.ruleNumber", test: (p: string) => /[0-9]/.test(p) },
+] as const;
 
 const passwordSchema = z.string().superRefine((password, ctx) => {
   for (const rule of PASSWORD_RULES) {

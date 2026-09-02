@@ -144,5 +144,35 @@
   "order.returnReasonCustomerRemorse": "ድሕሪ ሕጂ ኣየድልየንን",
   "order.returnCommentLabel": "ተወሳኺ ዝርዝር (ኣማራጺ)",
   "order.submitReturn": "ናይ ምምላስ ሕቶ ኣቕርብ",
-  "order.returnRequestSent": "ናይ ምምላስ ሕቶኹም ቀሪቡ ኣሎ።"
+  "order.returnRequestSent": "ናይ ምምላስ ሕቶኹም ቀሪቡ ኣሎ።",
+  "nav.wishlist": "ዝርዝር ድሌት", "common.error": "ገለ ጌጋ ተፈጢሩ። ደጊምኩም ፈትኑ።", "common.close": "ዕጸው", "common.clear": "ኣጽሪ", "common.cancel": "ሰርዝ", "common.remove": "ኣውጽእ", "common.default": "ነባሪ", "common.on": "ብሩህ", "common.off": "ጠፊኡ", "common.details": "ዝርዝር",
+  "home.welcome": "እንኳዕ ደሓን መጻእካ፣ {name}", "home.tagline": "ፋሽን ካብ ናጻ ብራንድታት።", "home.recentlyViewed": "ኣብ ቀረባ ዝተራእዩ", "home.justIn": "ሓደስቲ ዝኣተዉ", "home.justInSubtitle": "ሓደስቲ ፍርያት ናይዚ ሰሙን", "home.promoBody": "ኣብ ክፍሊት ብቐጥታ ይትግበር፤ ኮድ ኣየድልን።", "home.gridSubtitle": "ኩሎም ሓደስቲ ኣብ ሓደ ቦታ", "home.sell": "ኣብ ባዊ ሽጥ", "home.loadError": "ፍርያት ክጽዕኑ ኣይከኣሉን። ንታሕቲ ስሒብኩም ፈትኑ።",
+  "search.clearSearch": "ድለያ ኣጽሪ", "search.recentSearches": "ናይ ቀረባ ድለያታት", "search.browseCategories": "ጽፍትታት ዳህስስ",
+  "wishlist.loginHint": "ፍርያት ንምዕቃብ እቶ።", "wishlist.empty": "ገና ዝተዓቀበ የለን", "wishlist.emptyHint": "ኣብ ፍርያት ዘሎ ልቢ ጠውቕ እሞ ኣብዚ ዓቅቦ።", "wishlist.remove": "ካብ ዝርዝር ድሌት ኣውጽእ",
+  "product.unavailable": "እዚ ፍርያት ድሕሪ ሕጂ ኣይርከብን።", "product.removeWishlist": "ካብ ዝርዝር ድሌት ኣውጽእ", "product.saveWishlist": "ናብ ዝርዝር ድሌት ዓቅብ", "product.selectOptions": "መጠንን ሕብርን ምረጽ።", "product.freeShippingItem": "እዚ ፍርያት ነጻ ምልኣኽ ይረክብ", "product.freeShippingOver": "ልዕሊ {amount} ነጻ ምልኣኽ፤ እንተዘይኮይኑ {fee}", "product.returnsWithin": "ድሕሪ ምብጻሕ ኣብ {days} መዓልቲ ምምላስ ይከኣል", "product.moreFrom": "ተወሳኺ ካብ {brand}",
+  "cart.unavailableShort": "ድሕሪ ሕጂ ኣይርከብን", "cart.onlyLeft": "{count} ጥራይ ተሪፉ", "cart.decrease": "ብዝሒ ኣጉድል", "cart.increase": "ብዝሒ ወስኽ", "cart.saveLater": "ንድሕሪት ዓቅብ", "cart.recommendations": "ነዚኦም እውን ክትፈትዎም ትኽእሉ", "cart.addForFreeShipping": "ንነጻ ምልኣኽ {amount} ወስኽ።", "cart.checkoutUnavailable": "ክፍሊት ኣይርከብን", "cart.checkoutAttention": "ቅድሚ ምኽፋል ኣብ ቦርሳኹም ዘሎ ፍርያት ምስትኽኻል የድልዮ።",
+  "checkout.action": "ክፈል", "checkout.bagEmpty": "ቦርሳኹም ጥራዩ እዩ", "checkout.backToBag": "ናብ ቦርሳ ተመለስ", "checkout.comingSoon": "ክፍሊት ቀልጢፉ ክመጽእ እዩ", "checkout.comingSoonBody": "ንትእዛዝ ብር ናይ ኢትዮጵያ ክፍሊት ነዳሉ ኣለና። ቦርሳኹም ተዓቂቡ ኣሎ።",
+  "auth.genericError": "ገለ ጌጋ ተፈጢሩ። ደጊምኩም ፈትኑ።", "auth.networkError": "ምስ ሰርቨር ምርኻብ ኣይተኻእለን። መርበብኩም ኣረጋግጹ።", "auth.accountExists": "በዚ ኢመይል ሕሳብ ኣሎ።", "auth.registerSubtitle": "ኣብ ባዊ ካብ ናጻ ብራንድታት ግዙ።", "auth.welcomeBack": "እንኳዕ ደሓን ተመለስካ", "auth.loginSubtitle": "ናብ ሕሳብ ባዊ እቶ።", "auth.forgotPassword": "መሕለፊ ቃል ረሲዕካ?", "auth.signUp": "ተመዝገብ", "auth.confirmPassword": "መሕለፊ ቃል ኣረጋግጽ", "auth.resetTitle": "መሕለፊ ቃል ዳግም ኣቐምጥ", "auth.resetEmailBody": "ናይ ዳግም ምቕማጥ ኮድ ብኢመይል ክንልእኽ ኢና።", "auth.checkEmail": "ኢመይልካ ርአ", "auth.resetSent": "ን{email} ሕሳብ እንተሃልዩ፣ ኮድ ልኢኽና ኣለና። ኣብ ዝቕጽል ገጽ ምስ ሓድሽ መሕለፊ ቃል ኣእትዎ።", "auth.enterResetCode": "ኮድ ኣእቱ", "auth.sendResetCode": "ኮድ ስደድ", "auth.passwordUpdated": "መሕለፊ ቃል ተቐይሩ", "auth.passwordUpdatedBody": "መሕለፊ ቃልካ ተቐይሩ። ብሓድሽ እቶ።", "auth.resetCodeTitle": "ኮድካ ኣእቱ", "auth.resetCodeBody": "ካብ ኢመይል ዝመጸ ኮድ ለጥፍን ሓድሽ መሕለፊ ቃል ምረጽን።", "auth.resetCode": "ናይ ዳግም ምቕማጥ ኮድ", "auth.newPassword": "ሓድሽ መሕለፊ ቃል", "auth.confirmNewPassword": "ሓድሽ መሕለፊ ቃል ኣረጋግጽ", "auth.resetPassword": "መሕለፊ ቃል ዳግም ኣቐምጥ", "auth.ruleLength": "እንተወሓደ 8 ፊደላት", "auth.ruleLowercase": "ሓደ ንእሽቶ ፊደል", "auth.ruleUppercase": "ሓደ ዓቢ ፊደል", "auth.ruleNumber": "ሓደ ቁጽሪ",
+  "account.yourAccount": "ሕሳብካ", "account.loginHint": "ትእዛዝ ንምርኣይ፣ ዝፈተኻዮ ንምዕቃብን ቀልጢፍካ ንምኽፋልን እቶ።", "account.preferences": "ምርጫታት", "account.darkMode": "ጸልማት መልክዕ", "account.darkModeHint": "መተግበሪ ኣብ ብርሃንን ጸልማትን ይቕይር", "account.legal": "ሕጋዊ", "account.shopping": "ዕዳጋ", "account.myOrders": "ትእዛዛተይ", "account.details": "ዝርዝር", "account.addresses": "ኣድራሻታት", "account.notifications": "ምልክታታት", "account.logout": "ውጻእ", "account.hello": "ሰላም፣ {name}", "account.languageDescription": "ንዝርዝር፣ መጠወቒ፣ መልእኽትን ዝተተርጎመ ትሕዝቶን ቋንቋ ምረጽ።",
+  "notifications.empty": "ገና ምልክታ የለን", "orders.loginHint": "ትእዛዛትካ ንምርኣይ እቶ።", "orders.startBrowsing": "ምድህሳስ ጀምር", "orders.notFound": "እዚ ትእዛዝ ኣይርከብን።", "orders.placed": "ኣብ {date} ተኣዚዙ", "orders.deliveryCode": "ኮድ ምርግጋጽ ምብጻሕ", "orders.deliveryHint": "ትእዛዝካ ምስ በጽሐ ነቲ ኣብጻሒ ኣርእዮ።", "orders.webActions": "ትእዛዝ ንምስራዝ ወይ ንምምላስ መርበብ ባዊ ተጠቐም።",
+  "status.awaitingPreparation": "ምድላው ይጽበ", "status.preparing": "ይዳሎ ኣሎ", "status.readyForPickup": "ንምውሳድ ድሉው", "status.pickedUp": "ተወሲዱ", "status.outForDelivery": "ኣብ ምብጻሕ", "status.delivered": "በጺሑ", "status.cancelled": "ተሰሪዙ", "status.returned": "ተመሊሱ", "status.pendingPayment": "ክፍሊት ይጽበ", "status.paid": "ተኸፊሉ", "status.paymentFailed": "ክፍሊት ኣይሰለጠን", "notification.orderConfirmed": "ትእዛዝ ተረጋጊጹ", "notification.shipmentUpdate": "ሓበሬታ ምልኣኽ", "notification.delivered": "በጺሑ", "notification.returnUpdate": "ሓበሬታ ምምላስ", "notification.refundProcessed": "ገንዘብ ተመሊሱ", "notification.payoutSent": "ክፍሊት ተላኢኹ", "notification.applicationApproved": "ማመልከቻ ጸዲቑ", "notification.applicationUpdate": "ሓበሬታ ማመልከቻ",
+  "address.new": "ሓድሽ ኣድራሻ", "address.add": "ኣድራሻ ወስኽ", "address.empty": "ዝተዓቀበ ኣድራሻ የለን", "address.emptyHint": "ኣብ ዝቕጽል ቀልጢፍካ ንምኽፋል ኣድራሻ ወስኽ።", "address.removeConfirm": "እዚ ኣድራሻ ይውጻእ?", "address.removeFailed": "ኣድራሻ ምውጻእ ኣይተኻእለን", "address.removing": "ይወጽእ ኣሎ…", "address.line2Optional": "መስመር ኣድራሻ 2 (ኣማራጺ)", "address.regionOptional": "ክልል (ኣማራጺ)", "address.subCityOptional": "ክፍለ ከተማ (ኣማራጺ)", "address.woredaOptional": "ወረዳ (ኣማራጺ)", "address.postalOptional": "ፖስታ ኮድ (ኣማራጺ)", "address.landmarkOptional": "መፍለዪ ቦታ (ኣማራጺ)", "address.landmarkHint": "ኣብ ቀረባ ብቐሊሉ ዝርከብ ቦታ።", "address.deliveryNotesOptional": "መዘኻኸሪ ምብጻሕ (ኣማራጺ)", "address.deliveryNotesHint": "ሕብሪ ማዕጾ፣ ደርቢ፣ ምቹእ ግዜ ወዘተ።", "address.phoneOptional": "ተሌፎን (ኣማራጺ)", "address.setDefault": "ነባሪ ኣድራሻ ምልኣኽ ግበር", "address.save": "ኣድራሻ ዓቅብ", "address.selectCountry": "ሃገር ምረጽ", "address.searchCountries": "ሃገራት ድለ", "address.noMatches": "ምስ “{query}” ዝሰማማዕ ሃገር የለን።", "address.near": "ኣብ ጥቓ {landmark}", "address.woreda": "ወረዳ {value}"
+  ,"product.noImage": "ገና ስእሊ የለን", "auth.showPassword": "መሕለፊ ቃል ኣርኢ", "auth.hidePassword": "መሕለፊ ቃል ሕባእ"
+  ,"auth.passwordMismatch": "መሕለፊ ቃላት ኣይሰማምዑን"
+  ,"validation.invalidPhone": "ቅኑዕ ናይ ኢትዮጵያ ሞባይል ቁጽሪ ኣእቱ (ንኣብነት 0911234567)"
+  ,"notifications.updateBody": "እዋናዊ ዝርዝር ንምርኣይ እዚ መፍለጢ ክፈት።"
+  ,"legal.unavailable": "እዚ ሰነድ ኣይርከብን።"
+  ,"home.promoTitle": "ልዕሊ {amount} ነጻ ምልኣኽ"
+  ,"account.currency": "ባጤራ"
+  ,"account.currencyDescription": "ዋጋታት ኣብቲ መተግበሪ ዝረኣዩሉ ባጤራ ምረጽ።"
+  ,"account.currencyNotice": "ዝተቐየሩ ዋጋታት እዋናዊ ሸርፊ ይጥቀሙ። ክፍሊት ናይ ሸያጢ ትኽክለኛ ባጤራ ይዕቅብ።"
+  ,"account.currencyAttribution": "ሸርፊ ብExchangeRate-API"
+  ,"currency.etb": "ኢትዮጵያዊ ብር"
+  ,"currency.usd": "ዶላር ኣመሪካ"
+  ,"search.shop": "ዕደጋ"
+  ,"search.forYou": "ንዓኻ"
+  ,"account.deleteAccount": "ሕሳብ ሰርዝ"
+  ,"account.deleteAccountAction": "ንሓዋሩ ሰርዝ"
+  ,"account.deleteAccountConfirm": "እዚ ፕሮፋይልካ፣ ኣድራሻታትካ፣ ዝርዝር ድሌትካ፣ መፍለጢታትካን መእተዊኻን ንሓዋሩ ይስርዝ። ብሕጊ ዘድልዩ መዝገባት ግብይት ክዕቀቡ ይኽእሉ። እዚ ክምለስ ኣይክእልን።"
+  ,"account.deleteAccountFailed": "ሕሳብካ ምስራዝ ኣይተኻእለን። እንደገና ፈትን።"
 }

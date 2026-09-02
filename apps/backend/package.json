@@ -45,7 +45,7 @@
     "@tanstack/react-query": "5.64.2",
     "multer": "^2.2.0",
     "react-i18next": "13.5.0",
-    "react-router-dom": "6.30.4",
+    "react-router-dom": "6.30.6",
     "stripe": "^22.3.2",
     "zod": "4.2.0"
   },

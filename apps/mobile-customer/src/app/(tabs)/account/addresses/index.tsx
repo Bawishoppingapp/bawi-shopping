@@ -7,16 +7,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import {
-  AddressesClientError,
   type CustomerAddress,
   deleteAddress,
   listAddresses,
 } from "@/features/addresses/services/addresses-client";
 import { countryName } from "@/features/addresses/data/countries";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 
 export default function AddressesScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const themeColors = useThemeColors();
+  const locale = useLocale();
+  const t = useTranslations();
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -35,10 +37,10 @@ export default function AddressesScreen() {
   );
 
   function confirmDelete(address: CustomerAddress) {
-    Alert.alert("Remove this address?", `${address.address_1}, ${address.city}`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("address.removeConfirm"), `${address.address_1}, ${address.city}`, [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Remove",
+        text: t("common.remove"),
         style: "destructive",
         onPress: async () => {
           setDeletingId(address.id);
@@ -46,10 +48,10 @@ export default function AddressesScreen() {
             const token = await getSessionToken();
             await deleteAddress(token, address.id);
             await load();
-          } catch (error) {
+          } catch {
             Alert.alert(
-              "Couldn't remove address",
-              error instanceof AddressesClientError ? error.message : "Something went wrong."
+              t("address.removeFailed"),
+              t("common.error")
             );
           } finally {
             setDeletingId(null);
@@ -62,7 +64,7 @@ export default function AddressesScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <Stack.Screen options={{ headerShown: true, title: "Addresses" }} />
+        <Stack.Screen options={{ headerShown: true, title: t("account.addresses") }} />
         <ActivityIndicator color={themeColors.ink950} />
       </SafeAreaView>
     );
@@ -70,21 +72,21 @@ export default function AddressesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <Stack.Screen options={{ headerShown: true, title: "Addresses" }} />
+      <Stack.Screen options={{ headerShown: true, title: t("account.addresses") }} />
       <FlatList
         data={addresses}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, gap: 12, flexGrow: 1 }}
         ListHeaderComponent={
           <Button className="mb-2" onPress={() => router.push("/(tabs)/account/addresses/new")}>
-            + Add address
+            {`+ ${t("address.add")}`}
           </Button>
         }
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center gap-2 py-16">
-            <Text className="text-h2 text-ink-950">No saved addresses</Text>
+            <Text className="text-h2 text-ink-950">{t("address.empty")}</Text>
             <Text className="text-center text-body-sm text-ink-500">
-              Add one to check out faster next time.
+              {t("address.emptyHint")}
             </Text>
           </View>
         }
@@ -94,7 +96,7 @@ export default function AddressesScreen() {
               <Text className="text-body-sm font-medium text-ink-950">
                 {item.first_name} {item.last_name}
               </Text>
-              {item.is_default_shipping ? <StatusBadge label="Default" tone="info" /> : null}
+              {item.is_default_shipping ? <StatusBadge label={t("common.default")} tone="info" /> : null}
             </View>
             <Text className="text-body-sm text-ink-700">
               {item.address_1}
@@ -103,17 +105,17 @@ export default function AddressesScreen() {
             <Text className="text-body-sm text-ink-700">
               {[
                 item.metadata?.sub_city,
-                item.metadata?.woreda ? `Woreda ${item.metadata.woreda}` : null,
+                item.metadata?.woreda ? t("address.woreda", { value: item.metadata.woreda }) : null,
                 item.city,
                 item.province,
                 item.postal_code,
-                countryName(item.country_code),
+                countryName(item.country_code, locale),
               ]
                 .filter(Boolean)
                 .join(", ")}
             </Text>
             {item.metadata?.landmark ? (
-              <Text className="text-caption text-ink-500">Near {item.metadata.landmark}</Text>
+              <Text className="text-caption text-ink-500">{t("address.near", { landmark: item.metadata.landmark })}</Text>
             ) : null}
             <Pressable
               accessibilityRole="button"
@@ -122,7 +124,7 @@ export default function AddressesScreen() {
               className="self-start py-1"
             >
               <Text className="text-caption text-danger">
-                {deletingId === item.id ? "Removing…" : "Remove"}
+                {deletingId === item.id ? t("address.removing") : t("common.remove")}
               </Text>
             </Pressable>
           </View>

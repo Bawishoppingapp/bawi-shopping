@@ -8,6 +8,8 @@ interface InputProps extends TextInputProps {
   label: string;
   error?: string;
   helperText?: string;
+  showPasswordLabel?: string;
+  hidePasswordLabel?: string;
   ref?: Ref<TextInput>;
 }
 
@@ -32,6 +34,8 @@ export function Input({
   onBlur,
   ref,
   secureTextEntry,
+  showPasswordLabel = "Show password",
+  hidePasswordLabel = "Hide password",
   ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
@@ -64,7 +68,7 @@ export function Input({
         {isPasswordField ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={revealed ? "Hide password" : "Show password"}
+            accessibilityLabel={revealed ? hidePasswordLabel : showPasswordLabel}
             onPress={() => setRevealed((v) => !v)}
             className="absolute right-3 h-6 w-6 items-center justify-center"
             hitSlop={8}

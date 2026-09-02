@@ -3,11 +3,13 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 
-import { MedusaAuthError } from "@/features/auth/hooks/use-auth";
 import { resetPasswordSchema } from "@/features/auth/schemas/reset-password-schema";
 import { resetPassword } from "@/features/auth/services/medusa-auth-client";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
+import { localizeValidationMessage } from "@/features/i18n/utils/localize-validation";
 
 export default function ResetPasswordScreen() {
+  const t = useTranslations();
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,7 +25,7 @@ export default function ResetPasswordScreen() {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const field = String(issue.path[0]);
-        if (!errors[field]) errors[field] = issue.message;
+        if (!errors[field]) errors[field] = localizeValidationMessage(issue.message, t);
       }
       setFieldErrors(errors);
       return;
@@ -33,9 +35,9 @@ export default function ResetPasswordScreen() {
     try {
       await resetPassword(parsed.data.token, parsed.data.password);
       setDone(true);
-    } catch (error) {
+    } catch {
       setFormError(
-        error instanceof MedusaAuthError ? error.message : "Something went wrong. Please try again."
+        t("auth.genericError")
       );
     } finally {
       setSubmitting(false);
@@ -45,11 +47,11 @@ export default function ResetPasswordScreen() {
   if (done) {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-paper px-6">
-        <Text className="text-h1 text-ink-950">Password updated</Text>
+        <Text className="text-h1 text-ink-950">{t("auth.passwordUpdated")}</Text>
         <Text className="text-center text-body text-ink-500">
-          Your password has been reset. Log in with your new password.
+          {t("auth.passwordUpdatedBody")}
         </Text>
-        <Button onPress={() => router.replace("/login")}>Log in</Button>
+        <Button onPress={() => router.replace("/login")}>{t("login.submit")}</Button>
       </View>
     );
   }
@@ -58,9 +60,9 @@ export default function ResetPasswordScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 bg-paper">
       <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
         <View className="mb-4 gap-1">
-          <Text className="text-h1 text-ink-950">Enter your reset code</Text>
+          <Text className="text-h1 text-ink-950">{t("auth.resetCodeTitle")}</Text>
           <Text className="text-body text-ink-500">
-            Paste the reset code from your email and choose a new password.
+            {t("auth.resetCodeBody")}
           </Text>
         </View>
         {formError ? (
@@ -69,7 +71,7 @@ export default function ResetPasswordScreen() {
           </View>
         ) : null}
         <Input
-          label="Reset code"
+          label={t("auth.resetCode")}
           value={token}
           onChangeText={setToken}
           error={fieldErrors.token}
@@ -77,23 +79,27 @@ export default function ResetPasswordScreen() {
           autoCorrect={false}
         />
         <Input
-          label="New password"
+          label={t("auth.newPassword")}
           value={password}
           onChangeText={setPassword}
           error={fieldErrors.password}
           secureTextEntry
+          showPasswordLabel={t("auth.showPassword")}
+          hidePasswordLabel={t("auth.hidePassword")}
           textContentType="newPassword"
         />
         <Input
-          label="Confirm new password"
+          label={t("auth.confirmNewPassword")}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           error={fieldErrors.confirmPassword}
           secureTextEntry
+          showPasswordLabel={t("auth.showPassword")}
+          hidePasswordLabel={t("auth.hidePassword")}
           textContentType="newPassword"
         />
         <Button onPress={onSubmit} loading={submitting}>
-          Reset password
+          {t("auth.resetPassword")}
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>

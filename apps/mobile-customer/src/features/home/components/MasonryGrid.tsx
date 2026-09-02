@@ -4,6 +4,8 @@ import { View } from "react-native";
 import { ProductCard } from "@bawi/mobile-ui";
 import type { ProductHit } from "@/features/discovery/services/discovery-client";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 import { SectionHeader } from "./SectionHeader";
 import { splitIntoMasonryColumns } from "../utils/masonry";
@@ -20,6 +22,8 @@ interface MasonryGridProps {
  * alone still reads as a proper editorial layout rather than a plain
  * catalog listing. */
 export function MasonryGrid({ title, subtitle, products, seeAllHref }: MasonryGridProps) {
+  const t = useTranslations();
+  const { formatPrice } = useCurrency();
   const { left, right } = splitIntoMasonryColumns(products);
 
   return (
@@ -30,7 +34,7 @@ export function MasonryGrid({ title, subtitle, products, seeAllHref }: MasonryGr
           {left.map(({ item, aspectRatio }) => (
             <ProductCard
               key={item.productCode}
-              product={toProductCardData(item)}
+              product={toProductCardData(item, t, formatPrice)}
               imageAspectRatio={aspectRatio}
               onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
             />
@@ -40,7 +44,7 @@ export function MasonryGrid({ title, subtitle, products, seeAllHref }: MasonryGr
           {right.map(({ item, aspectRatio }) => (
             <ProductCard
               key={item.productCode}
-              product={toProductCardData(item)}
+              product={toProductCardData(item, t, formatPrice)}
               imageAspectRatio={aspectRatio}
               onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
             />

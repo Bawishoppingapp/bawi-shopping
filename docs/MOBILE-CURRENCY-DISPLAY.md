@@ -1,6 +1,6 @@
-# Mobile currency display — proposed approach (not yet built)
+# Mobile currency display — implemented
 
-Per the user's explicit instruction, this is a proposal to review before any implementation, not a description of something already built. USD stays the transaction/settlement currency regardless of what's decided here — nothing below changes checkout, Stripe, tax, or payout logic.
+The customer app now defaults to ETB display and offers ETB/USD under Account → Currency. Seller, cart, order, settlement, and payment currencies remain transactional source-of-truth values; the preference changes display only.
 
 ## What this actually is
 
@@ -29,4 +29,4 @@ A **display-only** convenience: optionally show an approximate price in a custom
 
 ## Status
 
-Not implemented. Recommend building once reviewed — small backend endpoint + mobile picker + display formatting, roughly the same size as the language-selector work already shipped.
+Implemented in `apps/backend/src/api/currency-rates`, `apps/backend/src/currency-rates`, and `apps/mobile-customer/src/features/currency`. Rates refresh at most every 12 hours and may be served stale for no more than 48 hours; after that, conversion fails closed to the correct source currency.

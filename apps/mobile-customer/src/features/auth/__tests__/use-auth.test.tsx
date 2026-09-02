@@ -97,6 +97,53 @@ describe("useAuth", () => {
     expect(await SecureStore.getItemAsync("bawi_customer_session")).toBeNull();
   });
 
+  test("deleteAccount deletes the remote account before clearing the local session", async () => {
+    mockedClient.loginCustomer.mockResolvedValue("session-token");
+    mockedClient.getCurrentCustomer.mockResolvedValue({
+      id: "cus_1",
+      email: "a@b.com",
+      first_name: "A",
+      last_name: "B",
+    });
+    mockedClient.deleteCustomerAccount.mockResolvedValue();
+
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => {
+      await result.current.login("a@b.com", "pw");
+    });
+
+    await act(async () => {
+      await result.current.deleteAccount();
+    });
+
+    expect(mockedClient.deleteCustomerAccount).toHaveBeenCalledWith("session-token");
+    expect(result.current.customer).toBeNull();
+    expect(await SecureStore.getItemAsync("bawi_customer_session")).toBeNull();
+  });
+
+  test("deleteAccount keeps the local session when the backend deletion fails", async () => {
+    mockedClient.loginCustomer.mockResolvedValue("session-token");
+    mockedClient.getCurrentCustomer.mockResolvedValue({
+      id: "cus_1",
+      email: "a@b.com",
+      first_name: "A",
+      last_name: "B",
+    });
+    mockedClient.deleteCustomerAccount.mockRejectedValue(new Error("server error"));
+
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => {
+      await result.current.login("a@b.com", "pw");
+    });
+
+    await expect(result.current.deleteAccount()).rejects.toThrow("server error");
+
+    expect(result.current.customer?.id).toBe("cus_1");
+    expect(await SecureStore.getItemAsync("bawi_customer_session")).toBe("session-token");
+  });
+
   test("drops a stale token on mount when getCurrentCustomer fails", async () => {
     await SecureStore.setItemAsync("bawi_customer_session", "stale-token");
     mockedClient.getCurrentCustomer.mockResolvedValue(null);

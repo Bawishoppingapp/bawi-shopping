@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 
 import { PASSWORD_RULES } from "../schemas/register-schema";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 interface PasswordRequirementsProps {
   password: string;
@@ -14,6 +15,7 @@ interface PasswordRequirementsProps {
  * really requires. */
 export function PasswordRequirements({ password }: PasswordRequirementsProps) {
   const themeColors = useThemeColors();
+  const t = useTranslations();
 
   return (
     <View className="gap-1 rounded-md bg-ink-100 p-3">
@@ -26,7 +28,7 @@ export function PasswordRequirements({ password }: PasswordRequirementsProps) {
               size={16}
               color={met ? themeColors.success : themeColors.ink400}
             />
-            <Text className={`text-body-sm ${met ? "text-success" : "text-ink-500"}`}>{rule.label}</Text>
+            <Text className={`flex-1 text-body-sm ${met ? "text-success" : "text-ink-500"}`}>{t(rule.labelKey)}</Text>
           </View>
         );
       })}

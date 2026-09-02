@@ -6,9 +6,12 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-na
 import { MedusaAuthError, useAuth } from "@/features/auth/hooks/use-auth";
 import { PasswordRequirements } from "@/features/auth/components/password-requirements";
 import { registerSchema } from "@/features/auth/schemas/register-schema";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
+import { localizeValidationMessage } from "@/features/i18n/utils/localize-validation";
 
 export default function RegisterScreen() {
   const { register } = useAuth();
+  const t = useTranslations();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,7 +29,7 @@ export default function RegisterScreen() {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const field = String(issue.path[0]);
-        if (!errors[field]) errors[field] = issue.message;
+        if (!errors[field]) errors[field] = localizeValidationMessage(issue.message, t);
       }
       setFieldErrors(errors);
       return;
@@ -40,7 +43,7 @@ export default function RegisterScreen() {
       if (error instanceof MedusaAuthError) {
         setFormError(
           /already exists/i.test(error.message)
-            ? "An account with this email already exists."
+            ? t("auth.accountExists")
             : error.message
         );
       } else {
@@ -48,7 +51,7 @@ export default function RegisterScreen() {
         // connection, server unreachable) rather than the server
         // responding with an error - a distinct failure mode from a
         // rejected registration.
-        setFormError("Couldn't reach the server. Check your connection and try again.");
+        setFormError(t("auth.networkError"));
       }
     } finally {
       setSubmitting(false);
@@ -62,8 +65,8 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
         <View className="mb-4 gap-1">
-          <Text className="text-h1 text-ink-950">Create your account</Text>
-          <Text className="text-body text-ink-500">Shop independent fashion brands on Bawi.</Text>
+          <Text className="text-h1 text-ink-950">{t("register.title")}</Text>
+          <Text className="text-body text-ink-500">{t("auth.registerSubtitle")}</Text>
         </View>
         {formError ? (
           <View className="rounded-md bg-danger/10 p-3">
@@ -73,7 +76,7 @@ export default function RegisterScreen() {
         <View className="flex-row gap-3">
           <View className="flex-1">
             <Input
-              label="First name"
+              label={t("register.firstName")}
               value={firstName}
               onChangeText={setFirstName}
               error={fieldErrors.firstName}
@@ -83,7 +86,7 @@ export default function RegisterScreen() {
           </View>
           <View className="flex-1">
             <Input
-              label="Last name"
+              label={t("register.lastName")}
               value={lastName}
               onChangeText={setLastName}
               error={fieldErrors.lastName}
@@ -93,7 +96,7 @@ export default function RegisterScreen() {
           </View>
         </View>
         <Input
-          label="Email"
+          label={t("register.email")}
           value={email}
           onChangeText={setEmail}
           error={fieldErrors.email}
@@ -103,33 +106,37 @@ export default function RegisterScreen() {
           textContentType="emailAddress"
         />
         <Input
-          label="Password"
+          label={t("register.password")}
           value={password}
           onChangeText={setPassword}
           error={fieldErrors.password}
           onFocus={() => setPasswordFocused(true)}
           secureTextEntry
+          showPasswordLabel={t("auth.showPassword")}
+          hidePasswordLabel={t("auth.hidePassword")}
           autoComplete="password-new"
           textContentType="newPassword"
         />
         {passwordFocused || password.length > 0 ? <PasswordRequirements password={password} /> : null}
         <Input
-          label="Confirm password"
+          label={t("auth.confirmPassword")}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           error={fieldErrors.confirmPassword}
           secureTextEntry
+          showPasswordLabel={t("auth.showPassword")}
+          hidePasswordLabel={t("auth.hidePassword")}
           autoComplete="password-new"
           textContentType="newPassword"
           onSubmitEditing={onSubmit}
           returnKeyType="done"
         />
         <Button onPress={onSubmit} loading={submitting}>
-          Create account
+          {t("register.submit")}
         </Button>
         <Link href="/login" replace asChild>
           <Text className="text-center text-body-sm text-ink-500">
-            Already have an account? <Text className="font-medium text-ink-950">Log in</Text>
+            {t("register.haveAccount")} <Text className="font-medium text-ink-950">{t("login.submit")}</Text>
           </Text>
         </Link>
       </ScrollView>

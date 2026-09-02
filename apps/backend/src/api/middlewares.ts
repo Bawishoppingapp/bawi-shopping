@@ -148,6 +148,11 @@ export default defineMiddlewares({
       middlewares: [authenticate("customer", ["bearer", "session"])],
     },
     {
+      method: ["DELETE"],
+      matcher: "/store/customers/me",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
       method: ["POST"],
       matcher: "/webhooks/stripe",
       // Stripe signature verification needs the exact raw request body -

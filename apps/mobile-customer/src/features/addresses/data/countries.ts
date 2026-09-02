@@ -64,6 +64,11 @@ export function findCountry(code: string | null | undefined): Country | undefine
   return COUNTRIES.find((c) => c.code === code.toLowerCase());
 }
 
-export function countryName(code: string | null | undefined): string {
-  return findCountry(code)?.name ?? (code ? code.toUpperCase() : "");
+export function countryName(code: string | null | undefined, locale = "en-US"): string {
+  if (!code) return "";
+  try {
+    return new Intl.DisplayNames([locale], { type: "region" }).of(code.toUpperCase()) ?? findCountry(code)?.name ?? code.toUpperCase();
+  } catch {
+    return findCountry(code)?.name ?? code.toUpperCase();
+  }
 }

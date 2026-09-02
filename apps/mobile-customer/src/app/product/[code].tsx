@@ -17,7 +17,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type PublicProduct, getPublicProduct } from "@/features/products/services/products-client";
 import { type ProductHit, searchProducts } from "@/features/discovery/services/discovery-client";
-import { formatMoney } from "@/features/discovery/utils/format-price";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { recordProductView } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
@@ -35,6 +35,7 @@ export default function ProductDetailScreen() {
   const { addItem } = useCart();
   const locale = useLocale();
   const t = useTranslations();
+  const { formatPrice } = useCurrency();
   const toast = useToast();
   const [product, setProduct] = useState<PublicProduct | null | undefined>(undefined);
   const [relatedProducts, setRelatedProducts] = useState<ProductHit[]>([]);
@@ -150,15 +151,15 @@ export default function ProductDetailScreen() {
       await addItem(variantId, 1);
       setLastAddResult({ variantId, status: "added" });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      toast.show(`Added to bag${product ? ` · ${product.title}` : ""}`, {
-        actionLabel: "View bag",
+      toast.show(`${t("cart.addedToCart")}${product ? ` · ${product.title}` : ""}`, {
+        actionLabel: t("cart.viewCart"),
         onPress: () => router.push("/(tabs)/cart"),
       });
     } catch (error) {
       setLastAddResult({
         variantId,
         status: "error",
-        message: error instanceof Error ? error.message : "Couldn't add this to your bag. Please try again.",
+        message: error instanceof Error ? error.message : t("cart.errorGeneric"),
       });
     } finally {
       setAdding(false);
@@ -178,7 +179,7 @@ export default function ProductDetailScreen() {
       <View className="flex-1 items-center justify-center gap-2 bg-paper px-6">
         <Stack.Screen options={{ title: "Product" }} />
         <Text className="text-h2 text-ink-950">{t("product.notFound")}</Text>
-        <Text className="text-body text-ink-500">This product isn&apos;t available anymore.</Text>
+        <Text className="text-body text-ink-500">{t("product.unavailable")}</Text>
       </View>
     );
   }
@@ -269,11 +270,11 @@ export default function ProductDetailScreen() {
             <View className="flex-1 gap-1">
               <Text className="text-caption uppercase tracking-wide text-ink-500">{product.brand}</Text>
               <Text className="text-h1 text-ink-950">{product.title}</Text>
-              <Text className="text-h3 text-ink-950">{formatMoney(price, product.currency_code)}</Text>
+              <Text className="text-h3 text-ink-950">{formatPrice(price, product.currency_code)}</Text>
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={saved ? "Remove from wishlist" : "Save to wishlist"}
+              accessibilityLabel={saved ? t("product.removeWishlist") : t("product.saveWishlist")}
               onPress={onToggleSave}
               disabled={savingWishlist}
               className="p-2"
@@ -326,7 +327,7 @@ export default function ProductDetailScreen() {
 
           {!isAvailable ? (
             <Text className="text-body-sm text-danger">
-              {selectedVariant ? t("product.outOfStock") : "Select a size and color."}
+              {selectedVariant ? t("product.outOfStock") : t("product.selectOptions")}
             </Text>
           ) : null}
 
@@ -338,7 +339,7 @@ export default function ProductDetailScreen() {
 
           {product.description ? (
             <View className="gap-1 pt-2">
-              <Text className="text-body-sm font-medium text-ink-800">Details</Text>
+              <Text className="text-body-sm font-medium text-ink-800">{t("common.details")}</Text>
               <Text className="text-body text-ink-700">{product.description}</Text>
             </View>
           ) : null}
@@ -349,14 +350,17 @@ export default function ProductDetailScreen() {
                 <ThemedIcon name="cube-outline" size={18} tone="ink700" />
                 <Text className="flex-1 text-body-sm text-ink-700">
                   {price >= shippingPolicy.freeShippingThresholdCents
-                    ? "This item qualifies for free shipping"
-                    : `Free shipping on orders over ${formatMoney(shippingPolicy.freeShippingThresholdCents, product.currency_code)} · otherwise ${formatMoney(shippingPolicy.standardShippingFeeCents, product.currency_code)}`}
+                    ? t("product.freeShippingItem")
+                    : t("product.freeShippingOver", {
+                        amount: formatPrice(shippingPolicy.freeShippingThresholdCents, product.currency_code),
+                        fee: formatPrice(shippingPolicy.standardShippingFeeCents, product.currency_code),
+                      })}
                 </Text>
               </View>
               <View className="flex-row items-center gap-2">
                 <ThemedIcon name="return-up-back-outline" size={18} tone="ink700" />
                 <Text className="flex-1 text-body-sm text-ink-700">
-                  Returns accepted within {shippingPolicy.returnWindowDays} days of delivery
+                  {t("product.returnsWithin", { days: shippingPolicy.returnWindowDays })}
                 </Text>
               </View>
             </View>
@@ -365,12 +369,12 @@ export default function ProductDetailScreen() {
 
         {relatedProducts.length > 0 ? (
           <View className="gap-2 pb-8">
-            <Text className="px-4 text-h3 text-ink-950">More from {product.brand}</Text>
+            <Text className="px-4 text-h3 text-ink-950">{t("product.moreFrom", { brand: product.brand })}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}>
               {relatedProducts.map((item) => (
                 <View key={item.productCode} style={{ width: 140 }}>
                   <ProductCard
-                    product={toProductCardData(item)}
+                    product={toProductCardData(item, t, formatPrice)}
                     onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
                   />
                 </View>

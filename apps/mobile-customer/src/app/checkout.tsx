@@ -5,7 +5,8 @@ import { Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useCart } from "@/features/cart/hooks/use-cart";
-import { formatMoney } from "@/features/discovery/utils/format-price";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 /**
  * Stripe checkout has been removed for now - the app is ETB-only and
@@ -19,6 +20,8 @@ import { formatMoney } from "@/features/discovery/utils/format-price";
 export default function CheckoutScreen() {
   const { customer } = useAuth();
   const { cart } = useCart();
+  const t = useTranslations();
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     if (!customer) {
@@ -29,10 +32,10 @@ export default function CheckoutScreen() {
   const summary = useMemo(() => {
     if (!cart) return null;
     return {
-      subtotal: formatMoney(cart.subtotal, cart.currency_code),
-      shipping: cart.qualifies_for_free_shipping ? "Free" : formatMoney(cart.shipping_estimate, cart.currency_code),
+      subtotal: formatPrice(cart.subtotal, cart.currency_code),
+      shipping: cart.qualifies_for_free_shipping ? t("cart.free") : formatPrice(cart.shipping_estimate, cart.currency_code),
     };
-  }, [cart]);
+  }, [cart, t, formatPrice]);
 
   if (!customer) {
     return null;
@@ -41,34 +44,33 @@ export default function CheckoutScreen() {
   if (!cart || cart.items.length === 0) {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-paper px-6">
-        <Stack.Screen options={{ headerShown: true, title: "Checkout" }} />
-        <Text className="text-h2 text-ink-950">Your bag is empty</Text>
-        <Button onPress={() => router.replace("/(tabs)/cart")}>Back to bag</Button>
+        <Stack.Screen options={{ headerShown: true, title: t("checkout.title") }} />
+        <Text className="text-h2 text-ink-950">{t("checkout.bagEmpty")}</Text>
+        <Button onPress={() => router.replace("/(tabs)/cart")}>{t("checkout.backToBag")}</Button>
       </View>
     );
   }
 
   return (
     <View className="flex-1 items-center justify-center gap-4 bg-paper px-6">
-      <Stack.Screen options={{ headerShown: true, title: "Checkout" }} />
-      <Text className="text-h2 text-ink-950">Checkout is coming soon</Text>
+      <Stack.Screen options={{ headerShown: true, title: t("checkout.title") }} />
+      <Text className="text-center text-h2 text-ink-950">{t("checkout.comingSoon")}</Text>
       <Text className="text-center text-body text-ink-500">
-        We&apos;re integrating an Ethiopian payment option so you can pay for Birr orders. Your bag is saved -
-        come back once payment is live.
+        {t("checkout.comingSoonBody")}
       </Text>
       {summary ? (
         <View className="w-full gap-1 rounded-md border border-ink-100 p-4">
           <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">Subtotal</Text>
+            <Text className="text-body text-ink-700">{t("checkout.subtotal")}</Text>
             <Text className="text-body text-ink-950">{summary.subtotal}</Text>
           </View>
           <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">Shipping</Text>
+            <Text className="text-body text-ink-700">{t("checkout.shipping")}</Text>
             <Text className="text-body text-ink-950">{summary.shipping}</Text>
           </View>
         </View>
       ) : null}
-      <Button onPress={() => router.back()}>Back to bag</Button>
+      <Button onPress={() => router.back()}>{t("checkout.backToBag")}</Button>
     </View>
   );
 }

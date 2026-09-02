@@ -16,6 +16,7 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json package-lock.json ./
+COPY scripts scripts
 COPY apps/backend/package.json apps/backend/package.json
 COPY packages/search-contract/package.json packages/search-contract/package.json
 # Full install (including devDependencies) - the build step below needs

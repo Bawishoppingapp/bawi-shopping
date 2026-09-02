@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import {
   MedusaAuthError,
   createCustomer,
+  deleteCustomerAccount,
   getCurrentCustomer,
   loginCustomer,
   registerCustomerAuthIdentity,
@@ -22,6 +23,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (input: { firstName: string; lastName: string; email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -74,9 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCustomer(null);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    const token = await getSessionToken();
+    if (!token) throw new MedusaAuthError("No active customer session");
+    await deleteCustomerAccount(token);
+    await clearSessionToken();
+    setCustomer(null);
+  }, []);
+
   const value = useMemo(
-    () => ({ customer, isLoading, login, register, logout }),
-    [customer, isLoading, login, register, logout]
+    () => ({ customer, isLoading, login, register, logout, deleteAccount }),
+    [customer, isLoading, login, register, logout, deleteAccount]
   );
 
   // Known TS false positive: Context.Provider's exotic component type

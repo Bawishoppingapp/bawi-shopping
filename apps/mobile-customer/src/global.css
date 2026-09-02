@@ -35,8 +35,9 @@
   --color-info: 59 91 219;
 }
 
-/* Dark mode follows the device's system setting (no manual toggle) -
-   same warm-neutral "quiet luxury" identity as light mode, just
+/* AppearanceProvider applies the customer's saved light/dark choice via
+   React Native's Appearance API, which drives this media query. Dark uses
+   the same warm-neutral "quiet luxury" identity as light mode, just
    inverted: near-black background, near-white text, borders/fills
    darkened instead of lightened. Semantic colors (success/warning/
    danger/info) are brightened slightly so they keep enough contrast

@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { COUNTRIES, type Country } from "../data/countries";
+import { COUNTRIES, countryName, type Country } from "../data/countries";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 
 interface CountryPickerProps {
   selectedCode: string | null;
@@ -23,17 +24,19 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const themeColors = useThemeColors();
+  const locale = useLocale();
+  const t = useTranslations();
 
   const selected = COUNTRIES.find((c) => c.code === selectedCode);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return COUNTRIES;
-    return COUNTRIES.filter((c) => c.name.toLowerCase().includes(q));
-  }, [query]);
+    return COUNTRIES.filter((c) => countryName(c.code, locale).toLocaleLowerCase(locale).includes(q));
+  }, [query, locale]);
 
   return (
     <View className="gap-1.5">
-      <Text className="text-body-sm font-medium text-ink-800">Country</Text>
+      <Text className="text-body-sm font-medium text-ink-800">{t("checkout.country")}</Text>
       <Pressable
         accessibilityRole="button"
         onPress={() => setOpen(true)}
@@ -42,7 +45,7 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
         } bg-surface`}
       >
         <Text className={selected ? "text-body text-ink-950" : "text-body text-ink-400"}>
-          {selected ? selected.name : "Select a country"}
+          {selected ? countryName(selected.code, locale) : t("address.selectCountry")}
         </Text>
         <ThemedIcon name="chevron-down" size={18} tone="ink400" />
       </Pressable>
@@ -51,15 +54,15 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <SafeAreaView className="flex-1 bg-paper">
           <View className="flex-row items-center justify-between border-b border-ink-100 px-4 py-3">
-            <Text className="text-h2 text-ink-950">Select country</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setOpen(false)} className="p-1">
+            <Text className="text-h2 text-ink-950">{t("address.selectCountry")}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("common.close")} onPress={() => setOpen(false)} className="p-1">
               <ThemedIcon name="close" size={24} />
             </Pressable>
           </View>
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search countries"
+            placeholder={t("address.searchCountries")}
             placeholderTextColor={themeColors.ink400}
             autoCapitalize="none"
             autoFocus
@@ -71,7 +74,7 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
             contentContainerStyle={{ paddingBottom: 24 }}
             ListEmptyComponent={
               <Text className="px-4 py-8 text-center text-body-sm text-ink-500">
-                No countries match &quot;{query}&quot;.
+                {t("address.noMatches", { query })}
               </Text>
             }
             renderItem={({ item }) => (
@@ -84,7 +87,7 @@ export function CountryPicker({ selectedCode, onSelect, error }: CountryPickerPr
                 }}
                 className="flex-row items-center justify-between px-4 py-3 active:bg-ink-100"
               >
-                <Text className="text-body text-ink-950">{item.name}</Text>
+                <Text className="text-body text-ink-950">{countryName(item.code, locale)}</Text>
                 {item.code === selectedCode ? <ThemedIcon name="checkmark" size={20} /> : null}
               </Pressable>
             )}

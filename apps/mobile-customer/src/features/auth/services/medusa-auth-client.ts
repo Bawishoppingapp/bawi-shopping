@@ -122,3 +122,17 @@ export async function getCurrentCustomer(sessionToken: string) {
   const data = await parseJson(response);
   return data.customer ?? null;
 }
+
+export async function deleteCustomerAccount(sessionToken: string): Promise<void> {
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${sessionToken}`,
+      "x-publishable-api-key": MEDUSA_PUBLISHABLE_KEY,
+    },
+  });
+  if (!response.ok) {
+    const data = await parseJson(response);
+    throw new MedusaAuthError(data.message || "Could not delete account");
+  }
+}

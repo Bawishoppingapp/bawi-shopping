@@ -5,8 +5,11 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-na
 
 import { forgotPasswordSchema } from "@/features/auth/schemas/forgot-password-schema";
 import { requestPasswordReset } from "@/features/auth/services/medusa-auth-client";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
+import { localizeValidationMessage } from "@/features/i18n/utils/localize-validation";
 
 export default function ForgotPasswordScreen() {
+  const t = useTranslations();
   const [email, setEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -18,7 +21,7 @@ export default function ForgotPasswordScreen() {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const field = String(issue.path[0]);
-        if (!errors[field]) errors[field] = issue.message;
+        if (!errors[field]) errors[field] = localizeValidationMessage(issue.message, t);
       }
       setFieldErrors(errors);
       return;
@@ -36,12 +39,11 @@ export default function ForgotPasswordScreen() {
   if (sent) {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-paper px-6">
-        <Text className="text-h1 text-ink-950">Check your email</Text>
+        <Text className="text-h1 text-ink-950">{t("auth.checkEmail")}</Text>
         <Text className="text-center text-body text-ink-500">
-          If an account exists for {email}, we&apos;ve sent a reset code. Enter it on the next screen along
-          with your new password.
+          {t("auth.resetSent", { email })}
         </Text>
-        <Button onPress={() => router.replace("/reset-password")}>Enter reset code</Button>
+        <Button onPress={() => router.replace("/reset-password")}>{t("auth.enterResetCode")}</Button>
       </View>
     );
   }
@@ -50,11 +52,11 @@ export default function ForgotPasswordScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 bg-paper">
       <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
         <View className="mb-4 gap-1">
-          <Text className="text-h1 text-ink-950">Reset your password</Text>
-          <Text className="text-body text-ink-500">We&apos;ll email you a code to reset your password.</Text>
+          <Text className="text-h1 text-ink-950">{t("auth.resetTitle")}</Text>
+          <Text className="text-body text-ink-500">{t("auth.resetEmailBody")}</Text>
         </View>
         <Input
-          label="Email"
+          label={t("login.email")}
           value={email}
           onChangeText={setEmail}
           error={fieldErrors.email}
@@ -64,7 +66,7 @@ export default function ForgotPasswordScreen() {
           textContentType="emailAddress"
         />
         <Button onPress={onSubmit} loading={submitting}>
-          Send reset code
+          {t("auth.sendResetCode")}
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>

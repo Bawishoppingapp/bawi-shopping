@@ -1,0 +1,81 @@
+name: Private beta bug
+description: Report a reproducible issue from a signed Bawi Shopping beta build
+title: "[Beta] "
+labels: ["beta", "bug"]
+body:
+  - type: input
+    id: build
+    attributes:
+      label: App version and build number
+      placeholder: "1.0.0 (42)"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS
+      placeholder: "iPhone 15, iOS 26.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Installation / launch
+        - Home
+        - Search / product
+        - Wishlist
+        - Cart / checkout-disabled flow
+        - Login / registration / account
+        - Language / appearance / currency
+        - Address / order / notification
+        - Seller application / seller tools
+        - Accessibility / layout
+        - Privacy / security
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: locale
+    attributes:
+      label: Language, appearance, and display currency
+      placeholder: "Amharic, dark, ETB"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open Search
+        2. Select Women
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, video, time, and correlation details
+      description: Do not include passwords, tokens, payment credentials, or another person's data.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - S1 — crash, security/privacy issue, cross-account access, or data loss
+        - S2 — critical flow unusable with no workaround
+        - S3 — incorrect behavior with a workaround
+        - S4 — cosmetic or minor usability issue
+    validations:
+      required: true

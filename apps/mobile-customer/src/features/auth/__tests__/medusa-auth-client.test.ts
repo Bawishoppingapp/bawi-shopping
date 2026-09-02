@@ -1,6 +1,7 @@
 import {
   MedusaAuthError,
   createCustomer,
+  deleteCustomerAccount,
   getCurrentCustomer,
   loginCustomer,
   registerCustomerAuthIdentity,
@@ -102,6 +103,31 @@ describe("medusa-auth-client", () => {
       (global.fetch as jest.Mock).mockResolvedValue({ ok: false });
       const customer = await getCurrentCustomer("stale-token");
       expect(customer).toBeNull();
+    });
+  });
+
+  describe("deleteCustomerAccount", () => {
+    test("deletes the authenticated customer with the session and publishable key", async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
+
+      await deleteCustomerAccount("session-token");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/store/customers/me"),
+        expect.objectContaining({
+          method: "DELETE",
+          headers: expect.objectContaining({ Authorization: "Bearer session-token" }),
+        })
+      );
+    });
+
+    test("surfaces the backend error without clearing the local session", async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        text: () => Promise.resolve(JSON.stringify({ message: "Account could not be deleted" })),
+      });
+
+      await expect(deleteCustomerAccount("session-token")).rejects.toThrow("Account could not be deleted");
     });
   });
 });

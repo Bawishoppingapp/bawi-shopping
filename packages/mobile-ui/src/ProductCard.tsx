@@ -11,6 +11,8 @@ export interface ProductCardData {
   priceLabel: string;
   compareAtPriceLabel?: string;
   soldOut?: boolean;
+  noImageLabel?: string;
+  soldOutLabel?: string;
 }
 
 interface ProductCardProps extends Omit<PressableProps, "children"> {
@@ -31,7 +33,7 @@ interface ProductCardProps extends Omit<PressableProps, "children"> {
  * decoration (matches the design brief's "avoid clutter" direction).
  */
 export function ProductCard({ product, className = "", imageAspectRatio = 4 / 5, ...props }: ProductCardProps) {
-  const { title, brandName, imageUrl, priceLabel, compareAtPriceLabel, soldOut } = product;
+  const { title, brandName, imageUrl, priceLabel, compareAtPriceLabel, soldOut, noImageLabel = "No image yet", soldOutLabel = "Sold out" } = product;
   const onSale = Boolean(compareAtPriceLabel);
 
   return (
@@ -55,12 +57,12 @@ export function ProductCard({ product, className = "", imageAspectRatio = 4 / 5,
         ) : (
           <View className="h-full w-full items-center justify-center gap-1.5">
             <ThemedIcon name="image-outline" size={22} tone="ink400" />
-            <Text className="text-caption text-ink-400">No image yet</Text>
+            <Text className="text-caption text-ink-400">{noImageLabel}</Text>
           </View>
         )}
         {soldOut ? (
           <View className="absolute inset-0 items-center justify-center bg-white/70">
-            <Text className="text-body-sm font-medium uppercase tracking-wide text-ink-700">Sold out</Text>
+            <Text className="text-body-sm font-medium uppercase tracking-wide text-ink-700">{soldOutLabel}</Text>
           </View>
         ) : null}
       </View>

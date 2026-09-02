@@ -144,5 +144,37 @@
   "order.returnReasonCustomerRemorse": "ከእንግዲህ አያስፈልገኝም",
   "order.returnCommentLabel": "ተጨማሪ ዝርዝሮች (አማራጭ)",
   "order.submitReturn": "የመመለሻ ጥያቄ አስገባ",
-  "order.returnRequestSent": "የመመለሻ ጥያቄዎ ገብቷል።"
+  "order.returnRequestSent": "የመመለሻ ጥያቄዎ ገብቷል።",
+  "nav.wishlist": "የምኞት ዝርዝር",
+  "common.error": "ችግር ተፈጥሯል። እንደገና ይሞክሩ።",
+  "common.close": "ዝጋ", "common.clear": "አጽዳ", "common.cancel": "ሰርዝ", "common.remove": "አስወግድ", "common.default": "ነባሪ", "common.on": "በርቷል", "common.off": "ጠፍቷል", "common.details": "ዝርዝሮች",
+  "home.welcome": "እንኳን ደህና መጡ፣ {name}", "home.tagline": "ከገለልተኛ ብራንዶች የተመረጠ ፋሽን።", "home.recentlyViewed": "በቅርቡ የታዩ", "home.justIn": "አዲስ የገቡ", "home.justInSubtitle": "የዚህ ሳምንት አዳዲስ ምርቶች", "home.promoBody": "በክፍያ ጊዜ በራስ-ሰር ይተገበራል፤ ኮድ አያስፈልግም።", "home.gridSubtitle": "ሁሉም አዳዲስ ምርቶች በአንድ ቦታ", "home.sell": "በባዊ ይሽጡ", "home.loadError": "ምርቶችን መጫን አልተቻለም። ወደ ታች ጎትተው ይሞክሩ።",
+  "search.clearSearch": "ፍለጋን አጽዳ", "search.recentSearches": "የቅርብ ጊዜ ፍለጋዎች", "search.browseCategories": "ምድቦችን ያስሱ",
+  "wishlist.loginHint": "ምርቶችን ለማስቀመጥ ይግቡ።", "wishlist.empty": "ገና የተቀመጠ የለም", "wishlist.emptyHint": "ምርትን እዚህ ለማስቀመጥ የልብ ምልክቱን ይንኩ።", "wishlist.remove": "ከምኞት ዝርዝር አስወግድ",
+  "product.unavailable": "ይህ ምርት ከእንግዲህ አይገኝም።", "product.removeWishlist": "ከምኞት ዝርዝር አስወግድ", "product.saveWishlist": "ወደ ምኞት ዝርዝር አስቀምጥ", "product.selectOptions": "መጠንና ቀለም ይምረጡ።", "product.freeShippingItem": "ይህ ምርት ነፃ መላኪያ ያገኛል", "product.freeShippingOver": "ከ{amount} በላይ ነፃ መላኪያ፤ ካልሆነ {fee}", "product.returnsWithin": "ከደረሰ በኋላ በ{days} ቀናት ውስጥ መመለስ ይቻላል", "product.moreFrom": "ተጨማሪ ከ{brand}",
+  "cart.unavailableShort": "ከእንግዲህ አይገኝም", "cart.onlyLeft": "{count} ብቻ ቀርቷል", "cart.decrease": "ብዛት ቀንስ", "cart.increase": "ብዛት ጨምር", "cart.saveLater": "ለኋላ አስቀምጥ", "cart.recommendations": "እነዚህንም ሊወዱ ይችላሉ", "cart.addForFreeShipping": "ለነፃ መላኪያ {amount} ይጨምሩ።", "cart.checkoutUnavailable": "ክፍያ አይገኝም", "cart.checkoutAttention": "ከመክፈልዎ በፊት በቦርሳዎ ውስጥ ያለ ምርት ማስተካከል ያስፈልጋል።",
+  "checkout.action": "ክፍያ", "checkout.bagEmpty": "ቦርሳዎ ባዶ ነው", "checkout.backToBag": "ወደ ቦርሳ ተመለስ", "checkout.comingSoon": "ክፍያ በቅርቡ ይመጣል", "checkout.comingSoonBody": "ለብር ትዕዛዞች የኢትዮጵያ የክፍያ አማራጭ እያዘጋጀን ነው። ቦርሳዎ ተቀምጧል።",
+  "auth.genericError": "ችግር ተፈጥሯል። እንደገና ይሞክሩ።", "auth.networkError": "ከሰርቨሩ ጋር መገናኘት አልተቻለም። ግንኙነትዎን ያረጋግጡ።", "auth.accountExists": "በዚህ ኢሜይል አካውንት አስቀድሞ አለ።", "auth.registerSubtitle": "በባዊ ከገለልተኛ የፋሽን ብራንዶች ይግዙ።", "auth.welcomeBack": "እንኳን ደህና ተመለሱ", "auth.loginSubtitle": "ወደ ባዊ አካውንትዎ ይግቡ።", "auth.forgotPassword": "የይለፍ ቃል ረሱ?", "auth.signUp": "ይመዝገቡ", "auth.confirmPassword": "የይለፍ ቃል ያረጋግጡ", "auth.resetTitle": "የይለፍ ቃልዎን ዳግም ያስጀምሩ", "auth.resetEmailBody": "የማስጀመሪያ ኮድ በኢሜይል እንልካለን።", "auth.checkEmail": "ኢሜይልዎን ይመልከቱ", "auth.resetSent": "ለ{email} አካውንት ካለ፣ ኮድ ልከናል። በሚቀጥለው ገጽ ከአዲሱ የይለፍ ቃል ጋር ያስገቡት።", "auth.enterResetCode": "የማስጀመሪያ ኮድ ያስገቡ", "auth.sendResetCode": "ኮድ ላክ", "auth.passwordUpdated": "የይለፍ ቃል ተቀይሯል", "auth.passwordUpdatedBody": "የይለፍ ቃልዎ ተቀይሯል። በአዲሱ ይግቡ።", "auth.resetCodeTitle": "የማስጀመሪያ ኮድዎን ያስገቡ", "auth.resetCodeBody": "ከኢሜይልዎ የተላከውን ኮድ ይለጥፉና አዲስ የይለፍ ቃል ይምረጡ።", "auth.resetCode": "የማስጀመሪያ ኮድ", "auth.newPassword": "አዲስ የይለፍ ቃል", "auth.confirmNewPassword": "አዲሱን የይለፍ ቃል ያረጋግጡ", "auth.resetPassword": "የይለፍ ቃል አስጀምር", "auth.ruleLength": "ቢያንስ 8 ቁምፊዎች", "auth.ruleLowercase": "አንድ ትንሽ ፊደል", "auth.ruleUppercase": "አንድ ትልቅ ፊደል", "auth.ruleNumber": "አንድ ቁጥር",
+  "account.yourAccount": "የእርስዎ አካውንት", "account.loginHint": "ትዕዛዞችን ለማየት፣ ተወዳጆችን ለማስቀመጥና ፈጥነው ለመክፈል ይግቡ።", "account.preferences": "ምርጫዎች", "account.darkMode": "ጨለማ ገጽታ", "account.darkModeHint": "መተግበሪያውን በብርሃንና በጨለማ ገጽታ መካከል ይቀይራል", "account.legal": "ሕጋዊ", "account.shopping": "ግብይት", "account.myOrders": "ትዕዛዞቼ", "account.details": "ዝርዝሮች", "account.addresses": "አድራሻዎች", "account.notifications": "ማሳወቂያዎች", "account.logout": "ውጣ", "account.hello": "ሰላም፣ {name}", "account.languageDescription": "ለምናሌዎች፣ አዝራሮች፣ መልዕክቶችና የተተረጎመ ይዘት ቋንቋ ይምረጡ።",
+  "notifications.empty": "ገና ማሳወቂያ የለም", "orders.loginHint": "ትዕዛዞችዎን ለማየት ይግቡ።", "orders.startBrowsing": "ማሰስ ይጀምሩ", "orders.notFound": "ይህ ትዕዛዝ አይገኝም።", "orders.placed": "በ{date} ታዘዘ", "orders.deliveryCode": "የማድረሻ ማረጋገጫ ኮድ", "orders.deliveryHint": "ትዕዛዝዎ ሲደርስ ይህን ለአድራሹ ያሳዩ።", "orders.webActions": "ትዕዛዝ ለመሰረዝ ወይም መመለስ ለመጠየቅ የባዊን ድረ ገጽ ይጎብኙ።",
+  "status.awaitingPreparation": "ዝግጅት በመጠበቅ ላይ", "status.preparing": "በዝግጅት ላይ", "status.readyForPickup": "ለመወሰድ ዝግጁ", "status.pickedUp": "ተወስዷል", "status.outForDelivery": "በማድረስ ላይ", "status.delivered": "ደርሷል", "status.cancelled": "ተሰርዟል", "status.returned": "ተመልሷል", "status.pendingPayment": "ክፍያ በመጠበቅ ላይ", "status.paid": "ተከፍሏል", "status.paymentFailed": "ክፍያ አልተሳካም", "notification.orderConfirmed": "ትዕዛዝ ተረጋግጧል", "notification.shipmentUpdate": "የመላኪያ ዝማኔ", "notification.delivered": "ደርሷል", "notification.returnUpdate": "የመመለሻ ዝማኔ", "notification.refundProcessed": "ገንዘብ ተመልሷል", "notification.payoutSent": "ክፍያ ተልኳል", "notification.applicationApproved": "ማመልከቻ ጸድቋል", "notification.applicationUpdate": "የማመልከቻ ዝማኔ",
+  "address.new": "አዲስ አድራሻ", "address.add": "አድራሻ ጨምር", "address.empty": "የተቀመጠ አድራሻ የለም", "address.emptyHint": "በሚቀጥለው ጊዜ ፈጥነው ለመክፈል አድራሻ ይጨምሩ።", "address.removeConfirm": "ይህን አድራሻ ያስወግዱ?", "address.removeFailed": "አድራሻውን ማስወገድ አልተቻለም", "address.removing": "በማስወገድ ላይ…", "address.line2Optional": "አድራሻ መስመር 2 (አማራጭ)", "address.regionOptional": "ክልል / ግዛት (አማራጭ)", "address.subCityOptional": "ክፍለ ከተማ (አማራጭ)", "address.woredaOptional": "ወረዳ (አማራጭ)", "address.postalOptional": "ፖስታ ኮድ (አማራጭ)", "address.landmarkOptional": "መለያ ቦታ (አማራጭ)", "address.landmarkHint": "በቀላሉ የሚገኝ በአቅራቢያ ያለ ቦታ።", "address.deliveryNotesOptional": "የማድረሻ ማስታወሻ (አማራጭ)", "address.deliveryNotesHint": "የበር ቀለም፣ ፎቅ፣ ምቹ ሰዓት ወዘተ።", "address.phoneOptional": "ስልክ (አማራጭ)", "address.setDefault": "ነባሪ የመላኪያ አድራሻ አድርግ", "address.save": "አድራሻ አስቀምጥ", "address.selectCountry": "አገር ይምረጡ", "address.searchCountries": "አገሮችን ፈልግ", "address.noMatches": "ከ“{query}” ጋር የሚዛመድ አገር የለም።", "address.near": "በ{landmark} አቅራቢያ", "address.woreda": "ወረዳ {value}"
+  ,"product.noImage": "ገና ምስል የለም", "auth.showPassword": "የይለፍ ቃል አሳይ", "auth.hidePassword": "የይለፍ ቃል ደብቅ"
+  ,"auth.passwordMismatch": "የይለፍ ቃሎቹ አይዛመዱም"
+  ,"validation.invalidPhone": "ትክክለኛ የኢትዮጵያ ሞባይል ቁጥር ያስገቡ (ለምሳሌ 0911234567)"
+  ,"notifications.updateBody": "የቅርብ ጊዜ ዝርዝሮችን ለማየት ይህን ማሳወቂያ ይክፈቱ።"
+  ,"legal.unavailable": "ይህ ሰነድ አይገኝም።"
+  ,"home.promoTitle": "ከ{amount} በላይ ነፃ መላኪያ"
+  ,"account.currency": "ምንዛሬ"
+  ,"account.currencyDescription": "በመተግበሪያው ውስጥ ዋጋዎች የሚታዩበትን ምንዛሬ ይምረጡ።"
+  ,"account.currencyNotice": "የተቀየሩ ዋጋዎች የቅርብ ጊዜ የምንዛሬ ተመንን ይጠቀማሉ። ክፍያ የሻጩን ትክክለኛ ምንዛሬ ይጠብቃል።"
+  ,"account.currencyAttribution": "የምንዛሬ ተመኖች በExchangeRate-API"
+  ,"currency.etb": "የኢትዮጵያ ብር"
+  ,"currency.usd": "የአሜሪካ ዶላር"
+  ,"search.shop": "ይግዙ"
+  ,"search.forYou": "ለእርስዎ"
+  ,"account.deleteAccount": "መለያ ሰርዝ"
+  ,"account.deleteAccountAction": "በቋሚነት ሰርዝ"
+  ,"account.deleteAccountConfirm": "ይህ መገለጫዎን፣ አድራሻዎችን፣ ምኞት ዝርዝርን፣ ማሳወቂያዎችን እና መግቢያን በቋሚነት ይሰርዛል። በሕግ የሚፈለጉ የግብይት መዝገቦች ሊቀመጡ ይችላሉ። ይህ ሊመለስ አይችልም።"
+  ,"account.deleteAccountFailed": "መለያዎን መሰረዝ አልተቻለም። እንደገና ይሞክሩ።"
 }

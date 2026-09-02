@@ -10,8 +10,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type ProductHit, searchProducts } from "@/features/discovery/services/discovery-client";
-import { formatMoney } from "@/features/discovery/utils/format-price";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import type { CartItem } from "@/features/cart/services/cart-client";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
@@ -27,6 +27,7 @@ function CartLineItem({
   onRemove,
   onSaveForLater,
   t,
+  formatPrice,
 }: {
   item: CartItem;
   currencyCode: string;
@@ -35,6 +36,7 @@ function CartLineItem({
   onRemove: () => void;
   onSaveForLater: (() => void) | null;
   t: ReturnType<typeof useTranslations>;
+  formatPrice: (minorUnits: number, currencyCode: string | null) => string;
 }) {
   return (
     <View className="flex-row gap-3 border-b border-ink-100 py-4">
@@ -54,15 +56,15 @@ function CartLineItem({
           </Text>
         ) : null}
         {!item.is_available ? (
-          <Text className="text-caption text-danger">No longer available</Text>
+          <Text className="text-caption text-danger">{t("cart.unavailableShort")}</Text>
         ) : item.quantity > item.available_quantity ? (
-          <Text className="text-caption text-warning">Only {item.available_quantity} left</Text>
+          <Text className="text-caption text-warning">{t("cart.onlyLeft", { count: item.available_quantity })}</Text>
         ) : null}
         <View className="mt-1 flex-row items-center justify-between">
           <View className="flex-row items-center gap-3 rounded-full border border-ink-200 px-2 py-1">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Decrease quantity"
+              accessibilityLabel={t("cart.decrease")}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 onDecrement();
@@ -74,7 +76,7 @@ function CartLineItem({
             <Text className="text-body-sm text-ink-950">{item.quantity}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Increase quantity"
+              accessibilityLabel={t("cart.increase")}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 onIncrement();
@@ -84,7 +86,7 @@ function CartLineItem({
               <Text className="text-h3 text-ink-950">+</Text>
             </Pressable>
           </View>
-          <Text className="text-body-sm font-medium text-ink-950">{formatMoney(item.line_total, currencyCode)}</Text>
+          <Text className="text-body-sm font-medium text-ink-950">{formatPrice(item.line_total, currencyCode)}</Text>
         </View>
         <View className="flex-row gap-4">
           <Pressable accessibilityRole="button" onPress={onRemove}>
@@ -92,7 +94,7 @@ function CartLineItem({
           </Pressable>
           {onSaveForLater ? (
             <Pressable accessibilityRole="button" onPress={onSaveForLater}>
-              <Text className="text-caption text-ink-500 underline">Save for later</Text>
+              <Text className="text-caption text-ink-500 underline">{t("cart.saveLater")}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -107,6 +109,7 @@ export default function CartScreen() {
   const locale = useLocale();
   const tabBarHeight = useBottomTabBarHeight();
   const t = useTranslations();
+  const { formatPrice } = useCurrency();
   const [savingForLater, setSavingForLater] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<ProductHit[]>([]);
 
@@ -175,7 +178,13 @@ export default function CartScreen() {
           <View className="mb-2 gap-1 rounded-md bg-warning/10 p-3">
             {cart.warnings.map((w) => (
               <Text key={`${w.line_item_id}-${w.code}`} className="text-body-sm text-warning">
-                {w.message}
+                {w.code === "unavailable"
+                  ? t("cart.itemUnavailable")
+                  : w.code === "price_changed"
+                    ? t("cart.priceChanged")
+                    : w.code === "quantity_exceeds_inventory"
+                      ? t("cart.quantityExceedsInventory")
+                      : t("cart.errorGeneric")}
               </Text>
             ))}
           </View>
@@ -193,17 +202,18 @@ export default function CartScreen() {
             onRemove={() => removeItem(item.id)}
             onSaveForLater={customer && item.product_code ? () => onSaveForLater(item) : null}
             t={t}
+            formatPrice={formatPrice}
           />
         ))}
 
         {recommendations.length > 0 ? (
           <View className="gap-2 pt-6">
-            <Text className="text-h3 text-ink-950">You might also like</Text>
+            <Text className="text-h3 text-ink-950">{t("cart.recommendations")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
               {recommendations.map((item) => (
                 <View key={item.productCode} style={{ width: 140 }}>
                   <ProductCard
-                    product={toProductCardData(item)}
+                    product={toProductCardData(item, t, formatPrice)}
                     onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
                   />
                 </View>
@@ -221,31 +231,31 @@ export default function CartScreen() {
       >
         {!cart.qualifies_for_free_shipping ? (
           <Text className="text-body-sm text-ink-500">
-            Add {formatMoney(cart.amount_remaining_for_free_shipping, cart.currency_code)} {t("cart.freeShippingProgress")}.
+            {t("cart.addForFreeShipping", { amount: formatPrice(cart.amount_remaining_for_free_shipping, cart.currency_code) })}
           </Text>
         ) : (
           <Text className="text-body-sm text-success">{t("cart.qualifiesForFreeShipping")}</Text>
         )}
         <View className="flex-row justify-between">
           <Text className="text-body text-ink-700">{t("cart.subtotal")}</Text>
-          <Text className="text-body text-ink-950">{formatMoney(cart.subtotal, cart.currency_code)}</Text>
+          <Text className="text-body text-ink-950">{formatPrice(cart.subtotal, cart.currency_code)}</Text>
         </View>
         <View className="flex-row justify-between">
           <Text className="text-body text-ink-700">{t("cart.shippingEstimate")}</Text>
           <Text className="text-body text-ink-950">
-            {cart.qualifies_for_free_shipping ? t("cart.free") : formatMoney(cart.shipping_estimate, cart.currency_code)}
+            {cart.qualifies_for_free_shipping ? t("cart.free") : formatPrice(cart.shipping_estimate, cart.currency_code)}
           </Text>
         </View>
 
         {cart.checkout_blocked ? (
           <>
-            <Button disabled>Checkout unavailable</Button>
+            <Button disabled>{t("cart.checkoutUnavailable")}</Button>
             <Text className="pb-2 text-center text-caption text-ink-500">
-              Something in your bag needs attention before you can check out - see the notes above.
+              {t("cart.checkoutAttention")}
             </Text>
           </>
         ) : (
-          <Button onPress={() => router.push(customer ? "/checkout" : "/login")}>Checkout</Button>
+          <Button onPress={() => router.push(customer ? "/checkout" : "/login")}>{t("checkout.action")}</Button>
         )}
       </View>
     </SafeAreaView>

@@ -12,9 +12,12 @@ import {
   listNotifications,
   markNotificationRead,
 } from "@/features/notifications/services/notifications-client";
+import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 
 export default function NotificationsScreen() {
   const themeColors = useThemeColors();
+  const locale = useLocale();
+  const t = useTranslations();
   const tabBarHeight = useBottomTabBarHeight();
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +54,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <Stack.Screen options={{ headerShown: true, title: "Notifications" }} />
+        <Stack.Screen options={{ headerShown: true, title: t("account.notifications") }} />
         <ThemedActivityIndicator />
       </SafeAreaView>
     );
@@ -60,9 +63,9 @@ export default function NotificationsScreen() {
   if (notifications.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-paper">
-        <Stack.Screen options={{ headerShown: true, title: "Notifications" }} />
+        <Stack.Screen options={{ headerShown: true, title: t("account.notifications") }} />
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-h2 text-ink-950">No notifications yet</Text>
+          <Text className="text-h2 text-ink-950">{t("notifications.empty")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -70,7 +73,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <Stack.Screen options={{ headerShown: true, title: "Notifications" }} />
+      <Stack.Screen options={{ headerShown: true, title: t("account.notifications") }} />
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
@@ -78,7 +81,8 @@ export default function NotificationsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
         renderItem={({ item }) => {
           const unread = !item.read_at;
-          const badge = notificationEventBadge(item.event_type);
+          const badge = notificationEventBadge(item.event_type, t);
+          const hasLocalizedCopy = badge.label !== item.event_type;
           return (
             <Pressable
               accessibilityRole="button"
@@ -89,14 +93,16 @@ export default function NotificationsScreen() {
                 <View className="flex-row items-center gap-2">
                   {unread ? <View className="h-2 w-2 rounded-full bg-ink-solid" /> : null}
                   <Text className={`text-body-sm ${unread ? "font-semibold" : "font-medium"} text-ink-950`}>
-                    {item.subject}
+                    {hasLocalizedCopy ? badge.label : item.subject}
                   </Text>
                 </View>
                 <Text className="text-caption uppercase text-ink-500">{badge.label}</Text>
               </View>
-              <Text className="text-body-sm text-ink-700">{item.body}</Text>
+              <Text className="text-body-sm text-ink-700">
+                {hasLocalizedCopy ? t("notifications.updateBody") : item.body}
+              </Text>
               <Text className="text-caption text-ink-500">
-                {new Date(item.created_at).toLocaleDateString()}
+                {new Date(item.created_at).toLocaleDateString(locale)}
               </Text>
             </Pressable>
           );

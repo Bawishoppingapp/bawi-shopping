@@ -69,7 +69,14 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={variant === "secondary" || variant === "ghost" ? themeColors.ink950 : "#FFFFFF"} />
       ) : (
-        <Text className={`font-medium ${textByVariant[variant]} ${sizeClasses[size].text}`}>{children}</Text>
+        <Text
+          className={`shrink text-center font-medium ${textByVariant[variant]} ${sizeClasses[size].text}`}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.82}
+        >
+          {children}
+        </Text>
       )}
     </Pressable>
   );

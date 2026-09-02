@@ -16,7 +16,7 @@ One shared system (`packages/ui`) powers the customer storefront, seller portal,
 - **One accent color**, used sparingly for primary actions (buy, submit, confirm) and active/selected states — not for decoration.
 - **Semantic colors** for state, kept distinct from the accent: success (order confirmed, in stock), warning (low stock, action needed), error (payment failed, validation error), info (neutral status updates).
 - Color is never the only signal for state — every semantic color pairs with an icon or text label (accessibility requirement, see §7).
-- Dark backgrounds are not part of v1's product-facing UI (storefront stays light/neutral for product photography fidelity); seller/admin portals may offer a dark mode as a later enhancement, not v1.
+- The web storefront and seller/admin portals stay light-only in v1. The native mobile app offers a saved Light/Dark preference because its full component palette is theme-aware; both modes preserve the same warm-neutral brand treatment and product-photo fidelity.
 
 ## 3. Typography
 

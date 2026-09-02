@@ -15,11 +15,12 @@ function authHeaders(sessionToken: string | null): Record<string, string> | null
   };
 }
 
-export async function listWishlist(sessionToken: string | null): Promise<ProductHit[]> {
+export async function listWishlist(sessionToken: string | null, locale?: string): Promise<ProductHit[]> {
   const headers = authHeaders(sessionToken);
   if (!headers) return [];
 
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/store/wishlist`, { headers });
+  const query = locale ? `?locale=${encodeURIComponent(locale)}` : "";
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/store/wishlist${query}`, { headers });
   if (!response.ok) return [];
 
   const data = await response.json();

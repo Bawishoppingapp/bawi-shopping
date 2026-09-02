@@ -4,6 +4,16 @@ A running log of decisions that aren't obvious from reading the code, in the ord
 
 ---
 
+## Customer display currency defaults to ETB with a persistent ETB/USD selector
+
+**Date:** September 1, 2026.
+
+**Decision:** Customer-facing prices use one persistent Account → Currency preference, defaulting to ETB. USD-priced catalog amounts are converted using a read-only Bawi backend endpoint backed by ExchangeRate-API; the backend caches successful rates for 12 hours and refuses conversions older than 48 hours. This is display-only: seller prices, carts, orders, checkout, and settlement retain their original transactional currency, so changing the preference can never alter the amount or currency actually charged.
+
+**Why:** The customer requested consistent ETB presentation throughout the app while retaining an explicit way to switch the full display to USD. Centralizing conversion prevents individual screens from mixing `$` and `Br`, while keeping transactional money untouched avoids the financially incorrect alternatives of relabeling numbers or silently modifying checkout amounts.
+
+---
+
 ## Commerce backend stays Medusa; Supabase is not used
 
 **Date:** first implementation session (user registration vertical slice).
@@ -180,7 +190,7 @@ A running log of decisions that aren't obvious from reading the code, in the ord
 
 ---
 
-## v1 stays light-mode only, everywhere - `prefers-color-scheme: dark` removed from all three apps
+## v1 web apps stay light-mode only - `prefers-color-scheme: dark` removed from all three web apps
 
 **Date:** seller-application vertical slice (found during manual browser verification, not by inspection).
 
@@ -188,7 +198,7 @@ A running log of decisions that aren't obvious from reading the code, in the ord
 
 **Why:** `docs/DESIGN-SYSTEM.md` §2 already said dark mode is deferred past v1 - but the Next.js scaffold's default `globals.css` includes a dark-mode media query that flips the page *background* to near-black while `packages/ui` components (`Input`, `Button`, etc.) use fixed `text-neutral-900`-on-white-ish classes that don't adapt. The combination produced a real, hard-to-read screen (dark background, near-black text) in any browser/OS set to dark mode - only caught by taking an actual screenshot during manual testing, not by lint/typecheck/tests. Since dark mode support isn't in scope, the fix is to stop flipping the background, not to make every component dark-mode-aware.
 
-**How to apply:** If dark mode is ever built for real (a deliberate future decision, not this one), it needs to update `packages/ui`'s components to use theme-aware color tokens, not just restore this CSS block. Don't re-add a bare `prefers-color-scheme` override without that work happening at the same time.
+**How to apply:** If dark mode is ever built for the web apps, it needs to update `packages/ui`'s components to use theme-aware color tokens, not just restore this CSS block. Don't re-add a bare `prefers-color-scheme` override without that work happening at the same time. The separate React Native app now has a complete theme-aware palette and a persisted Light/Dark setting under Account; that does not change this web decision.
 
 ---
 

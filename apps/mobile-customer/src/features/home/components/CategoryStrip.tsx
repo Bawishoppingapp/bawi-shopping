@@ -35,9 +35,14 @@ export function CategoryStrip({ categories }: CategoryStripProps) {
           onPress={() =>
             router.push({ pathname: "/(tabs)/search", params: { category: item.id, categoryName: item.name } })
           }
-          className={`h-28 w-36 justify-between rounded-2xl p-4 active:opacity-80 ${TILE_STYLES[index % TILE_STYLES.length]}`}
+          className={`h-28 w-40 justify-between rounded-2xl p-4 active:opacity-80 ${TILE_STYLES[index % TILE_STYLES.length]}`}
         >
-          <Text numberOfLines={2} className="font-serif text-h3 text-ink-950">
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.76}
+            className="font-serif text-h3 text-ink-950"
+          >
             {item.name}
           </Text>
           {/* Literal white, not ThemedIcon: this chip is always dark

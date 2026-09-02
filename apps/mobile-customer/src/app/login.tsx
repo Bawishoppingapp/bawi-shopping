@@ -3,11 +3,14 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 
-import { MedusaAuthError, useAuth } from "@/features/auth/hooks/use-auth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { loginSchema } from "@/features/auth/schemas/login-schema";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
+import { localizeValidationMessage } from "@/features/i18n/utils/localize-validation";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const t = useTranslations();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -21,7 +24,7 @@ export default function LoginScreen() {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const field = String(issue.path[0]);
-        if (!errors[field]) errors[field] = issue.message;
+        if (!errors[field]) errors[field] = localizeValidationMessage(issue.message, t);
       }
       setFieldErrors(errors);
       return;
@@ -31,9 +34,9 @@ export default function LoginScreen() {
     try {
       await login(parsed.data.email, parsed.data.password);
       router.back();
-    } catch (error) {
+    } catch {
       setFormError(
-        error instanceof MedusaAuthError ? error.message : "Something went wrong. Please try again."
+        t("auth.genericError")
       );
     } finally {
       setSubmitting(false);
@@ -47,8 +50,8 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
         <View className="mb-4 gap-1">
-          <Text className="text-h1 text-ink-950">Welcome back</Text>
-          <Text className="text-body text-ink-500">Log in to your Bawi account.</Text>
+          <Text className="text-h1 text-ink-950">{t("auth.welcomeBack")}</Text>
+          <Text className="text-body text-ink-500">{t("auth.loginSubtitle")}</Text>
         </View>
         {formError ? (
           <View className="rounded-md bg-danger/10 p-3">
@@ -56,7 +59,7 @@ export default function LoginScreen() {
           </View>
         ) : null}
         <Input
-          label="Email"
+          label={t("login.email")}
           value={email}
           onChangeText={setEmail}
           error={fieldErrors.email}
@@ -66,23 +69,25 @@ export default function LoginScreen() {
           textContentType="emailAddress"
         />
         <Input
-          label="Password"
+          label={t("login.password")}
           value={password}
           onChangeText={setPassword}
           error={fieldErrors.password}
           secureTextEntry
+          showPasswordLabel={t("auth.showPassword")}
+          hidePasswordLabel={t("auth.hidePassword")}
           autoComplete="password"
           textContentType="password"
         />
         <Button onPress={onSubmit} loading={submitting}>
-          Log in
+          {t("login.submit")}
         </Button>
         <Link href="/forgot-password" asChild>
-          <Text className="text-center text-body-sm text-ink-500">Forgot password?</Text>
+          <Text className="text-center text-body-sm text-ink-500">{t("auth.forgotPassword")}</Text>
         </Link>
         <Link href="/register" replace asChild>
           <Text className="text-center text-body-sm text-ink-500">
-            Don&apos;t have an account? <Text className="font-medium text-ink-950">Sign up</Text>
+            {t("login.noAccount")} <Text className="font-medium text-ink-950">{t("auth.signUp")}</Text>
           </Text>
         </Link>
       </ScrollView>

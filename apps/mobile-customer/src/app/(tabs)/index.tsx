@@ -6,18 +6,15 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { getSessionToken } from "@/features/auth/services/token-storage";
 import { type CategoryNode, type ProductHit, listCategories, searchProducts } from "@/features/discovery/services/discovery-client";
 import { getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
-import { formatMoney } from "@/features/discovery/utils/format-price";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { CategoryStrip } from "@/features/home/components/CategoryStrip";
 import { EditorialSpotlight } from "@/features/home/components/EditorialSpotlight";
-import { HeroBanner } from "@/features/home/components/HeroBanner";
 import { MasonryGrid } from "@/features/home/components/MasonryGrid";
 import { ProductRail } from "@/features/home/components/ProductRail";
 import { PromoBanner } from "@/features/home/components/PromoBanner";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
-import { listNotifications } from "@/features/notifications/services/notifications-client";
 import { getShippingPolicy } from "@/features/shipping-policy/services/shipping-policy-client";
 
 const NEW_ARRIVALS_LIMIT = 15;
@@ -32,6 +29,7 @@ export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const locale = useLocale();
   const t = useTranslations();
+  const { formatPrice } = useCurrency();
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [newArrivals, setNewArrivals] = useState<ProductHit[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<ProductHit[]>([]);
@@ -39,7 +37,6 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   // Recently-viewed is local-device state (not tied to the discovery
   // fetch below), so it refreshes on every focus rather than only on
@@ -49,22 +46,6 @@ export default function HomeScreen() {
     useCallback(() => {
       getRecentlyViewed().then(setRecentlyViewed);
     }, [])
-  );
-
-  // Refetched on every focus (not just mount) so the badge clears
-  // promptly after visiting Account -> Notifications.
-  useFocusEffect(
-    useCallback(() => {
-      if (!customer) {
-        setUnreadCount(0);
-        return;
-      }
-      (async () => {
-        const token = await getSessionToken();
-        const notifications = await listNotifications(token);
-        setUnreadCount(notifications.filter((n) => !n.read_at).length);
-      })();
-    }, [customer])
   );
 
   const load = useCallback(async () => {
@@ -104,18 +85,6 @@ export default function HomeScreen() {
   const sections = useMemo(
     () => [
       {
-        key: "hero",
-        node: (
-          <HeroBanner
-            eyebrow="NEW ARRIVALS WEEKLY"
-            headline="Fashion, From Independent Hands"
-            body="Discover boutique labels and independent designers, curated in one closet."
-            ctaLabel="Shop new arrivals"
-            ctaHref={{ pathname: "/(tabs)/search", params: { sort: "newest" } }}
-          />
-        ),
-      },
-      {
         key: "categories",
         node: categories.length > 0 ? <CategoryStrip categories={categories} /> : null,
       },
@@ -123,7 +92,7 @@ export default function HomeScreen() {
         key: "recently-viewed",
         node:
           recentlyViewed.length > 0 ? (
-            <ProductRail title="Recently viewed" products={recentlyViewed} />
+            <ProductRail title={t("home.recentlyViewed")} products={recentlyViewed} />
           ) : null,
       },
       {
@@ -131,8 +100,8 @@ export default function HomeScreen() {
         node:
           spotlightProducts.length === SPOTLIGHT_COUNT ? (
             <EditorialSpotlight
-              title="Just In"
-              subtitle="Fresh from this week's drops"
+              title={t("home.justIn")}
+              subtitle={t("home.justInSubtitle")}
               products={spotlightProducts as [ProductHit, ProductHit, ProductHit]}
             />
           ) : null,
@@ -142,8 +111,10 @@ export default function HomeScreen() {
         node:
           freeShippingThreshold !== null ? (
             <PromoBanner
-              title={`Free shipping over ${formatMoney(freeShippingThreshold, CURRENCY_CODE)}`}
-              body="Applied automatically at checkout - no code needed."
+              title={t("home.promoTitle", {
+                amount: formatPrice(freeShippingThreshold, CURRENCY_CODE),
+              })}
+              body={t("home.promoBody")}
             />
           ) : null,
       },
@@ -153,14 +124,14 @@ export default function HomeScreen() {
           gridProducts.length > 0 ? (
             <MasonryGrid
               title={t("home.newArrivals")}
-              subtitle="The latest, all in one place"
+              subtitle={t("home.gridSubtitle")}
               products={gridProducts}
               seeAllHref="/(tabs)/search"
             />
           ) : null,
       },
     ],
-    [categories, recentlyViewed, spotlightProducts, gridProducts, freeShippingThreshold, t]
+    [categories, recentlyViewed, spotlightProducts, gridProducts, freeShippingThreshold, t, formatPrice]
   );
 
   if (loading) {
@@ -188,41 +159,14 @@ export default function HomeScreen() {
           <View className="flex-row items-center justify-between">
             <View className="gap-1">
               <Text className="font-serif text-display text-ink-950">
-                {customer?.first_name ? `Welcome, ${customer.first_name}` : "Bawi"}
+                {customer?.first_name ? t("home.welcome", { name: customer.first_name }) : "Bawi"}
               </Text>
-              <Text className="text-body text-ink-500">Fashion, from independent brands.</Text>
+              <Text className="text-body text-ink-500">{t("home.tagline")}</Text>
             </View>
             <View className="flex-row items-center gap-1">
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Change language"
-                onPress={() => router.push("/(tabs)/account/language")}
-                className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
-              >
-                <ThemedIcon name="language-outline" size={20} />
-              </Pressable>
-              {customer ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-                  onPress={() => router.push("/(tabs)/account/notifications")}
-                  className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
-                >
-                  <View>
-                    <ThemedIcon name="notifications-outline" size={20} />
-                    {unreadCount > 0 ? (
-                      <View className="absolute -right-1.5 -top-1.5 h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1">
-                        <Text className="text-[10px] font-medium text-white">
-                          {unreadCount > 9 ? "9+" : unreadCount}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </Pressable>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Sell on Bawi"
+                accessibilityLabel={t("home.sell")}
                 onPress={() => router.push("/sell")}
                 className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
               >
@@ -235,7 +179,7 @@ export default function HomeScreen() {
         {error ? (
           <View className="px-4 pt-4">
             <Text className="text-body-sm text-ink-500">
-              Couldn&apos;t load products right now. Pull down to try again.
+              {t("home.loadError")}
             </Text>
           </View>
         ) : null}

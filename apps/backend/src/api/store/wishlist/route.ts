@@ -4,6 +4,7 @@ import { WISHLIST_MODULE } from "../../../modules/wishlist"
 import type WishlistModuleService from "../../../modules/wishlist/service"
 import { resolveWishlistHits } from "../../../wishlist/wishlist-catalog"
 import { addWishlistItemSchema } from "../../../wishlist/schemas"
+import { isTranslatableLocale } from "../../../modules/category-translation/locales"
 
 /** A customer's saved products, resolved into display-ready hits - same
  * shape as the public product-search endpoint's `products`, so the
@@ -18,7 +19,10 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse):
 
   const hitsByCode = await resolveWishlistHits(
     req.scope,
-    items.map((item) => item.product_code)
+    items.map((item) => item.product_code),
+    typeof req.query.locale === "string" && isTranslatableLocale(req.query.locale)
+      ? req.query.locale
+      : undefined
   )
   const products = items
     .map((item) => hitsByCode.get(item.product_code))

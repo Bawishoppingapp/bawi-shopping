@@ -2,8 +2,9 @@ import { useThemeColors } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { StyleSheet, useColorScheme } from "react-native";
+import { StyleSheet } from "react-native";
 
+import { useAppearance } from "@/features/appearance/hooks/use-appearance";
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 const ICON_SIZE = 24;
@@ -11,8 +12,8 @@ const ICON_SIZE = 24;
 export default function TabsLayout() {
   const t = useTranslations();
   const themeColors = useThemeColors();
-  const scheme = useColorScheme();
-  const isDark = scheme === "dark";
+  const { appearance } = useAppearance();
+  const isDark = appearance === "dark";
 
   return (
     <Tabs
@@ -59,7 +60,7 @@ export default function TabsLayout() {
           // concept the web nav never had (see CLAUDE.md's mobile
           // section). Left in English rather than guessing a
           // translation for a genuinely new term.
-          title: "Wishlist",
+          title: t("nav.wishlist"),
           tabBarIcon: ({ color }) => <Ionicons name="heart-outline" size={ICON_SIZE} color={color} />,
         }}
       />

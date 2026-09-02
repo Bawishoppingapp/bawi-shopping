@@ -4,6 +4,8 @@ import { FlatList, View } from "react-native";
 import { ProductCard } from "@bawi/mobile-ui";
 import type { ProductHit } from "@/features/discovery/services/discovery-client";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 import { SectionHeader } from "./SectionHeader";
 
@@ -18,6 +20,8 @@ interface ProductRailProps {
  * types, deliberately, so it reads as a fast, glanceable rail next to
  * the heavier editorial/masonry sections around it. */
 export function ProductRail({ title, subtitle, products, seeAllHref }: ProductRailProps) {
+  const t = useTranslations();
+  const { formatPrice } = useCurrency();
   return (
     <View className="gap-3">
       <SectionHeader title={title} subtitle={subtitle} seeAllHref={seeAllHref} />
@@ -30,7 +34,7 @@ export function ProductRail({ title, subtitle, products, seeAllHref }: ProductRa
         renderItem={({ item }) => (
           <View style={{ width: 150 }}>
             <ProductCard
-              product={toProductCardData(item)}
+              product={toProductCardData(item, t, formatPrice)}
               onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })}
             />
           </View>

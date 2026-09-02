@@ -14,8 +14,8 @@ import {
   listCategories,
   searchProducts,
 } from "@/features/discovery/services/discovery-client";
-import { getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from "@/features/search/services/search-history";
 
@@ -41,6 +41,7 @@ export default function SearchScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const locale = useLocale();
   const t = useTranslations();
+  const { formatPrice } = useCurrency();
   const themeColors = useThemeColors();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -56,9 +57,7 @@ export default function SearchScreen() {
 
   // Discovery-state (shown before the user has typed/selected anything)
   const [categories, setCategories] = useState<CategoryNode[]>([]);
-  const [newArrivals, setNewArrivals] = useState<ProductHit[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [recentlyViewed, setRecentlyViewed] = useState<ProductHit[]>([]);
 
   const showDiscovery = debouncedQuery.trim().length === 0 && !params.category;
 
@@ -116,16 +115,12 @@ export default function SearchScreen() {
   }, [debouncedQuery]);
 
   const loadDiscoveryData = useCallback(async () => {
-    const [categoriesResult, arrivalsResult, recentResult, viewedResult] = await Promise.allSettled([
+    const [categoriesResult, recentResult] = await Promise.allSettled([
       listCategories(locale),
-      searchProducts({ sort: "newest", limit: 12, locale }),
       getRecentSearches(),
-      getRecentlyViewed(),
     ]);
     if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
-    if (arrivalsResult.status === "fulfilled") setNewArrivals(arrivalsResult.value.products);
     if (recentResult.status === "fulfilled") setRecentSearches(recentResult.value);
-    if (viewedResult.status === "fulfilled") setRecentlyViewed(viewedResult.value);
   }, [locale]);
 
   useFocusEffect(
@@ -154,11 +149,46 @@ export default function SearchScreen() {
     router.push({ pathname: "/product/[code]", params: { code } });
   }
 
+  const topCategories = categories.slice(0, 5);
+
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <View className="gap-3 px-4 pb-3 pt-2">
-        {params.categoryName ? <Text className="text-h2 text-ink-950">{params.categoryName}</Text> : null}
-        <View className="h-12 flex-row items-center rounded-md border border-ink-200 bg-surface px-3">
+      <View className="border-b border-ink-100 bg-paper">
+        <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
+          <Text className="font-serif text-display text-ink-950">{t("search.shop")}</Text>
+          <View className="rounded-full border border-ink-200 bg-surface px-3 py-1.5">
+            <Text className="text-caption font-medium text-ink-700">{t("search.forYou")}</Text>
+          </View>
+        </View>
+
+        {showDiscovery && topCategories.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 28 }}
+          >
+            {topCategories.map((category, index) => (
+              <Pressable
+                key={category.id}
+                accessibilityRole="button"
+                onPress={() => router.setParams({ category: category.id, categoryName: category.name })}
+                className={`border-b-2 pb-3 pt-1 ${index === 0 ? "border-ink-solid" : "border-transparent"}`}
+              >
+                <Text className="text-body-sm font-semibold uppercase tracking-wide text-ink-950">
+                  {category.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : params.categoryName ? (
+          <View className="px-4 pb-3">
+            <Text className="text-h2 text-ink-950">{params.categoryName}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <View className="gap-3 border-b border-ink-100 px-4 py-4">
+        <View className="h-14 flex-row items-center rounded-full border-2 border-ink-200 bg-surface px-4">
           <ThemedIcon name="search" size={18} tone="ink400" />
           <TextInput
             value={query}
@@ -167,10 +197,10 @@ export default function SearchScreen() {
             placeholderTextColor={themeColors.ink400}
             returnKeyType="search"
             autoCapitalize="none"
-            className="ml-2 flex-1 text-body text-ink-950"
+            className="ml-3 flex-1 text-body text-ink-950"
           />
           {query.length > 0 ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery("")}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("search.clearSearch")} onPress={() => setQuery("")}>
               <ThemedIcon name="close-circle" size={18} tone="ink400" />
             </Pressable>
           ) : null}
@@ -180,9 +210,9 @@ export default function SearchScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {(
               [
-                ["newest", "Newest"],
-                ["price_asc", "Price: low to high"],
-                ["price_desc", "Price: high to low"],
+                ["newest", t("sort.newest")],
+                ["price_asc", t("sort.priceAsc")],
+                ["price_desc", t("sort.priceDesc")],
               ] as const
             ).map(([value, label]) => (
               <Chip key={value} label={label} selected={sort === value} onPress={() => setSort(value)} />
@@ -200,11 +230,11 @@ export default function SearchScreen() {
       {showDiscovery ? (
         <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} keyboardShouldPersistTaps="handled">
           {recentSearches.length > 0 ? (
-            <View className="gap-2 px-4 pb-6">
+            <View className="gap-2 border-b border-ink-100 px-4 py-4">
               <View className="flex-row items-center justify-between">
-                <Text className="text-h3 text-ink-950">Recent searches</Text>
+                <Text className="text-h3 text-ink-950">{t("search.recentSearches")}</Text>
                 <Pressable accessibilityRole="button" onPress={onClearRecentSearches}>
-                  <Text className="text-caption text-ink-500">Clear</Text>
+                  <Text className="text-caption text-ink-500">{t("common.clear")}</Text>
                 </Pressable>
               </View>
               <View className="flex-row flex-wrap gap-2">
@@ -216,46 +246,25 @@ export default function SearchScreen() {
           ) : null}
 
           {categories.length > 0 ? (
-            <View className="gap-2 pb-6">
-              <Text className="px-4 text-h3 text-ink-950">Browse categories</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
-                {categories.map((c) => (
-                  <Pressable
-                    key={c.id}
-                    accessibilityRole="button"
-                    onPress={() => router.setParams({ category: c.id, categoryName: c.name })}
-                    className="rounded-full border border-ink-200 bg-surface px-4 py-2 active:bg-ink-100"
-                  >
-                    <Text className="text-body-sm text-ink-800">{c.name}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          ) : null}
-
-          {recentlyViewed.length > 0 ? (
-            <View className="gap-2 pb-6">
-              <Text className="px-4 text-h3 text-ink-950">Recently viewed</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}>
-                {recentlyViewed.map((item) => (
-                  <View key={item.productCode} style={{ width: 120 }}>
-                    <ProductCard product={toProductCardData(item)} onPress={() => goToProduct(item.productCode)} />
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          ) : null}
-
-          {newArrivals.length > 0 ? (
-            <View className="gap-2">
-              <Text className="px-4 text-h3 text-ink-950">New arrivals</Text>
-              <View className="flex-row flex-wrap gap-4 px-4">
-                {newArrivals.map((item) => (
-                  <View key={item.productCode} style={{ width: "47%" }}>
-                    <ProductCard product={toProductCardData(item)} onPress={() => goToProduct(item.productCode)} />
-                  </View>
-                ))}
+            <View>
+              <View className="border-b border-ink-100 px-4 py-4">
+                <Text className="text-caption font-semibold uppercase tracking-widest text-ink-500">
+                  {t("search.browseCategories")}
+                </Text>
               </View>
+              {categories.map((category) => (
+                <Pressable
+                  key={category.id}
+                  accessibilityRole="button"
+                  onPress={() => router.setParams({ category: category.id, categoryName: category.name })}
+                  className="mx-4 min-h-16 flex-row items-center border-b border-ink-100 py-4 active:bg-ink-100"
+                >
+                  <Text className="flex-1 text-body font-semibold uppercase tracking-wide text-ink-950">
+                    {category.name}
+                  </Text>
+                  <ThemedIcon name="chevron-forward" size={22} tone="ink700" />
+                </Pressable>
+              ))}
             </View>
           ) : null}
         </ScrollView>
@@ -285,7 +294,7 @@ export default function SearchScreen() {
           ListFooterComponent={loadingMore ? <ThemedActivityIndicator className="py-4" /> : null}
           renderItem={({ item }) => (
             <View className="flex-1 px-2 pb-4">
-              <ProductCard product={toProductCardData(item)} onPress={() => goToProduct(item.productCode)} />
+              <ProductCard product={toProductCardData(item, t, formatPrice)} onPress={() => goToProduct(item.productCode)} />
             </View>
           )}
         />

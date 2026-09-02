@@ -97,7 +97,20 @@ Full detail in `docs/DEPLOYMENT.md` §8. Do not start this section until §1–�
 - [ ] `live_payments_enabled` flipped last — the actual go-live moment.
 - [ ] Readiness check re-run one more time immediately after, to confirm every flag landed where intended.
 
-## 13. Post-launch
+## 13. Mobile store submission
+
+Before the mobile customer app is submitted to either store:
+
+- [ ] Replace the mobile checkout's current "coming soon" screen with the approved Ethiopian payment rail, then complete a real-device test order through payment, order creation, notification, fulfillment, refund, and cancellation.
+- [x] Provider-neutral Ethiopian payment contract is present and fails closed while `ETHIOPIAN_PAYMENT_PROVIDER=disabled`; install and register the chosen bank-specific adapter only after receiving its sandbox specification and credentials.
+- [ ] Keep the in-app account-deletion flow enabled and verify it against staging with a disposable customer account.
+- [ ] Publish the attorney-approved Privacy Policy at a public HTTPS URL, link it in App Store Connect and Play Console, and complete Apple privacy labels / Google Play Data safety answers from the production SDK and data inventory.
+- [ ] Create signed production EAS builds and test them through TestFlight and a Google Play internal-testing track on physical phones; verify fresh install, upgrade, restart persistence, deep links, image upload, and push delivery.
+- [ ] Confirm the release build points only to the production HTTPS backend and production publishable key; no localhost, test-support route, test account, or development secret may be present.
+- [ ] Prepare store listing copy, screenshots for required device sizes, support and privacy URLs, content rating, review notes, and a working reviewer/demo account.
+- [ ] Review unresolved production dependency advisories and document any temporarily accepted transitive risk before submission.
+
+## 14. Post-launch
 
 - [ ] Monitor error tracking, uptime, and Stripe Dashboard closely for the first 24–48 hours.
 - [ ] Confirm the first few real orders complete their full lifecycle (payment capture → vendor-order split → fulfillment → delivery confirmation → payout eligibility) exactly as the smoke test in §5 predicted.

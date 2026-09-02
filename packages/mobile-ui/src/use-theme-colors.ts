@@ -41,9 +41,9 @@ const DARK: ThemeColors = {
   success: "#4CAF74",
 };
 
-/** Reactive to the system color scheme (React Native's Appearance API) -
- * re-renders automatically when the user switches light/dark, same as
- * the CSS-variable-driven Tailwind classes do. */
+/** Reactive to React Native's Appearance API. The mobile app applies its
+ * saved in-app preference through that API, keeping raw prop colors and
+ * CSS-variable-driven NativeWind classes on the same palette. */
 export function useThemeColors(): ThemeColors {
   const scheme = useColorScheme();
   return scheme === "dark" ? DARK : LIGHT;

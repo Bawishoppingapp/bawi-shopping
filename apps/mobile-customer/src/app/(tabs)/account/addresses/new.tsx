@@ -5,15 +5,17 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import {
-  AddressesClientError,
   createAddress,
 } from "@/features/addresses/services/addresses-client";
 import { CountryPicker } from "@/features/addresses/components/country-picker";
 import { findCountry } from "@/features/addresses/data/countries";
 import { addressSchema } from "@/features/addresses/schemas/address-schema";
 import { normalizeEthiopianPhone } from "@/features/addresses/utils/phone-format";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
+import { localizeValidationMessage } from "@/features/i18n/utils/localize-validation";
 
 export default function NewAddressScreen() {
+  const t = useTranslations();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
@@ -59,7 +61,7 @@ export default function NewAddressScreen() {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const field = String(issue.path[0]);
-        if (!errors[field]) errors[field] = issue.message;
+        if (!errors[field]) errors[field] = localizeValidationMessage(issue.message, t);
       }
       setFieldErrors(errors);
       return;
@@ -86,9 +88,9 @@ export default function NewAddressScreen() {
           : undefined;
       await createAddress(token, { ...addressFields, metadata });
       router.back();
-    } catch (error) {
+    } catch {
       setFormError(
-        error instanceof AddressesClientError ? error.message : "Something went wrong. Please try again."
+        t("common.error")
       );
     } finally {
       setSubmitting(false);
@@ -97,7 +99,7 @@ export default function NewAddressScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 bg-paper">
-      <Stack.Screen options={{ headerShown: true, title: "New address" }} />
+      <Stack.Screen options={{ headerShown: true, title: t("address.new") }} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         {formError ? (
           <View className="rounded-md bg-danger/10 p-3">
@@ -111,13 +113,13 @@ export default function NewAddressScreen() {
           error={fieldErrors.country_code}
         />
 
-        <Input label="First name" value={firstName} onChangeText={setFirstName} error={fieldErrors.first_name} />
-        <Input label="Last name" value={lastName} onChangeText={setLastName} error={fieldErrors.last_name} />
-        <Input label="Address line 1" value={addressLine1} onChangeText={setAddressLine1} error={fieldErrors.address_1} />
-        <Input label="Address line 2 (optional)" value={addressLine2} onChangeText={setAddressLine2} />
-        <Input label="City" value={city} onChangeText={setCity} error={fieldErrors.city} />
+        <Input label={t("checkout.firstName")} value={firstName} onChangeText={setFirstName} error={fieldErrors.first_name} />
+        <Input label={t("checkout.lastName")} value={lastName} onChangeText={setLastName} error={fieldErrors.last_name} />
+        <Input label={t("checkout.addressLine1")} value={addressLine1} onChangeText={setAddressLine1} error={fieldErrors.address_1} />
+        <Input label={t("address.line2Optional")} value={addressLine2} onChangeText={setAddressLine2} />
+        <Input label={t("checkout.city")} value={city} onChangeText={setCity} error={fieldErrors.city} />
         <Input
-          label="State / Province / Region (optional)"
+          label={t("address.regionOptional")}
           value={province}
           onChangeText={setProvince}
           error={fieldErrors.province}
@@ -125,37 +127,36 @@ export default function NewAddressScreen() {
         {isEthiopia ? (
           <>
             <Input
-              label="Sub-city (optional)"
+              label={t("address.subCityOptional")}
               value={subCity}
               onChangeText={setSubCity}
-              placeholder="e.g. Bole"
             />
-            <Input label="Woreda (optional)" value={woreda} onChangeText={setWoreda} placeholder="e.g. 03" />
+            <Input label={t("address.woredaOptional")} value={woreda} onChangeText={setWoreda} />
           </>
         ) : null}
         <Input
-          label={selectedCountry?.postalCodeRequired === false ? "Postal code (optional)" : "Postal code"}
+          label={selectedCountry?.postalCodeRequired === false ? t("address.postalOptional") : t("checkout.postalCode")}
           value={postalCode}
           onChangeText={setPostalCode}
           error={fieldErrors.postal_code}
           autoCapitalize="characters"
         />
         <Input
-          label="Landmark (optional)"
+          label={t("address.landmarkOptional")}
           value={landmark}
           onChangeText={setLandmark}
-          helperText="A nearby, easy-to-find place - useful when there's no formal street address."
+          helperText={t("address.landmarkHint")}
         />
         <Input
-          label="Delivery notes (optional)"
+          label={t("address.deliveryNotesOptional")}
           value={deliveryNotes}
           onChangeText={setDeliveryNotes}
           multiline
           numberOfLines={2}
-          helperText="Gate color, floor, best time to deliver, etc."
+          helperText={t("address.deliveryNotesHint")}
         />
         <Input
-          label="Phone (optional)"
+          label={t("address.phoneOptional")}
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
@@ -169,11 +170,11 @@ export default function NewAddressScreen() {
           className="flex-row items-center gap-2 py-2"
         >
           <ThemedIcon name={isDefaultShipping ? "checkbox" : "square-outline"} size={22} />
-          <Text className="text-body-sm text-ink-700">Set as default shipping address</Text>
+          <Text className="text-body-sm text-ink-700">{t("address.setDefault")}</Text>
         </Pressable>
 
         <Button onPress={onSubmit} loading={submitting}>
-          Save address
+          {t("address.save")}
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>

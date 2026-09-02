@@ -4,6 +4,8 @@ import { View } from "react-native";
 import { ProductCard } from "@bawi/mobile-ui";
 import type { ProductHit } from "@/features/discovery/services/discovery-client";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
+import { useCurrency } from "@/features/currency/hooks/use-currency";
+import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
 import { SectionHeader } from "./SectionHeader";
 
@@ -22,6 +24,8 @@ function goToProduct(code: string) {
  * asymmetric block on the page, breaking up the rails/grids around it
  * the way a magazine spread breaks up columns of text. */
 export function EditorialSpotlight({ title, subtitle, products }: EditorialSpotlightProps) {
+  const t = useTranslations();
+  const { formatPrice } = useCurrency();
   const [large, topRight, bottomRight] = products;
 
   return (
@@ -30,19 +34,19 @@ export function EditorialSpotlight({ title, subtitle, products }: EditorialSpotl
       <View className="flex-row gap-3 px-4">
         <View className="flex-1">
           <ProductCard
-            product={toProductCardData(large)}
+            product={toProductCardData(large, t, formatPrice)}
             imageAspectRatio={3 / 4}
             onPress={() => goToProduct(large.productCode)}
           />
         </View>
         <View className="flex-1 gap-3">
           <ProductCard
-            product={toProductCardData(topRight)}
+            product={toProductCardData(topRight, t, formatPrice)}
             imageAspectRatio={1}
             onPress={() => goToProduct(topRight.productCode)}
           />
           <ProductCard
-            product={toProductCardData(bottomRight)}
+            product={toProductCardData(bottomRight, t, formatPrice)}
             imageAspectRatio={1}
             onPress={() => goToProduct(bottomRight.productCode)}
           />

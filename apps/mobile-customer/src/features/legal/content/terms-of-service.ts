@@ -26,7 +26,7 @@ This structure means: if something goes wrong with your order, you contact Bawi 
 
 ## 4. Orders, pricing, and availability
 
-- Prices are shown in USD and may include or exclude tax and shipping depending on the checkout flow; the final total is confirmed before you pay.
+- Prices may be displayed in your selected ETB or USD display currency. Converted amounts use a recent exchange rate; the seller's actual transaction currency and final total are confirmed before payment.
 - Product availability, price, and eligibility are re-verified at the moment of checkout, not just when you added an item to your cart — an item can sell out or its price/availability can change between adding to cart and checkout.
 - We reserve the right to cancel an order (in whole or part) if a product turns out to be unavailable, mispriced, or otherwise cannot be fulfilled, with a full refund of any amount charged for the cancelled portion.
 

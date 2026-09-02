@@ -18,7 +18,7 @@ export default function LegalDocumentScreen() {
   if (!isLegalSlug(slug)) {
     return (
       <View className="flex-1 items-center justify-center bg-paper px-6">
-        <Text className="text-body text-ink-500">This document isn&apos;t available.</Text>
+        <Text className="text-body text-ink-500">{t("legal.unavailable")}</Text>
       </View>
     );
   }
