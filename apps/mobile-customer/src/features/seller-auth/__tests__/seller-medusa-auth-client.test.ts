@@ -7,34 +7,34 @@ import {
 
 describe("seller-medusa-auth-client", () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    globalThis.fetch = jest.fn();
   });
 
   describe("loginSellerUser", () => {
     test("hits the seller_user emailpass endpoint and returns the token", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(JSON.stringify({ token: "seller-token" })),
       });
       const token = await loginSellerUser("owner@shop.com", "pw");
       expect(token).toBe("seller-token");
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/auth/seller_user/emailpass"),
         expect.anything()
       );
     });
 
     test("throws SellerAuthError on invalid credentials", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, text: () => Promise.resolve("{}") });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, text: () => Promise.resolve("{}") });
       await expect(loginSellerUser("owner@shop.com", "wrong")).rejects.toThrow(SellerAuthError);
     });
   });
 
   describe("completeSellerActivation", () => {
     test("posts the token and new password", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, text: () => Promise.resolve("{}") });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: true, text: () => Promise.resolve("{}") });
       await completeSellerActivation("activation-token", "NewPass123");
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/seller-activation/complete"),
         expect.objectContaining({
           body: JSON.stringify({ token: "activation-token", password: "NewPass123" }),
@@ -43,7 +43,7 @@ describe("seller-medusa-auth-client", () => {
     });
 
     test("throws with the server message on failure", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         text: () => Promise.resolve(JSON.stringify({ message: "Token expired" })),
       });
@@ -64,7 +64,7 @@ describe("seller-medusa-auth-client", () => {
           stripe: { connected: false, charges_enabled: false, payouts_enabled: false, details_submitted: false },
         },
       };
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(JSON.stringify(sellerMe)),
       });
@@ -73,7 +73,7 @@ describe("seller-medusa-auth-client", () => {
     });
 
     test("returns null on a non-ok response instead of throwing", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: false });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false });
       const result = await getCurrentSeller("stale-token");
       expect(result).toBeNull();
     });

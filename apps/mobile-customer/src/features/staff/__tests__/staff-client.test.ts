@@ -2,12 +2,12 @@ import { StaffClientError, inviteStaff, listStaff, removeStaff } from "../servic
 
 describe("staff-client", () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    globalThis.fetch = jest.fn();
   });
 
   describe("listStaff", () => {
     test("returns the staff array on success", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(JSON.stringify({ staff: [{ id: "su_1", email: "a@b.com", role: "owner", activated: true }] })),
       });
@@ -16,20 +16,20 @@ describe("staff-client", () => {
     });
 
     test("throws StaffClientError on failure", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, text: () => Promise.resolve("{}") });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, text: () => Promise.resolve("{}") });
       await expect(listStaff("token")).rejects.toThrow(StaffClientError);
     });
   });
 
   describe("inviteStaff", () => {
     test("posts email and role", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(JSON.stringify({ staff: { id: "su_2", email: "new@b.com", role: "analyst", activated: false } })),
       });
       const result = await inviteStaff("token", "new@b.com", "analyst");
       expect(result.activated).toBe(false);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/seller/staff"),
         expect.objectContaining({
           method: "POST",
@@ -39,7 +39,7 @@ describe("staff-client", () => {
     });
 
     test("throws with the server message when the email is already invited", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         text: () => Promise.resolve(JSON.stringify({ message: "This email is already part of your team" })),
       });
@@ -51,16 +51,16 @@ describe("staff-client", () => {
 
   describe("removeStaff", () => {
     test("DELETEs the staff member by id", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, text: () => Promise.resolve("{}") });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: true, text: () => Promise.resolve("{}") });
       await removeStaff("token", "su_2");
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/seller/staff/su_2"),
         expect.objectContaining({ method: "DELETE" })
       );
     });
 
     test("throws when trying to remove the owner", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         text: () => Promise.resolve(JSON.stringify({ message: "The seller owner cannot be removed" })),
       });

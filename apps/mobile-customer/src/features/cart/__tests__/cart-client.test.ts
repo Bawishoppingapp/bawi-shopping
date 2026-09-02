@@ -8,7 +8,7 @@ import {
 
 describe("cart-client", () => {
   beforeEach(() => {
-    global.fetch = jest.fn().mockResolvedValue({
+    globalThis.fetch = jest.fn().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve(JSON.stringify({ cart: { id: "cart_1", items: [] } })),
     });
@@ -16,7 +16,7 @@ describe("cart-client", () => {
 
   test("getCart sends x-cart-id when a cart id is provided", async () => {
     await getCart("cart_1", null);
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/store/cart"),
       expect.objectContaining({
         headers: expect.objectContaining({ "x-cart-id": "cart_1" }),
@@ -26,14 +26,14 @@ describe("cart-client", () => {
 
   test("getCart omits x-cart-id and Authorization when both are absent", async () => {
     await getCart(null, null);
-    const [, options] = (global.fetch as jest.Mock).mock.calls[0];
+    const [, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
     expect(options.headers["x-cart-id"]).toBeUndefined();
     expect(options.headers.Authorization).toBeUndefined();
   });
 
   test("addCartItem posts variant_id and quantity", async () => {
     await addCartItem(null, "variant_1", 2, "token");
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/store/cart/items"),
       expect.objectContaining({
         method: "POST",
@@ -45,7 +45,7 @@ describe("cart-client", () => {
 
   test("updateCartItemQuantity PATCHes the line item", async () => {
     await updateCartItemQuantity("cart_1", "item_1", 3, "token");
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/store/cart/items/item_1"),
       expect.objectContaining({ method: "PATCH", body: JSON.stringify({ quantity: 3 }) })
     );
@@ -53,7 +53,7 @@ describe("cart-client", () => {
 
   test("removeCartItem DELETEs the line item", async () => {
     await removeCartItem("cart_1", "item_1", "token");
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/store/cart/items/item_1"),
       expect.objectContaining({ method: "DELETE" })
     );
@@ -61,7 +61,7 @@ describe("cart-client", () => {
 
   test("mergeGuestCartIntoCustomerCart posts the guest cart id, requires a token", async () => {
     await mergeGuestCartIntoCustomerCart("guest_cart_1", "token");
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/store/cart/merge"),
       expect.objectContaining({
         method: "POST",
@@ -72,12 +72,12 @@ describe("cart-client", () => {
   });
 
   test("throws when the response is not ok", async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 409, text: () => Promise.resolve("") });
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: false, status: 409, text: () => Promise.resolve("") });
     await expect(getCart("cart_1", null)).rejects.toThrow("Cart request failed (409)");
   });
 
   test("throws with the server's specific message when the response body has one", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    globalThis.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 400,
       text: () =>

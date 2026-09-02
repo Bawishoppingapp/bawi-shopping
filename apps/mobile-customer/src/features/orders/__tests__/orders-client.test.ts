@@ -2,25 +2,25 @@ import { getOrder, listOrders } from "../services/orders-client";
 
 describe("orders-client", () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    globalThis.fetch = jest.fn();
   });
 
   describe("listOrders", () => {
     test("returns an empty list without calling fetch when there is no session token", async () => {
       const result = await listOrders(null);
       expect(result).toEqual([]);
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
     test("sends the publishable key and bearer token, returns the orders array", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ orders: [{ id: "order_1" }] }),
       });
 
       const result = await listOrders("token-abc");
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/store/orders"),
         expect.objectContaining({
           headers: expect.objectContaining({ Authorization: "Bearer token-abc" }),
@@ -30,7 +30,7 @@ describe("orders-client", () => {
     });
 
     test("returns an empty list on a non-ok response instead of throwing", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: false });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false });
       const result = await listOrders("token-abc");
       expect(result).toEqual([]);
     });
@@ -40,18 +40,18 @@ describe("orders-client", () => {
     test("returns null without calling fetch when there is no session token", async () => {
       const result = await getOrder("order_1", null);
       expect(result).toBeNull();
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
     test("fetches the order by id and returns it", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ order: { id: "order_1", status: "paid" } }),
       });
 
       const result = await getOrder("order_1", "token-abc");
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/store/orders/order_1"),
         expect.anything()
       );
@@ -59,7 +59,7 @@ describe("orders-client", () => {
     });
 
     test("returns null on a non-ok response instead of throwing", async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: false });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false });
       const result = await getOrder("order_1", "token-abc");
       expect(result).toBeNull();
     });
