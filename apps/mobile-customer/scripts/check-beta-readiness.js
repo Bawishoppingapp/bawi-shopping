@@ -16,11 +16,32 @@ requireValue(app.name === "Bawi Shopping", "Unexpected app name");
 requireValue(Boolean(app.ios?.bundleIdentifier), "Missing iOS bundle identifier");
 requireValue(Boolean(app.android?.package), "Missing Android package");
 requireValue(Boolean(app.extra?.eas?.projectId), "Missing EAS project ID");
+requireValue(Boolean(app.scheme), "Missing app deep-link scheme for password resets");
 requireValue(app.userInterfaceStyle === "automatic", "App must support system appearance");
 requireValue(eas.build?.preview?.distribution === "internal", "Preview must use internal distribution");
 requireValue(eas.build?.preview?.environment === "preview", "Preview must use the EAS preview environment");
+requireValue(
+  eas.build?.["preview-simulator"]?.ios?.simulator === true &&
+    eas.build?.["preview-simulator"]?.environment === "preview",
+  "iOS Simulator beta must use the EAS preview environment"
+);
+requireValue(
+  eas.build?.["play-internal"]?.distribution === "store" &&
+    eas.build?.["play-internal"]?.environment === "preview" &&
+    eas.build?.["play-internal"]?.android?.buildType === "app-bundle",
+  "Google Play internal testing must produce an app bundle against preview services"
+);
+requireValue(
+  eas.submit?.["play-internal"]?.android?.track === "internal",
+  "Google Play beta submissions must target the internal track"
+);
 requireValue(eas.build?.production?.environment === "production", "Production must use the EAS production environment");
 requireValue(Boolean(pkg.scripts?.["eas-build-pre-install"]), "Missing EAS release-environment guard");
+
+const releaseEnvGuard = fs.readFileSync(path.join(root, "scripts/validate-release-env.js"), "utf8");
+for (const profile of ["preview", "preview-simulator", "play-internal", "production"]) {
+  requireValue(releaseEnvGuard.includes(`"${profile}"`), `Release environment guard does not cover ${profile}`);
+}
 
 const checkout = fs.readFileSync(path.join(root, "src/app/checkout.tsx"), "utf8");
 requireValue(checkout.includes("comingSoon"), "Payment-disabled beta checkout marker is missing");
@@ -33,4 +54,3 @@ if (errors.length) {
 
 console.log("Private-beta static readiness passed.");
 console.log("External requirements still checked by EAS: public HTTPS backend and Medusa publishable key.");
-

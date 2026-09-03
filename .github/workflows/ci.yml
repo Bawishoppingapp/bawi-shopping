@@ -75,11 +75,10 @@ jobs:
       # Medusa initializes several database-backed modules. Keep their Knex
       # pools small in the single Postgres CI container so server startup does
       # not exhaust Postgres's connection limit before HTTP tests can run.
-      # Medusa creates a separate pool for many modules. Two connections per
-      # module collectively exceeds Postgres's default 100-client limit even
-      # though Jest itself runs serially; one is sufficient for this
-      # single-process integration job and prevents connection starvation.
-      DATABASE_POOL_MAX: "1"
+      # Migrations need two connections for their lock/transaction sequence.
+      # The integration-test step overrides this to one because a running
+      # Medusa app creates separate pools for many modules.
+      DATABASE_POOL_MAX: "2"
       JWT_SECRET: ci-only-not-a-real-secret
       COOKIE_SECRET: ci-only-not-a-real-secret
       AUTH_MFA_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
@@ -107,4 +106,8 @@ jobs:
 
       - name: Run integration tests
         working-directory: apps/backend
+        env:
+          # Jest runs in-band, so one connection per Medusa module is enough
+          # and keeps the aggregate below Postgres's default client limit.
+          DATABASE_POOL_MAX: "1"
         run: npm run test:integration

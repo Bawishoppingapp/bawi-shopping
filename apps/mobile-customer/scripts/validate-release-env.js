@@ -1,6 +1,7 @@
 const profile = process.env.EAS_BUILD_PROFILE;
+const releaseProfiles = new Set(["preview", "preview-simulator", "play-internal", "production"]);
 
-if (profile !== "preview" && profile !== "production") {
+if (!profile || !releaseProfiles.has(profile)) {
   process.exit(0);
 }
 

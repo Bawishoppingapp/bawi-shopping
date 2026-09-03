@@ -12,6 +12,7 @@ Run on at least one current and one older supported iPhone, plus one current and
 
 - Guest Home, Search, categories, filters, product detail, images, and long translated copy
 - Register, validation errors, login failure/success, logout, password reset delivery, and session expiry
+- Password-reset email link opens the installed app with the code prefilled; the fallback code also works when pasted manually
 - Language switch across every tab and nested screen; restart persistence
 - Light/dark mode across every screen; restart persistence
 - ETB default prices and optional display-currency conversion; restart persistence
@@ -44,3 +45,8 @@ Run on at least one current and one older supported iPhone, plus one current and
 - Signed preview build points only to staging HTTPS services
 - Payment remains impossible in the beta build
 
+## Deferred external gates
+
+- Transactional email delivery remains log-only until the owner creates and verifies a SendGrid sender and stores a mail-send-only API key in the host secret manager. The reset-link code path is implemented; do not record delivery as passed until a real inbox test succeeds.
+- Google Play Console submission remains deferred until the owner creates a developer account. The `play-internal` EAS profile may build an `.aab`, but no store submission or registration fee is authorized yet.
+- Physical-iPhone distribution remains deferred until an Apple Developer membership and signing credentials are available. Continue iOS testing with the `preview-simulator` profile.
