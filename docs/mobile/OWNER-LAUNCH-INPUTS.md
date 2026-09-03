@@ -1,5 +1,7 @@
 # Owner Launch Inputs — Provide in This Order
 
+Current completion and deferral status is tracked in `PRIVATE-BETA-LAUNCH-STATUS.md`.
+
 Never commit passwords, API secrets, private keys, or live payment credentials. Enter secrets directly in the selected hosting provider or EAS secret environment.
 
 ## 1. Staging backend — needed for the private beta
@@ -59,4 +61,3 @@ These two values go in the EAS `preview` environment:
 ## 6. Ethiopian payment provider — later
 
 No selection is needed for the payment-disabled beta. When ready, provide the bank/provider name, sandbox documentation, merchant identifier, sandbox credentials, webhook/signature specification, settlement agreement, and certification contact. See `docs/ETHIOPIAN-PAYMENT-INTEGRATION.md`.
-
