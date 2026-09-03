@@ -26,12 +26,25 @@
         "simulator": true
       }
     },
+    "play-internal": {
+      "distribution": "store",
+      "environment": "preview",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "environment": "production"
     }
   },
   "submit": {
+    "play-internal": {
+      "android": {
+        "track": "internal"
+      }
+    },
     "production": {}
   }
 }
