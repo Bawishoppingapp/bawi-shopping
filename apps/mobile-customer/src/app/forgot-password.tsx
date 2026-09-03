@@ -12,10 +12,12 @@ export default function ForgotPasswordScreen() {
   const t = useTranslations();
   const [email, setEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
   async function onSubmit() {
+    setFormError(null);
     const parsed = forgotPasswordSchema.safeParse({ email });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
@@ -31,6 +33,8 @@ export default function ForgotPasswordScreen() {
     try {
       await requestPasswordReset(parsed.data.email);
       setSent(true);
+    } catch {
+      setFormError(t("auth.genericError"));
     } finally {
       setSubmitting(false);
     }
@@ -55,6 +59,11 @@ export default function ForgotPasswordScreen() {
           <Text className="text-h1 text-ink-950">{t("auth.resetTitle")}</Text>
           <Text className="text-body text-ink-500">{t("auth.resetEmailBody")}</Text>
         </View>
+        {formError ? (
+          <View className="rounded-md bg-danger/10 p-3">
+            <Text className="text-body-sm text-danger">{formError}</Text>
+          </View>
+        ) : null}
         <Input
           label={t("login.email")}
           value={email}

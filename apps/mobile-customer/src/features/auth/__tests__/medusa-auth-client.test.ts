@@ -73,9 +73,16 @@ describe("medusa-auth-client", () => {
   });
 
   describe("requestPasswordReset", () => {
-    test("always resolves, even on a non-ok response (avoids leaking which emails exist)", async () => {
-      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false });
+    test("resolves when the backend accepts the privacy-preserving request", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: true });
       await expect(requestPasswordReset("nobody@example.com")).resolves.toBeUndefined();
+    });
+
+    test("surfaces backend delivery failures without exposing account existence", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false });
+      await expect(requestPasswordReset("nobody@example.com")).rejects.toThrow(
+        "Could not request a password reset"
+      );
     });
   });
 

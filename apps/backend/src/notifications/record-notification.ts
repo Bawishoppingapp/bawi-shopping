@@ -31,6 +31,7 @@ export interface RecordNotificationInput {
   to: string
   subject: string
   body: string
+  html?: string
   /** Omit both when there's no in-app account to index this against yet
    * (e.g. a rejected seller application - no seller_user is ever created
    * for it) - the email still sends, there's just no inbox row, since
@@ -55,12 +56,22 @@ export async function recordNotification(
   container: MedusaContainer,
   input: RecordNotificationInput
 ): Promise<void> {
+  const escapedBody = input.body
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("\n", "<br />")
   const notificationModuleService = container.resolve(Modules.NOTIFICATION)
   const notification = await notificationModuleService.createNotifications({
     to: input.to,
     channel: "email",
     template: input.eventType,
-    content: { subject: input.subject, text: input.body },
+    // SendGrid consumes `html`; the local provider and notification record
+    // retain `text`. Supplying both keeps development logs useful and avoids
+    // real emails being delivered with an empty body.
+    content: { subject: input.subject, text: input.body, html: input.html ?? escapedBody },
     trigger_type: input.eventType,
     resource_id: input.resourceId,
     resource_type: input.resourceType,

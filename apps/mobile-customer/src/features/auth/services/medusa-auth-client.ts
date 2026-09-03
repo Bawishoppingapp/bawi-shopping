@@ -87,11 +87,15 @@ export async function loginCustomer(email: string, password: string): Promise<st
 // false - same limitation as seller activation, hence the paste-in-code
 // UI on the reset-password screen instead of a deep link).
 export async function requestPasswordReset(email: string): Promise<void> {
-  await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/reset-password`, {
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ identifier: email }),
   });
+
+  if (!response.ok) {
+    throw new MedusaAuthError("Could not request a password reset. Please try again.");
+  }
 }
 
 export async function resetPassword(resetToken: string, password: string): Promise<void> {

@@ -1,6 +1,6 @@
 import { Button, Input } from "@bawi/mobile-ui";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 
 import { resetPasswordSchema } from "@/features/auth/schemas/reset-password-schema";
@@ -10,6 +10,7 @@ import { localizeValidationMessage } from "@/features/i18n/utils/localize-valida
 
 export default function ResetPasswordScreen() {
   const t = useTranslations();
+  const params = useLocalSearchParams<{ token?: string | string[] }>();
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,6 +18,11 @@ export default function ResetPasswordScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    const linkedToken = Array.isArray(params.token) ? params.token[0] : params.token;
+    if (linkedToken) setToken(linkedToken);
+  }, [params.token]);
 
   async function onSubmit() {
     setFormError(null);
