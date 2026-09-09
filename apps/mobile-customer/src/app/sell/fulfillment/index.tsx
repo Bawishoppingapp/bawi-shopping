@@ -84,7 +84,7 @@ export default function SellFulfillmentScreen() {
                   {itemCount} item{itemCount === 1 ? "" : "s"} · due{" "}
                   {new Date(item.fulfillment_deadline_at).toLocaleDateString()}
                 </Text>
-                <Text className="text-body-sm text-ink-950">{formatMoney(item.total, currencyCode)}</Text>
+                <Text className="text-body-sm text-ink-950">{formatMoney(item.earnings, currencyCode)}</Text>
               </View>
             </Pressable>
           );

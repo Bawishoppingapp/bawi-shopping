@@ -23,9 +23,7 @@ export interface SellerFulfillmentOrder {
   picked_up_at: string | null
   out_for_delivery_at: string | null
   delivered_at: string | null
-  subtotal: number
-  commission_amount: number
-  total: number
+  earnings: number
   items: SellerFulfillmentItem[]
   // Only present once ready_for_pickup - the seller's own copy to
   // display/print for the courier at handoff. Never the tracking_code,
@@ -77,9 +75,7 @@ export function toSellerFulfillmentOrder(
     picked_up_at: vendorOrder.picked_up_at as unknown as string | null,
     out_for_delivery_at: vendorOrder.out_for_delivery_at as unknown as string | null,
     delivered_at: vendorOrder.delivered_at as unknown as string | null,
-    subtotal: vendorOrder.subtotal_amount,
-    commission_amount: vendorOrder.commission_amount,
-    total: vendorOrder.total_amount,
+    earnings: vendorOrder.subtotal_amount - vendorOrder.commission_amount,
     items: vendorOrder.items.map((item) => ({
       id: item.id,
       product_code: item.product_code,

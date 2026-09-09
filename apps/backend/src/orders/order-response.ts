@@ -47,6 +47,9 @@ export interface PublicOrder {
   display_id: string
   status: string
   payment_status: string
+  payment_method: string
+  payment_reference: string | null
+  payment_rejection_reason: string | null
   currency_code: string
   subtotal: number
   shipping: number
@@ -100,6 +103,9 @@ export async function shapeOrderForCustomer(
     display_id: order.display_id,
     status: order.status,
     payment_status: order.payment_status,
+    payment_method: order.payment_method,
+    payment_reference: order.payment_reference,
+    payment_rejection_reason: order.payment_rejection_reason,
     currency_code: order.currency_code,
     subtotal: order.subtotal_amount,
     shipping: order.shipping_amount,

@@ -9,6 +9,7 @@ import {
   ProductListingsError,
 } from "@/features/product-listings/services/product-listings-client"
 import { ReviewActions } from "@/features/product-listings/components/review-actions"
+import { updateAiPreviewAction } from "@/features/product-listings/actions/ai-preview"
 
 // Session-scoped (admin-authenticated) content must never be cached by the
 // browser keyed only on the URL.
@@ -77,6 +78,19 @@ export default async function ProductDetailPage({
           ))}
         </div>
       )}
+
+      <section className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4">
+        <div><h2 className="font-medium text-neutral-900">AI model preview</h2><p className="text-sm text-neutral-500">Generate from the seller originals, preserving the exact garment. The original gallery remains visible as the factual product record.</p></div>
+        <p className="text-sm">Status: <strong>{listing.ai_preview_status.replaceAll("_", " ")}</strong></p>
+        {listing.ai_preview_url ? <div className="flex items-start gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={listing.ai_preview_url} alt="AI-generated model preview" className="h-56 w-40 rounded object-cover"/>
+          <span className="rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">AI-generated preview</span>
+        </div> : null}
+        <form action={updateAiPreviewAction.bind(null, listing.id)} className="flex flex-col gap-2 sm:flex-row" encType="multipart/form-data"><input type="hidden" name="action" value="upload"/><input required type="file" name="file" accept="image/jpeg,image/png,image/webp" className="flex-1 rounded border p-2 text-sm"/><button className="rounded bg-neutral-950 px-4 py-2 text-sm text-white">Upload generated preview</button></form>
+        {listing.ai_preview_url && listing.ai_preview_status !== "approved" ? <div className="flex flex-col gap-2 sm:flex-row"><form action={updateAiPreviewAction.bind(null, listing.id)}><input type="hidden" name="action" value="approve"/><button className="rounded bg-emerald-700 px-4 py-2 text-sm text-white">Approve preview</button></form><form action={updateAiPreviewAction.bind(null, listing.id)} className="flex flex-1 gap-2"><input type="hidden" name="action" value="reject"/><input required minLength={3} name="reason" placeholder="Why this preview is inaccurate" className="flex-1 rounded border px-3 py-2 text-sm"/><button className="rounded border border-red-300 px-4 py-2 text-sm text-red-700">Reject preview</button></form></div> : null}
+        {listing.ai_preview_rejection_reason ? <p className="rounded bg-red-50 p-3 text-sm text-red-800">{listing.ai_preview_rejection_reason}</p> : null}
+      </section>
 
       <div className="flex flex-col gap-1">
         <h2 className="text-sm font-medium text-neutral-900">Variants</h2>

@@ -207,6 +207,7 @@ export default function SellProductDetailScreen() {
           multiline
           numberOfLines={4}
           editable={editable}
+          helperText={editable ? "Include material, exact color, pattern, fit, length, sleeves, neckline, closures, pockets, lining, stretch, care, condition, and every included piece. These details guide the AI preview." : undefined}
         />
 
         {editable ? (

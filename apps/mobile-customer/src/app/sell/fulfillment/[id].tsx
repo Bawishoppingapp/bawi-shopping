@@ -110,17 +110,9 @@ export default function SellFulfillmentDetailScreen() {
 
         <View className="gap-2 rounded-md border border-ink-100 p-4">
           <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">Subtotal</Text>
-            <Text className="text-body text-ink-950">{formatMoney(order.subtotal, currencyCode)}</Text>
-          </View>
-          <View className="flex-row justify-between">
-            <Text className="text-body text-ink-700">Commission</Text>
-            <Text className="text-body text-ink-950">-{formatMoney(order.commission_amount, currencyCode)}</Text>
-          </View>
-          <View className="flex-row justify-between border-t border-ink-100 pt-2">
             <Text className="text-body-sm font-medium text-ink-950">You earn</Text>
             <Text className="text-body-sm font-medium text-ink-950">
-              {formatMoney(order.total - order.commission_amount, currencyCode)}
+              {formatMoney(order.earnings, currencyCode)}
             </Text>
           </View>
         </View>

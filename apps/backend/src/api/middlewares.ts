@@ -58,12 +58,22 @@ export default defineMiddlewares({
       middlewares: [upload.array("files")],
     },
     {
+      method: ["POST"],
+      matcher: "/store/orders/:id/payment-proof",
+      middlewares: [authenticate("customer", ["bearer", "session"]), upload.single("file")],
+    },
+    {
       matcher: "/admin/seller-applications*",
       middlewares: [authenticate("user", ["bearer", "session"])],
     },
     {
       matcher: "/admin/product-listings*",
       middlewares: [authenticate("user", ["bearer", "session"])],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/product-listings/:id/ai-preview",
+      middlewares: [upload.single("file")],
     },
     {
       matcher: "/admin/product-translations*",
@@ -91,6 +101,10 @@ export default defineMiddlewares({
     },
     {
       matcher: "/admin/finance*",
+      middlewares: [authenticate("user", ["bearer", "session"])],
+    },
+    {
+      matcher: "/admin/payments*",
       middlewares: [authenticate("user", ["bearer", "session"])],
     },
     {

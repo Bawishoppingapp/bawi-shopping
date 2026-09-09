@@ -9,6 +9,9 @@ import { resolvePublicBrand } from "../modules/seller/public-brand"
 import { PRODUCT_TRANSLATION_MODULE } from "../modules/product-translation"
 import type ProductTranslationModuleService from "../modules/product-translation/service"
 import type { TranslatableLocale } from "../modules/category-translation/locales"
+import { BUSINESS_CONFIG_MODULE } from "../modules/business-config"
+import type BusinessConfigModuleService from "../modules/business-config/service"
+import { addCustomerMarkup } from "../pricing/customer-price"
 
 type VariantAgg = { available: number; prices: number[]; currencyCode: string | null }
 
@@ -45,6 +48,9 @@ export async function resolveWishlistHits(
   const listingByProductId = new Map(listings.map((listing) => [listing.product_id, listing]))
 
   const sellerModuleService: SellerModuleService = container.resolve(SELLER_MODULE)
+  const businessConfig: BusinessConfigModuleService = container.resolve(BUSINESS_CONFIG_MODULE)
+  const commissionConfig = await businessConfig.getCategoryValues("commission")
+  const markupRate = Number(commissionConfig.platform_default_rate_basis_points ?? 1000)
   const sellers = await sellerModuleService.listSellers({
     id: listings.map((listing) => listing.vendor_id),
   })
@@ -107,7 +113,7 @@ export async function resolveWishlistHits(
     const agg = variantAggByProductId.get(productId) ?? { available: 0, prices: [], currencyCode: null }
     agg.available += available
     if (price !== undefined) {
-      agg.prices.push(price.amount)
+      agg.prices.push(addCustomerMarkup(price.amount, markupRate))
       agg.currencyCode = seller!.currency_code
     }
     variantAggByProductId.set(productId, agg)

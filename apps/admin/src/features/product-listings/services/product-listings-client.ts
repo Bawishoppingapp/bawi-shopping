@@ -60,6 +60,14 @@ export interface ProductListingDetail extends ProductListingSummary {
   rejection_reason: string | null
   reviewed_by: string | null
   reviewed_at: string | null
+  ai_preview_status: "not_requested" | "ready_for_generation" | "generated" | "approved" | "rejected"
+  ai_preview_url: string | null
+  ai_preview_rejection_reason: string | null
+}
+
+export async function updateAiPreview(sessionToken: string, listingId: string, formData: FormData): Promise<void> {
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/admin/product-listings/${listingId}/ai-preview`, { method: "POST", headers: { Authorization: `Bearer ${sessionToken}` }, body: formData })
+  if (!response.ok) { const data = await parseJson(response); throw new ProductListingsError(data.message || "Could not update AI preview") }
 }
 
 export interface ProductDetail {

@@ -61,6 +61,24 @@ export function ImageUploader({ listingId, images, editable, onUploaded }: Image
   return (
     <View className="gap-2">
       <Text className="text-body-sm font-medium text-ink-800">Photos</Text>
+      {editable ? (
+        <View className="gap-3 rounded-md border border-gold-300 bg-gold-50 p-4">
+          <View className="gap-1">
+            <Text className="text-body-sm font-semibold text-ink-950">Photos that generate the best model preview</Text>
+            <Text className="text-caption text-ink-700">• Upload a sharp, high-resolution front photo of the entire garment.</Text>
+            <Text className="text-caption text-ink-700">• Lay or hang it flat against a plain, contrasting background.</Text>
+            <Text className="text-caption text-ink-700">• Use bright, even daylight. Avoid shadows, filters, glare, and screenshots.</Text>
+            <Text className="text-caption text-ink-700">• Add clear back, side, fabric-texture, label, and special-detail photos.</Text>
+            <Text className="text-caption text-ink-700">• Photograph every color separately. Do not include hands, people, hangers covering details, packaging, or unrelated objects.</Text>
+          </View>
+          <View className="gap-1">
+            <Text className="text-body-sm font-semibold text-ink-950">Details you must describe accurately</Text>
+            <Text className="text-caption text-ink-700">Item type, exact color, material/fabric, pattern, fit, length, sleeve and neckline style, closures, pockets, lining, stretch, and included pieces.</Text>
+            <Text className="text-caption text-ink-700">List every available size and color, measurements or size guidance, care instructions, condition, and any logo or decoration placement.</Text>
+          </View>
+          <Text className="text-caption font-medium text-danger">AI previews are checked against these originals. Inaccurate, cropped, blurry, filtered, or incomplete submissions may be rejected.</Text>
+        </View>
+      ) : null}
       {images.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {images.map((uri) => (
@@ -78,7 +96,7 @@ export function ImageUploader({ listingId, images, editable, onUploaded }: Image
       {error ? <Text className="text-body-sm text-danger">{error}</Text> : null}
       {editable ? (
         <Button variant="secondary" onPress={pickAndUpload} loading={uploading}>
-          Add photos
+          Add clear product photos
         </Button>
       ) : null}
     </View>

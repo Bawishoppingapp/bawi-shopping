@@ -7,7 +7,6 @@ import {
 import { Modules } from "@medusajs/framework/utils"
 import { MARKETPLACE_ORDER_MODULE } from "../modules/marketplace-order"
 import type OrderModuleService from "../modules/marketplace-order/service"
-import { createStripePaymentClient } from "../payments/stripe-payment-client"
 
 /**
  * Checkout-start touches inventory (a soft reservation per line item),
@@ -84,6 +83,8 @@ type CreatePendingOrderInput = {
   taxAmount: number
   taxRateBasisPoints: number
   totalAmount: number
+  paymentRecipientName: string
+  paymentRecipientPhone: string
 }
 
 const createPendingOrderStep = createStep(
@@ -108,6 +109,9 @@ const createPendingOrderStep = createStep(
       line_items_snapshot: input.lineItemsSnapshot as unknown as Record<string, unknown>,
       reservation_item_ids: input.reservationItemIds as unknown as Record<string, unknown>,
       payment_status: "pending",
+      payment_method: "manual_telebirr",
+      payment_recipient_name: input.paymentRecipientName,
+      payment_recipient_phone: input.paymentRecipientPhone,
     })
     return new StepResponse(order, order.id)
   },
@@ -117,54 +121,6 @@ const createPendingOrderStep = createStep(
     }
     const orderModuleService: OrderModuleService = container.resolve(MARKETPLACE_ORDER_MODULE)
     await orderModuleService.deleteMarketplaceOrders([orderId])
-  }
-)
-
-type CreatePaymentIntentInput = {
-  orderId: string
-  amountCents: number
-  currencyCode: string
-  idempotencyKey: string
-}
-
-const createCheckoutPaymentIntentStep = createStep(
-  "create-checkout-payment-intent",
-  async (input: CreatePaymentIntentInput) => {
-    const paymentClient = createStripePaymentClient()
-    const intent = await paymentClient.createPaymentIntent({
-      amountCents: input.amountCents,
-      currency: input.currencyCode,
-      idempotencyKey: input.idempotencyKey,
-      metadata: { order_id: input.orderId },
-    })
-    return new StepResponse(intent, intent.id)
-  },
-  async (paymentIntentId) => {
-    if (!paymentIntentId) {
-      return
-    }
-    const paymentClient = createStripePaymentClient()
-    try {
-      await paymentClient.cancelPaymentIntent(paymentIntentId)
-    } catch {
-      // Best-effort - an uncaptured test/dev PaymentIntent left in
-      // requires_payment_method is not a financial risk; a failure here
-      // must not block the rest of the rollback.
-    }
-  }
-)
-
-type AttachPaymentIntentInput = { orderId: string; paymentIntentId: string }
-
-const attachPaymentIntentToOrderStep = createStep(
-  "attach-payment-intent-to-order",
-  async (input: AttachPaymentIntentInput, { container }) => {
-    const orderModuleService: OrderModuleService = container.resolve(MARKETPLACE_ORDER_MODULE)
-    const order = await orderModuleService.updateMarketplaceOrders({
-      id: input.orderId,
-      stripe_payment_intent_id: input.paymentIntentId,
-    })
-    return new StepResponse(order)
   }
 )
 
@@ -181,6 +137,8 @@ export type StartCheckoutWorkflowInput = {
   taxAmount: number
   taxRateBasisPoints: number
   totalAmount: number
+  paymentRecipientName: string
+  paymentRecipientPhone: string
 }
 
 export const startCheckoutWorkflowId = "start-checkout"
@@ -206,24 +164,15 @@ export const startCheckoutWorkflow = createWorkflow(
       taxAmount: input.taxAmount,
       taxRateBasisPoints: input.taxRateBasisPoints,
       totalAmount: input.totalAmount,
-    })
-
-    const paymentIntent = createCheckoutPaymentIntentStep({
-      orderId: order.id,
-      amountCents: input.totalAmount,
-      currencyCode: input.currencyCode,
-      idempotencyKey: input.idempotencyKey,
-    })
-
-    attachPaymentIntentToOrderStep({
-      orderId: order.id,
-      paymentIntentId: paymentIntent.id,
+      paymentRecipientName: input.paymentRecipientName,
+      paymentRecipientPhone: input.paymentRecipientPhone,
     })
 
     return new WorkflowResponse({
       orderId: order.id,
       displayId: order.display_id,
-      clientSecret: paymentIntent.clientSecret,
+      paymentRecipientName: order.payment_recipient_name,
+      paymentRecipientPhone: order.payment_recipient_phone,
     })
   }
 )

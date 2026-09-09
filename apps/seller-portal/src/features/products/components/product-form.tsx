@@ -39,6 +39,9 @@ export function ProductForm({
       <FormField label="Description" error={state.fieldErrors.description}>
         <Textarea name="description" rows={4} defaultValue={initialValues?.description} />
       </FormField>
+      <p className="-mt-3 text-xs leading-5 text-neutral-500">
+        For an accurate AI preview, include material, exact color, pattern, fit, length, sleeves, neckline, closures, pockets, lining, stretch, care, condition, logo placement, and every included piece.
+      </p>
 
       <FormField label="Category" error={state.fieldErrors.category_id}>
         <Select name="category_id" defaultValue={initialValues?.category_id ?? ""}>

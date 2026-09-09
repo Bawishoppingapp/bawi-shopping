@@ -8,7 +8,6 @@ import { CUSTOMER_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentCustomer } from "@/features/auth/services/medusa-auth-client"
 import { getOrder } from "@/features/orders/services/orders-client"
 import { CancelOrderButton } from "@/features/returns/components/cancel-order-button"
-import { ReturnRequestForm } from "@/features/returns/components/return-request-form"
 import { formatMoney } from "@/features/discovery/utils/format-price"
 
 export const dynamic = "force-dynamic"
@@ -86,21 +85,11 @@ export default async function OrderDetailPage({
                     {formatMoney(item.line_total, order.currency_code)}
                   </span>
                 </div>
-                {vendorOrder.status === "delivered" && (
-                  <details>
-                    <summary className="cursor-pointer text-xs text-neutral-500 hover:underline">
-                      {t("order.requestReturn")}
-                    </summary>
-                    <div className="mt-2">
-                      <ReturnRequestForm orderId={order.id} vendorOrderItemId={item.id} />
-                    </div>
-                  </details>
-                )}
               </li>
             ))}
           </ul>
 
-          {vendorOrder.status === "awaiting_preparation" && (
+          {["awaiting_preparation", "preparing", "ready_for_pickup"].includes(vendorOrder.status) && (
             <div className="mt-4">
               <p className="mb-2 text-xs text-neutral-500">{t("order.cancelHint")}</p>
               <CancelOrderButton orderId={order.id} vendorOrderId={vendorOrder.id} />

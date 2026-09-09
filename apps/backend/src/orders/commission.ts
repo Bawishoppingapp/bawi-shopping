@@ -19,9 +19,10 @@ export function resolveCommission(
   sellerOverrideBasisPoints?: number | null
 ): CommissionResult {
   const rate = sellerOverrideBasisPoints ?? platformDefaultRateBasisPoints
-  const commissionAmount = Math.round((itemSubtotalCents * rate) / 10000)
+  const commissionAmount = splitCustomerPrice(itemSubtotalCents, rate).markupAmount
   return {
     commission_rate_basis_points: rate,
     commission_amount: commissionAmount,
   }
 }
+import { splitCustomerPrice } from "../pricing/customer-price"

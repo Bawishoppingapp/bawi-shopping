@@ -10,6 +10,7 @@ export interface OrderSummary {
   id: string;
   display_id: string;
   status: string;
+  payment_status: string;
   total: number;
   currency_code: string;
   created_at: string;
@@ -54,6 +55,9 @@ export interface OrderDetail {
   display_id: string;
   status: string;
   payment_status: string;
+  payment_method: string;
+  payment_reference: string | null;
+  payment_rejection_reason: string | null;
   currency_code: string;
   subtotal: number;
   shipping: number;

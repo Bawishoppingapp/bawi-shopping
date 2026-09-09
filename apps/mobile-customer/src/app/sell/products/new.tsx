@@ -93,6 +93,7 @@ export default function SellNewProductScreen() {
           error={fieldErrors.description}
           multiline
           numberOfLines={4}
+          helperText="Include material, exact color, pattern, fit, length, sleeves, neckline, closures, pockets, lining, stretch, care, condition, and every included piece. These details guide the AI preview."
         />
 
         {categories === null ? (

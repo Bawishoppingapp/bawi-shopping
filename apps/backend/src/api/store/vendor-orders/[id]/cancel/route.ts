@@ -34,10 +34,10 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
   const cancellationConfig = await businessConfigModuleService.getCategoryValues("cancellation")
   const cutoffStatus = String(cancellationConfig.cancellation_cutoff ?? "preparing")
 
-  // "Cancellation allowed until <cutoffStatus>" means allowed only while
-  // the order is still strictly before that status - in v1 that's always
-  // "preparing", i.e. only while awaiting_preparation.
-  if (cutoffStatus !== "preparing" || vendorOrder.status !== "awaiting_preparation") {
+  const cancellableStatuses = cutoffStatus === "picked_up"
+    ? ["awaiting_preparation", "preparing", "ready_for_pickup"]
+    : ["awaiting_preparation"]
+  if (!cancellableStatuses.includes(vendorOrder.status)) {
     res.status(422).json({
       message: `This order can no longer be cancelled (status: "${vendorOrder.status}")`,
     })

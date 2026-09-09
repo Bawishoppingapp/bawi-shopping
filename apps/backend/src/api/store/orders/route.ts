@@ -11,7 +11,7 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse):
   const orderModuleService: OrderModuleService = req.scope.resolve(MARKETPLACE_ORDER_MODULE)
 
   const orders = await orderModuleService.listMarketplaceOrders(
-    { customer_id: customerId, status: "paid" },
+    { customer_id: customerId },
     { order: { created_at: "DESC" } }
   )
 
@@ -20,6 +20,7 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse):
       id: order.id,
       display_id: order.display_id,
       status: order.status,
+      payment_status: order.payment_status,
       total: order.total_amount,
       currency_code: order.currency_code,
       created_at: order.created_at,

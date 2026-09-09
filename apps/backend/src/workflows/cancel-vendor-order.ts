@@ -111,7 +111,7 @@ const refundCancelledVendorOrderStep = createStep(
       amount: vendorOrder.total_amount,
       is_partial: false,
       stripe_refund_id: stripeRefundId,
-      status: "succeeded",
+      status: marketplaceOrder.payment_method === "manual_telebirr" ? "pending" : "succeeded",
     })
 
     let ledgerEntry: { id: string } | null = null

@@ -19,6 +19,7 @@ export interface PublicProduct {
   currency_code: string;
   images: string[];
   thumbnail: string | null;
+  ai_preview_url: string | null;
   colors: string[];
   sizes: string[];
   base_price: number;

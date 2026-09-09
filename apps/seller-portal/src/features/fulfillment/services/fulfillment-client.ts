@@ -54,9 +54,7 @@ export interface FulfillmentOrder {
   picked_up_at: string | null
   out_for_delivery_at: string | null
   delivered_at: string | null
-  subtotal: number
-  commission_amount: number
-  total: number
+  earnings: number
   items: FulfillmentOrderItem[]
   pickup_code: string | null
 }

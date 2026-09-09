@@ -58,6 +58,9 @@ export default async function RootLayout({
           {children}
           <footer className="mt-auto border-t border-neutral-200 p-6 text-sm text-neutral-600">
             <nav className="flex flex-wrap gap-x-6 gap-y-2">
+              <Link href="/support" className="hover:text-neutral-900">
+                {translate(locale, "footer.support")}
+              </Link>
               <Link href="/legal/terms" className="hover:text-neutral-900">
                 {translate(locale, "footer.terms")}
               </Link>

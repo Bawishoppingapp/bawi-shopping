@@ -8,6 +8,9 @@ import { resolvePublicBrand } from "../../../modules/seller/public-brand"
 import { isTranslatableLocale } from "../../../modules/category-translation/locales"
 import { PRODUCT_TRANSLATION_MODULE } from "../../../modules/product-translation"
 import type ProductTranslationModuleService from "../../../modules/product-translation/service"
+import { BUSINESS_CONFIG_MODULE } from "../../../modules/business-config"
+import type BusinessConfigModuleService from "../../../modules/business-config/service"
+import { addCustomerMarkup } from "../../../pricing/customer-price"
 
 /**
  * Public, unauthenticated. Only ever returns an `approved` listing - draft/
@@ -25,6 +28,9 @@ export async function GET(
   const productListingModuleService: ProductListingModuleService = req.scope.resolve(
     PRODUCT_LISTING_MODULE
   )
+  const businessConfig: BusinessConfigModuleService = req.scope.resolve(BUSINESS_CONFIG_MODULE)
+  const commissionConfig = await businessConfig.getCategoryValues("commission")
+  const markupRate = Number(commissionConfig.platform_default_rate_basis_points ?? 1000)
 
   const [listing] = await productListingModuleService.listProductListings({
     product_code: req.params.code,
@@ -88,7 +94,7 @@ export async function GET(
     const prices = (variant.prices ?? []) as Array<{ amount: number; currency_code: string }>
     const price = prices.find((p) => p.currency_code === seller.currency_code)
     if (price) {
-      priceByVariantId.set(variant.id as string, price.amount)
+      priceByVariantId.set(variant.id as string, addCustomerMarkup(price.amount, markupRate))
     }
   }
 
@@ -101,6 +107,7 @@ export async function GET(
       currency_code: seller.currency_code,
       images: product.images?.map((image) => image.url) ?? [],
       thumbnail: product.thumbnail,
+      ai_preview_url: listing.ai_preview_status === "approved" ? listing.ai_preview_url : null,
       colors: Array.from(
         new Set(
           product.options

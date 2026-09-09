@@ -51,5 +51,11 @@ services:
         sync: false
       - key: EMAIL_PROVIDER
         value: "" # leave blank to keep notification-local (no email actually sends)
+      - key: BREVO_API_KEY
+        sync: false # secret from Brevo; never commit the value
+      - key: BREVO_FROM_EMAIL
+        value: support@bawishopping.com
+      - key: BREVO_FROM_NAME
+        value: Bawi Shopping
       - key: S3_BUCKET
         value: "" # leave blank to use local disk; see docs/DEPLOYMENT-LOWCOST.md for why that's lossy here

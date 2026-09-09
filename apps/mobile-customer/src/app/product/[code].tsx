@@ -190,9 +190,12 @@ export default function ProductDetailScreen() {
   // Thumbnail first, then any additional images not already equal to it -
   // avoids showing the same photo twice when the backend's `images` list
   // already includes the thumbnail.
-  const galleryImages = product.thumbnail
+  const originalImages = product.thumbnail
     ? [product.thumbnail, ...product.images.filter((uri) => uri !== product.thumbnail)]
     : product.images;
+  const galleryImages = product.ai_preview_url
+    ? [product.ai_preview_url, ...originalImages.filter((uri) => uri !== product.ai_preview_url)]
+    : originalImages;
 
   function onGalleryScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const index = Math.round(event.nativeEvent.contentOffset.x / imageSize);
@@ -244,6 +247,12 @@ export default function ProductDetailScreen() {
             </View>
           ) : null}
         </View>
+
+        {product.ai_preview_url && activeImageIndex === 0 ? (
+          <Text className="mx-4 mt-2 self-start rounded bg-gold-100 px-2 py-1 text-caption text-ink-800">
+            {t("product.aiPreview")}
+          </Text>
+        ) : null}
 
         {galleryImages.length > 1 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 16 }}>
@@ -360,7 +369,9 @@ export default function ProductDetailScreen() {
               <View className="flex-row items-center gap-2">
                 <ThemedIcon name="return-up-back-outline" size={18} tone="ink700" />
                 <Text className="flex-1 text-body-sm text-ink-700">
-                  {t("product.returnsWithin", { days: shippingPolicy.returnWindowDays })}
+                  {shippingPolicy.returnWindowDays > 0
+                    ? t("product.returnsWithin", { days: shippingPolicy.returnWindowDays })
+                    : t("product.returnsUnavailable")}
                 </Text>
               </View>
             </View>

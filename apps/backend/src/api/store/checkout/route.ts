@@ -14,7 +14,8 @@ import { BUSINESS_CONFIG_MODULE } from "../../../modules/business-config"
 import type BusinessConfigModuleService from "../../../modules/business-config/service"
 import { MARKETPLACE_ORDER_MODULE } from "../../../modules/marketplace-order"
 import type OrderModuleService from "../../../modules/marketplace-order/service"
-import { createStripePaymentClient } from "../../../payments/stripe-payment-client"
+import { calculateAddressShipping } from "../../../shipping/address-shipping"
+import { addCustomerMarkup } from "../../../pricing/customer-price"
 
 /**
  * Starts checkout for the authenticated customer's cart: final server-side
@@ -44,22 +45,19 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     idempotency_key,
   })
   if (existingOrder) {
-    if (existingOrder.status === "paid" || !existingOrder.stripe_payment_intent_id) {
-      res.json({
-        order_id: existingOrder.id,
-        display_id: existingOrder.display_id,
-        status: existingOrder.status,
-        client_secret: null,
-      })
-      return
-    }
-    const paymentClient = createStripePaymentClient()
-    const intent = await paymentClient.retrievePaymentIntent(existingOrder.stripe_payment_intent_id)
     res.json({
       order_id: existingOrder.id,
       display_id: existingOrder.display_id,
       status: existingOrder.status,
-      client_secret: intent.clientSecret,
+      payment_status: existingOrder.payment_status,
+      payment_method: existingOrder.payment_method,
+      payment_recipient_name: existingOrder.payment_recipient_name,
+      payment_recipient_phone: existingOrder.payment_recipient_phone,
+      subtotal: existingOrder.subtotal_amount,
+      shipping: existingOrder.shipping_amount,
+      tax: existingOrder.tax_amount,
+      total: existingOrder.total_amount,
+      currency_code: existingOrder.currency_code,
     })
     return
   }
@@ -114,16 +112,41 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     })
   }
 
-  const taxConfig = await businessConfigModuleService.getCategoryValues("tax")
+  const [taxConfig, shippingConfig, commissionConfig] = await Promise.all([
+    businessConfigModuleService.getCategoryValues("tax"),
+    businessConfigModuleService.getCategoryValues("shipping"),
+    businessConfigModuleService.getCategoryValues("commission"),
+  ])
   const taxRateBasisPoints = Number(taxConfig.mock_rate_basis_points ?? 825)
   // Tax applies to the item subtotal only, not shipping - a common (not
   // universal) simplification; revisit once a real tax provider replaces
   // this mock adapter (see docs/DECISIONS.md).
   const taxResult = calculateMockTax(publicCart.subtotal, taxRateBasisPoints)
 
-  const totalAmount = publicCart.subtotal + publicCart.shipping_estimate + taxResult.tax_amount
+  const shippingQuote = calculateAddressShipping(
+    shipping_address,
+    Number(shippingConfig.standard_shipping_fee_cents_etb ?? 15000),
+    Number(shippingConfig.neighboring_shipping_fee_cents_etb ?? 25000)
+  )
+  if (!shippingQuote) {
+    res.status(422).json({ message: "Delivery is currently available only in Addis Ababa and supported neighboring areas." })
+    return
+  }
+  const markupRate = Number(commissionConfig.platform_default_rate_basis_points ?? 1000)
+  for (const item of lineItemsSnapshot) {
+    item.unitPriceCents = addCustomerMarkup(item.unitPriceCents, markupRate)
+  }
+  const totalAmount = publicCart.subtotal + shippingQuote.amount + taxResult.tax_amount
   const locationId = await getOrCreateDefaultStockLocationId(req.scope)
   const displayId = generateOrderDisplayId()
+  const paymentConfig = await businessConfigModuleService.getCategoryValues("payment_methods")
+  const paymentRecipientName = String(paymentConfig.telebirr_recipient_name ?? "")
+  const paymentRecipientPhone = String(paymentConfig.telebirr_recipient_phone ?? "")
+
+  if (!paymentRecipientName || !paymentRecipientPhone) {
+    res.status(503).json({ message: "Telebirr checkout is not configured yet." })
+    return
+  }
 
   try {
     const { result } = await startCheckoutWorkflow(req.scope).run({
@@ -136,10 +159,12 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
         lineItemsSnapshot,
         locationId,
         subtotalAmount: publicCart.subtotal,
-        shippingAmount: publicCart.shipping_estimate,
+        shippingAmount: shippingQuote.amount,
         taxAmount: taxResult.tax_amount,
         taxRateBasisPoints,
         totalAmount,
+        paymentRecipientName,
+        paymentRecipientPhone,
       },
     })
 
@@ -147,7 +172,15 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
       order_id: result.orderId,
       display_id: result.displayId,
       status: "pending_payment",
-      client_secret: result.clientSecret,
+      payment_status: "pending",
+      payment_method: "manual_telebirr",
+      payment_recipient_name: result.paymentRecipientName,
+      payment_recipient_phone: result.paymentRecipientPhone,
+      subtotal: publicCart.subtotal,
+      shipping: shippingQuote.amount,
+      tax: taxResult.tax_amount,
+      total: totalAmount,
+      currency_code: publicCart.currency_code,
     })
   } catch {
     res.status(500).json({ message: "Could not start checkout. Please try again." })

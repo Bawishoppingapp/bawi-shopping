@@ -122,10 +122,13 @@ async function handlePaymentIntentSucceeded(
 
   await captureCheckoutPaymentWorkflow(req.scope).run({
     input: {
+      provider: "stripe",
       eventId: event.id,
       eventType: event.type,
       orderId: order.id,
       customerId: order.customer_id,
+      actorType: "system",
+      actorId: "stripe_webhook",
       reservationItemIds: (order.reservation_item_ids as unknown as string[]) ?? [],
       lineItemsSnapshot: order.line_items_snapshot as unknown as CheckoutLineItemSnapshot[],
       locationId,

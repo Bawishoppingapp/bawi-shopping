@@ -23,4 +23,15 @@ export const ProductListing = model.define("product_listing", {
   // derived server-side from req.auth_context, never client input.
   reviewed_by: model.text().nullable(),
   reviewed_at: model.dateTime().nullable(),
+  // AI imagery is an admin-owned, reviewable derivative. The seller's
+  // original gallery remains untouched and is always the factual source.
+  ai_preview_status: model
+    .enum(["not_requested", "ready_for_generation", "generated", "approved", "rejected"])
+    .default("not_requested"),
+  ai_preview_url: model.text().nullable(),
+  ai_preview_generated_by: model.text().nullable(),
+  ai_preview_generated_at: model.dateTime().nullable(),
+  ai_preview_reviewed_by: model.text().nullable(),
+  ai_preview_reviewed_at: model.dateTime().nullable(),
+  ai_preview_rejection_reason: model.text().nullable(),
 })

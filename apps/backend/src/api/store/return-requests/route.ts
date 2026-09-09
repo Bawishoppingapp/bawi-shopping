@@ -64,6 +64,10 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
   )
   const returnsConfig = await businessConfigModuleService.getCategoryValues("returns")
   const returnWindowDays = Number(returnsConfig.return_window_days ?? 14)
+  if (!Number.isFinite(returnWindowDays) || returnWindowDays <= 0) {
+    res.status(422).json({ message: "Returns are not currently accepted" })
+    return
+  }
   const windowEndsAt =
     new Date(vendorOrder.delivered_at).getTime() + returnWindowDays * 24 * 60 * 60 * 1000
   if (Date.now() > windowEndsAt) {

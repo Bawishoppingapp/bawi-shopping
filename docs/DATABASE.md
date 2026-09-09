@@ -7,6 +7,7 @@
 - All schema changes ship as migrations (Medusa/MikroORM migration CLI per module). No manual DDL in any environment, including local — the migration is the only source of truth for schema history.
 - Primary keys: ULIDs/UUIDs (Medusa's default ID convention), not sequential integers, to avoid enumeration and to keep IDs safe to expose in URLs.
 - Monetary values stored as integers in minor units (cents), never floats — required for commission/payout arithmetic correctness (see [`PAYMENTS.md`](PAYMENTS.md)).
+- Manual Telebirr payments are snapshotted on `marketplace_order`: recipient, unique normalized transaction reference, private receipt URL, submission/review timestamps, reviewer, and rejection reason. `payment_status` distinguishes pending, proof submitted, under review, approved, and rejected states; screenshots never authorize fulfillment by themselves.
 - Timestamps: `created_at`, `updated_at` on every table; `deleted_at` (soft delete) only where order-history integrity requires preserving a row after logical deletion (e.g., products), not used as a general-purpose pattern.
 
 ## 2. Entity-relationship overview

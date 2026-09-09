@@ -55,8 +55,26 @@ export const MarketplaceOrder = model.define("marketplace_order", {
   // finalized into a real deduction on capture.
   reservation_item_ids: model.json().nullable(),
   stripe_payment_intent_id: model.text().unique().nullable(),
+  payment_method: model.text().default("manual_telebirr"),
+  payment_reference: model.text().unique().nullable(),
+  payment_proof_url: model.text().nullable(),
+  payment_recipient_name: model.text().nullable(),
+  payment_recipient_phone: model.text().nullable(),
+  payment_submitted_at: model.dateTime().nullable(),
+  payment_reviewed_by: model.text().nullable(),
+  payment_reviewed_at: model.dateTime().nullable(),
+  payment_rejection_reason: model.text().nullable(),
   payment_status: model
-    .enum(["pending", "requires_action", "succeeded", "failed", "canceled"])
+    .enum([
+      "pending",
+      "requires_action",
+      "proof_submitted",
+      "under_review",
+      "succeeded",
+      "rejected",
+      "failed",
+      "canceled",
+    ])
     .default("pending"),
   vendor_orders: model.hasMany(() => VendorOrder, { mappedBy: "order" }),
 })

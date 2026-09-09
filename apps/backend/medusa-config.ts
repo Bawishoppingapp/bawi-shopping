@@ -124,6 +124,20 @@ const emailProviders = [
         },
       ]
     : []),
+  ...(process.env.EMAIL_PROVIDER === "brevo"
+    ? [
+        {
+          resolve: "./src/providers/brevo-notification",
+          id: "brevo",
+          options: {
+            channels: ["email"],
+            api_key: process.env.BREVO_API_KEY,
+            from: process.env.BREVO_FROM_EMAIL ?? "support@bawishopping.com",
+            from_name: process.env.BREVO_FROM_NAME ?? "Bawi Shopping",
+          },
+        },
+      ]
+    : []),
 ]
 
 module.exports = defineConfig({

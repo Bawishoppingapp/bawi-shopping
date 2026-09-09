@@ -23,14 +23,15 @@ import { orderConfirmationTemplate } from "../notifications/templates"
 import type { CheckoutLineItemSnapshot } from "./start-checkout"
 
 /**
- * Runs once per successful `payment_intent.succeeded` webhook delivery -
+ * Finalizes a verified payment exactly once. The provider/event claim can
+ * come from Stripe or an authenticated manual Telebirr verification -
  * idempotency-claim-first, same pattern as
  * apply-stripe-account-updated-webhook.ts. The per-vendor split, the final
  * inventory deduction, and clearing the cart all happen only after this
  * event is genuinely claimed for the first time (see docs/PAYMENTS.md §7).
  */
 
-type ClaimEventInput = { eventId: string; eventType: string }
+type ClaimEventInput = { provider: string; eventId: string; eventType: string }
 
 const claimWebhookEventStep = createStep(
   "claim-webhook-event",
@@ -38,21 +39,21 @@ const claimWebhookEventStep = createStep(
     const webhookEventModuleService: WebhookEventModuleService =
       container.resolve(WEBHOOK_EVENT_MODULE)
     const claimed = await webhookEventModuleService.markProcessed(
-      "stripe",
+      input.provider,
       input.eventId,
       input.eventType
     )
-    return new StepResponse(claimed, claimed ? input.eventId : null)
+    return new StepResponse(claimed, claimed ? { provider: input.provider, eventId: input.eventId } : null)
   },
-  async (eventId, { container }) => {
-    if (!eventId) {
+  async (claim, { container }) => {
+    if (!claim) {
       return
     }
     const webhookEventModuleService: WebhookEventModuleService =
       container.resolve(WEBHOOK_EVENT_MODULE)
     const [row] = await webhookEventModuleService.listProcessedWebhookEvents({
-      provider: "stripe",
-      event_id: eventId,
+      provider: claim.provider,
+      event_id: claim.eventId,
     })
     if (row) {
       await webhookEventModuleService.deleteProcessedWebhookEvents([row.id])
@@ -334,15 +335,15 @@ const clearCustomerCartStep = createStep(
   }
 )
 
-type RecordAuditLogInput = { orderId: string; customerId: string }
+type RecordAuditLogInput = { orderId: string; actorType: "customer" | "seller_user" | "user" | "system" | "courier"; actorId: string }
 
 const recordOrderPaidAuditLogStep = createStep(
   "record-order-paid-audit-log",
   async (input: RecordAuditLogInput, { container }) => {
     const auditLogModuleService: AuditLogModuleService = container.resolve(AUDIT_LOG_MODULE)
     const auditLog = await auditLogModuleService.record({
-      actorType: "customer",
-      actorId: input.customerId,
+      actorType: input.actorType,
+      actorId: input.actorId,
       action: "order.paid",
       entityType: "order",
       entityId: input.orderId,
@@ -392,6 +393,9 @@ export type CaptureCheckoutPaymentWorkflowInput = {
   reservationItemIds: string[]
   lineItemsSnapshot: CheckoutLineItemSnapshot[]
   locationId: string
+  provider: string
+  actorType: "customer" | "seller_user" | "user" | "system" | "courier"
+  actorId: string
 }
 
 export const captureCheckoutPaymentWorkflowId = "capture-checkout-payment"
@@ -400,6 +404,7 @@ export const captureCheckoutPaymentWorkflow = createWorkflow(
   captureCheckoutPaymentWorkflowId,
   (input: CaptureCheckoutPaymentWorkflowInput) => {
     const claimed = claimWebhookEventStep({
+      provider: input.provider,
       eventId: input.eventId,
       eventType: input.eventType,
     })
@@ -419,7 +424,8 @@ export const captureCheckoutPaymentWorkflow = createWorkflow(
 
       recordOrderPaidAuditLogStep({
         orderId: input.orderId,
-        customerId: input.customerId,
+        actorType: input.actorType,
+        actorId: input.actorId,
       })
 
       sendOrderConfirmationStep({

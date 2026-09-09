@@ -60,6 +60,16 @@ export default function OrderDetailScreen() {
           </Text>
         </View>
 
+        {order.status === "pending_payment" ? (
+          <View className={`gap-1 rounded-md p-4 ${order.payment_status === "rejected" ? "bg-danger/10" : "bg-info/10"}`}>
+            <Text className={`font-medium ${order.payment_status === "rejected" ? "text-danger" : "text-info"}`}>
+              {order.payment_status === "rejected" ? t("orders.paymentRejected") : t("orders.paymentUnderReview")}
+            </Text>
+            {order.payment_rejection_reason ? <Text className="text-body-sm text-danger">{order.payment_rejection_reason}</Text> : null}
+            {order.payment_reference ? <Text className="text-caption text-ink-600">{t("checkout.transactionReference")}: {order.payment_reference}</Text> : null}
+          </View>
+        ) : null}
+
         {order.vendor_orders.map((vendorOrder) => {
           const badge = orderStatusBadge(vendorOrder.status, t);
           return (

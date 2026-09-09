@@ -7,6 +7,7 @@ import type BusinessConfigModuleService from "../modules/business-config/service
 import { SELLER_MODULE } from "../modules/seller"
 import type SellerModuleService from "../modules/seller/service"
 import { resolvePublicBrand } from "../modules/seller/public-brand"
+import { addCustomerMarkup } from "../pricing/customer-price"
 
 export interface RawCartLineItem {
   id: string
@@ -107,9 +108,10 @@ export async function refreshAndShapeCart(
   )
   const sellerModuleService: SellerModuleService = container.resolve(SELLER_MODULE)
 
-  const [cartConfig, shippingConfig] = await Promise.all([
+  const [cartConfig, shippingConfig, commissionConfig] = await Promise.all([
     businessConfigModuleService.getCategoryValues("cart"),
     businessConfigModuleService.getCategoryValues("shipping"),
+    businessConfigModuleService.getCategoryValues("commission"),
   ])
   const maxQuantityPerLineItem = Number(cartConfig.max_quantity_per_line_item ?? 10)
   // USD keys stay unsuffixed (see defaults.ts); every other currency gets
@@ -190,7 +192,11 @@ export async function refreshAndShapeCart(
         message: "The price of this item has changed since it was added to your cart.",
       })
     }
-    const currentUnitPrice = resolved.unitPriceCents ?? item.unit_price
+    const baseUnitPrice = resolved.unitPriceCents ?? item.unit_price
+    const currentUnitPrice = addCustomerMarkup(
+      baseUnitPrice,
+      Number(commissionConfig.platform_default_rate_basis_points ?? 1000)
+    )
 
     const isAvailable = resolved.availableQuantity > 0
     if (item.quantity > resolved.availableQuantity) {

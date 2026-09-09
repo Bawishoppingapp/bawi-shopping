@@ -82,12 +82,8 @@ export default async function FulfillmentOrderPage({
       <section className="rounded-md border border-neutral-200 p-4">
         <h2 className="mb-3 text-sm font-medium text-neutral-900">Your earnings</h2>
         <div className="flex justify-between text-sm">
-          <span className="text-neutral-500">Subtotal</span>
-          <span className="text-neutral-900">{formatMoney(order.subtotal, currencyCode)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-neutral-500">Commission</span>
-          <span className="text-neutral-900">-{formatMoney(order.commission_amount, currencyCode)}</span>
+          <span className="text-neutral-500">Amount you earn</span>
+          <span className="text-neutral-900">{formatMoney(order.earnings, currencyCode)}</span>
         </div>
       </section>
 

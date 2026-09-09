@@ -11,6 +11,9 @@ import type ProductListingModuleService from "../modules/product-listing/service
 import { SELLER_MODULE } from "../modules/seller"
 import type SellerModuleService from "../modules/seller/service"
 import { resolvePublicBrand } from "../modules/seller/public-brand"
+import { BUSINESS_CONFIG_MODULE } from "../modules/business-config"
+import type BusinessConfigModuleService from "../modules/business-config/service"
+import { addCustomerMarkup } from "../pricing/customer-price"
 
 const MAX_CANDIDATES = 500
 
@@ -59,6 +62,9 @@ export class PostgresSearchService implements SearchService {
     const sellerModuleService: SellerModuleService = this.container.resolve(SELLER_MODULE)
     const productModuleService = this.container.resolve(Modules.PRODUCT)
     const queryEngine = this.container.resolve(ContainerRegistrationKeys.QUERY)
+    const businessConfig: BusinessConfigModuleService = this.container.resolve(BUSINESS_CONFIG_MODULE)
+    const commissionConfig = await businessConfig.getCategoryValues("commission")
+    const markupRate = Number(commissionConfig.platform_default_rate_basis_points ?? 1000)
 
     let vendorId: string | undefined
     if (query.filters.brandSlug) {
@@ -127,7 +133,7 @@ export class PostgresSearchService implements SearchService {
       const agg = variantAggByProductId.get(productId) ?? { available: 0, prices: [], currencyCode: null }
       agg.available += available
       if (price !== undefined) {
-        agg.prices.push(price.amount)
+        agg.prices.push(addCustomerMarkup(price.amount, markupRate))
         agg.currencyCode = seller!.currency_code
       }
       variantAggByProductId.set(productId, agg)
