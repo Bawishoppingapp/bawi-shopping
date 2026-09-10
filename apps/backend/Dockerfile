@@ -67,4 +67,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # explicit step, staging before production, never implicitly on boot) -
 # and still run from apps/backend (via Shell or bootstrap-staging.sh),
 # not from here, since they use ts-node against the original src/ tree.
-CMD ["sh", "scripts/migrate-and-start.sh"]
+CMD ["sh", "-c", "cd .medusa/server && npm run start"]
