@@ -4,7 +4,6 @@ import Link from "next/link"
 import { Button } from "@bawi/ui"
 import { SELLER_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentSeller } from "@/features/auth/services/medusa-auth-client"
-import { StripeConnectBanner } from "@/features/stripe/components/stripe-connect-banner"
 
 // Session-scoped content must never be cached by the browser keyed only on
 // the URL - see docs/DECISIONS.md (product-listing page caching finding).
@@ -30,7 +29,9 @@ export default async function DashboardPage() {
           Signed in as {me.seller_user.role} · {me.seller.slug}
         </p>
       </div>
-      <StripeConnectBanner stripe={me.seller.stripe} />
+      <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+        Seller earnings are reviewed by Bawi Shopping and paid through the approved manual payout process.
+      </div>
       <Link href="/products">
         <Button>Manage products</Button>
       </Link>

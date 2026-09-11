@@ -30,7 +30,7 @@ export default async function FinancePage() {
     { label: "Pending", value: balance.pending, hint: "Not yet past the transfer hold period" },
     { label: "Available", value: balance.available, hint: "Ready for your next payout" },
     { label: "Paid out", value: balance.paid },
-    { label: "Disputed", value: balance.disputed, hint: "Frozen while a Stripe dispute is open" },
+    { label: "Under review", value: balance.disputed, hint: "Frozen while a payment issue is reviewed" },
   ]
 
   return (

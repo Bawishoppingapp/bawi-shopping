@@ -80,7 +80,6 @@ export default async function RootLayout({
                 {translate(locale, "footer.dmca")}
               </Link>
             </nav>
-            <p className="mt-3 text-xs text-neutral-400">{translate(locale, "footer.legalDraftNotice")}</p>
           </footer>
         </LocaleProvider>
       </body>

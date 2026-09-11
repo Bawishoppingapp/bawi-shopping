@@ -173,7 +173,7 @@ export const DEFAULT_BUSINESS_CONFIG_ENTRIES: DefaultConfigEntry[] = [
   {
     category: "payment_methods",
     key: "currency",
-    value: "USD",
+    value: "ETB",
     value_type: "string",
     label: "Currency",
     is_placeholder: false,

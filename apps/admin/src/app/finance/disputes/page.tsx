@@ -8,8 +8,8 @@ import { listDisputes } from "@/features/finance/services/finance-client"
 
 export const dynamic = "force-dynamic"
 
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
+function formatEtb(cents: number): string {
+  return `${(cents / 100).toFixed(2)} ETB`
 }
 
 export default async function DisputesPage() {
@@ -40,7 +40,7 @@ export default async function DisputesPage() {
             <li key={dispute.id} className="flex items-center justify-between px-4 py-3">
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-neutral-900">
-                  {formatUsd(dispute.amount)} - {dispute.stripe_dispute_id}
+                  {formatEtb(dispute.amount)} · Payment issue
                 </span>
                 <span className="text-xs text-neutral-500">
                   {dispute.reason ?? "No reason given"} · opened{" "}

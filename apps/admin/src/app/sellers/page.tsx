@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { StatusBadge } from "@bawi/ui"
 import { ADMIN_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentAdmin } from "@/features/auth/services/medusa-auth-client"
-import { listSellers, stripeStatusLabel } from "@/features/sellers/services/sellers-client"
+import { listSellers } from "@/features/sellers/services/sellers-client"
 
 export const dynamic = "force-dynamic"
 
@@ -18,10 +18,6 @@ export default async function SellersPage() {
   }
 
   const sellers = await listSellers(sessionToken)
-  const notLiveCount = sellers.filter(
-    (s) => s.status === "approved" && stripeStatusLabel(s.stripe) !== "Live"
-  ).length
-
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-12">
       <nav className="flex gap-4 text-sm">
@@ -59,8 +55,6 @@ export default async function SellersPage() {
         <h1 className="text-2xl font-semibold text-neutral-900">Sellers</h1>
         <p className="text-sm text-neutral-500">
           {sellers.length} total
-          {notLiveCount > 0 &&
-            ` · ${notLiveCount} approved but not yet live for Stripe payouts`}
         </p>
       </div>
 
@@ -75,7 +69,6 @@ export default async function SellersPage() {
               <tr>
                 <th className="px-4 py-2 font-medium">Seller</th>
                 <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Stripe</th>
                 <th className="px-4 py-2 font-medium">Public brand display</th>
               </tr>
             </thead>
@@ -88,9 +81,6 @@ export default async function SellersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={seller.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={stripeStatusLabel(seller.stripe)} />
                   </td>
                   <td className="px-4 py-3 text-neutral-600">
                     {seller.public_brand_display_approved ? "Approved" : "Hidden"}

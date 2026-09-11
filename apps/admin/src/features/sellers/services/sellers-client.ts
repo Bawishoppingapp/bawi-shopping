@@ -9,12 +9,6 @@ export interface SellerSummary {
   status: string
   public_brand_display_approved: boolean
   created_at: string
-  stripe: {
-    connected: boolean
-    charges_enabled: boolean
-    payouts_enabled: boolean
-    details_submitted: boolean
-  }
 }
 
 export async function listSellers(sessionToken: string): Promise<SellerSummary[]> {
@@ -27,14 +21,4 @@ export async function listSellers(sessionToken: string): Promise<SellerSummary[]
   }
   const data = await response.json()
   return data.sellers as SellerSummary[]
-}
-
-export function stripeStatusLabel(stripe: SellerSummary["stripe"]): string {
-  if (!stripe.connected) {
-    return "Not connected"
-  }
-  if (stripe.charges_enabled && stripe.payouts_enabled) {
-    return "Live"
-  }
-  return "Pending"
 }

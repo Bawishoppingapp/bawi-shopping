@@ -17,8 +17,8 @@ export function CheckoutFlow({ idempotencyKey }: { idempotencyKey: string }) {
   const [state, formAction, pending] = useActionState(startCheckoutAction, initialCheckoutState)
   const t = useTranslations()
 
-  if (state.result?.client_secret) {
-    return <PaymentStep clientSecret={state.result.client_secret} orderId={state.result.order_id} />
+  if (state.result) {
+    return <PaymentStep result={state.result} />
   }
 
   return (

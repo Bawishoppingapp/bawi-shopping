@@ -14,7 +14,15 @@ export interface CheckoutStartResult {
   order_id: string
   display_id: string
   status: string
-  client_secret: string | null
+  payment_status: string
+  payment_method: "manual_telebirr"
+  payment_recipient_name: string
+  payment_recipient_phone: string
+  subtotal: number
+  shipping: number
+  tax: number
+  total: number
+  currency_code: string
 }
 
 export interface CheckoutActionState {
