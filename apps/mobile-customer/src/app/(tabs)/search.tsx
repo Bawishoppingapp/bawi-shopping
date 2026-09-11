@@ -21,6 +21,43 @@ import { addRecentSearch, clearRecentSearches, getRecentSearches } from "@/featu
 
 const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 400;
+const AUDIENCE_CATEGORY_ORDER = ["Women", "Young Women", "Kids", "Sports", "Men"];
+const SHOP_CATEGORY_ORDER = [
+  "New In",
+  "Clothing",
+  "Formal Shop",
+  "Habesha Wear",
+  "Dresses",
+  "Jumpsuits",
+  "Tops",
+  "Graphics",
+  "Jackets & Sweaters",
+  "Jeans",
+  "Pants",
+  "Bottoms",
+  "Matching Sets",
+  "Shoes",
+  "Bags",
+  "Accessories",
+  "Lingerie & Sleep",
+  "Beauty",
+  "Women",
+  "Young Women",
+  "Men",
+  "Kids",
+  "Sports",
+  "Shirts",
+  "Sweatshirts",
+];
+
+function orderCategories(categories: CategoryNode[], preferredOrder: string[]) {
+  const order = new Map(preferredOrder.map((name, index) => [name.toLowerCase(), index]));
+  return [...categories].sort((a, b) => {
+    const aIndex = order.get(a.name.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+    const bIndex = order.get(b.name.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+    return aIndex - bIndex || a.name.localeCompare(b.name);
+  });
+}
 
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
@@ -149,16 +186,16 @@ export default function SearchScreen() {
     router.push({ pathname: "/product/[code]", params: { code } });
   }
 
-  const topCategories = categories.slice(0, 5);
+  const topCategories = AUDIENCE_CATEGORY_ORDER
+    .map((name) => categories.find((category) => category.name.toLowerCase() === name.toLowerCase()))
+    .filter((category): category is CategoryNode => Boolean(category));
+  const browseCategories = orderCategories(categories, SHOP_CATEGORY_ORDER);
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
       <View className="border-b border-ink-100 bg-paper">
-        <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
+        <View className="px-4 pb-3 pt-2">
           <Text className="font-serif text-display text-ink-950">{t("search.shop")}</Text>
-          <View className="rounded-full border border-ink-200 bg-surface px-3 py-1.5">
-            <Text className="text-caption font-medium text-ink-700">{t("search.forYou")}</Text>
-          </View>
         </View>
 
         {showDiscovery && topCategories.length > 0 ? (
@@ -167,12 +204,12 @@ export default function SearchScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 28 }}
           >
-            {topCategories.map((category, index) => (
+            {topCategories.map((category) => (
               <Pressable
                 key={category.id}
                 accessibilityRole="button"
                 onPress={() => router.setParams({ category: category.id, categoryName: category.name })}
-                className={`border-b-2 pb-3 pt-1 ${index === 0 ? "border-ink-solid" : "border-transparent"}`}
+                className="border-b-2 border-transparent pb-3 pt-1"
               >
                 <Text className="text-body-sm font-semibold uppercase tracking-wide text-ink-950">
                   {category.name}
@@ -252,7 +289,7 @@ export default function SearchScreen() {
                   {t("search.browseCategories")}
                 </Text>
               </View>
-              {categories.map((category) => (
+              {browseCategories.map((category) => (
                 <Pressable
                   key={category.id}
                   accessibilityRole="button"

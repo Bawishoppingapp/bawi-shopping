@@ -302,22 +302,33 @@ export default async function initial_data_seed({
   ).run({
     input: {
       product_categories: [
-        {
-          name: "Shirts",
-          is_active: true,
-        },
-        {
-          name: "Sweatshirts",
-          is_active: true,
-        },
-        {
-          name: "Pants",
-          is_active: true,
-        },
-        {
-          name: "Merch",
-          is_active: true,
-        },
+        ...[
+          "Women",
+          "Young Women",
+          "Kids",
+          "Sports",
+          "Men",
+          "New In",
+          "Clothing",
+          "Formal Shop",
+          "Habesha Wear",
+          "Dresses",
+          "Jumpsuits",
+          "Tops",
+          "Graphics",
+          "Jackets & Sweaters",
+          "Jeans",
+          "Pants",
+          "Bottoms",
+          "Matching Sets",
+          "Shoes",
+          "Bags",
+          "Accessories",
+          "Lingerie & Sleep",
+          "Beauty",
+          "Shirts",
+          "Sweatshirts",
+        ].map((name) => ({ name, is_active: true })),
       ],
     },
   });
