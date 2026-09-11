@@ -24,7 +24,7 @@ describe("CurrencyProvider", () => {
 
     await act(async () => hook.result.current.setCurrency("usd"));
     expect(hook.result.current.formatPrice(212500, "etb")).toBe("$14.17");
-    await waitFor(() => expect(SecureStore.setItemAsync).toHaveBeenCalledWith("bawi_display_currency", "usd"));
+    await waitFor(() => expect(SecureStore.setItemAsync).toHaveBeenCalledWith("bawi_display_currency_v2", "usd"));
     await hook.unmount();
   });
 });

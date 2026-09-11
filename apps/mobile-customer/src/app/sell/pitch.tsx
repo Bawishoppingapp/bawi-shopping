@@ -1,4 +1,4 @@
-import { Button } from "@bawi/mobile-ui";
+import { Button, ThemedIcon } from "@bawi/mobile-ui";
 import { router } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +18,14 @@ export default function SellPitchScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to account"
+        onPress={() => router.replace("/(tabs)/account")}
+        className="ml-4 mt-2 h-11 w-11 items-center justify-center rounded-full active:bg-ink-100"
+      >
+        <ThemedIcon name="chevron-back" size={28} tone="ink950" />
+      </Pressable>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: "center", gap: 20 }}>
         <View className="gap-2">
           <Text className="text-caption font-medium uppercase text-ink-500">Sell with Bawi</Text>

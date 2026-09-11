@@ -6,7 +6,10 @@ import { getCurrencyRates } from "../services/currency-rates-client";
 
 export const DISPLAY_CURRENCIES = ["etb", "usd"] as const;
 export type DisplayCurrency = (typeof DISPLAY_CURRENCIES)[number];
-const STORAGE_KEY = "bawi_display_currency";
+// Versioned once when ETB became the launch default. Older development
+// installs may have persisted USD before that decision; ignoring the old
+// key moves them to ETB while future customer choices still persist.
+const STORAGE_KEY = "bawi_display_currency_v2";
 
 interface CurrencyContextValue {
   currency: DisplayCurrency;

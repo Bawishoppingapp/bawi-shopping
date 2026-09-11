@@ -45,7 +45,14 @@ export default function SellLoginScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 bg-paper">
-      <Stack.Screen options={{ headerShown: true, title: "Seller log in" }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: "Seller log in",
+          headerBackTitle: "Back",
+          headerBackButtonDisplayMode: "default",
+        }}
+      />
       <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
         <View className="mb-4 gap-1">
           <Text className="text-h1 text-ink-950">Seller log in</Text>
