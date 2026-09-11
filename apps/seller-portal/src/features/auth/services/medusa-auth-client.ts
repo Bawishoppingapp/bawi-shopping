@@ -68,12 +68,6 @@ export interface SellerMe {
     slug: string
     status: string
     currency_code: string
-    stripe: {
-      connected: boolean
-      charges_enabled: boolean
-      payouts_enabled: boolean
-      details_submitted: boolean
-    }
   }
 }
 

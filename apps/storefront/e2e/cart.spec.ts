@@ -23,7 +23,7 @@ async function get(path: string, token?: string) {
 
 /**
  * Requires the backend running with ENABLE_TEST_SUPPORT_ROUTES=true (same
- * requirement as discovery.spec.ts/stripe-onboarding.spec.ts) - this spec
+ * requirement as discovery.spec.ts) - this spec
  * seeds sellers/products directly via the backend API since the part under
  * test is the storefront cart experience, not the seller/admin product
  * lifecycle (which has its own dedicated specs).

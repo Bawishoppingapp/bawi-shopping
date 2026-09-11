@@ -17,9 +17,7 @@ const backendOrigin = (() => {
 
 const isDev = process.env.NODE_ENV === "development";
 
-// Storefront-specific: allows Stripe's Payment Element (script + iframe +
-// its own API calls) - see docs/PAYMENTS.md. img-src allows any https:
-// source because product images are served from wherever the file
+// Product images are served from wherever the file
 // module/S3 provider is configured (see docs/DEPLOYMENT.md §8) - not a
 // fixed, predictable host across environments. 'unsafe-inline' (not a
 // nonce) is used deliberately so existing static/ISR pages don't have to
@@ -27,12 +25,12 @@ const isDev = process.env.NODE_ENV === "development";
 // pre-launch hardening section for the trade-off.
 const cspHeader = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://js.stripe.com`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' https://api.stripe.com https://m.stripe.network${backendOrigin ? ` ${backendOrigin}` : ""}`,
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  `connect-src 'self'${backendOrigin ? ` ${backendOrigin}` : ""}`,
+  "frame-src 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

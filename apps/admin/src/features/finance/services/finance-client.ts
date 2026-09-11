@@ -64,7 +64,7 @@ export interface Dispute {
   id: string
   order_id: string
   vendor_order_id: string | null
-  stripe_dispute_id: string
+  payment_provider_reference?: string
   amount: number
   reason: string | null
   status: string

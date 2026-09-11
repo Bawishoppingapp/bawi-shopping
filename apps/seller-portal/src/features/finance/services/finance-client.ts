@@ -47,7 +47,7 @@ export interface Payout {
   id: string
   amount: number
   status: string
-  stripe_transfer_id: string | null
+  payment_provider_reference?: string | null
   created_at: string
 }
 

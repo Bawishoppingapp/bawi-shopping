@@ -82,21 +82,21 @@ describe("useSellerAuth", () => {
     expect(await SecureStore.getItemAsync("bawi_seller_session")).toBeNull();
   });
 
-  test("refresh re-fetches the current seller (used to pick up Stripe status after onboarding)", async () => {
+  test("refresh re-fetches the current seller", async () => {
     await SecureStore.setItemAsync("bawi_seller_session", "seller-token");
     mockedClient.getCurrentSeller.mockResolvedValue(sellerMe);
 
     const { result } = await renderHook(() => useSellerAuth(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.seller?.seller.stripe.charges_enabled).toBe(false);
+    expect(result.current.seller?.seller.status).toBe(sellerMe.seller.status);
 
-    const updated = { ...sellerMe, seller: { ...sellerMe.seller, stripe: { ...sellerMe.seller.stripe, charges_enabled: true, payouts_enabled: true } } };
+    const updated = { ...sellerMe, seller: { ...sellerMe.seller, status: "suspended" } };
     mockedClient.getCurrentSeller.mockResolvedValue(updated);
 
     await act(async () => {
       await result.current.refresh();
     });
 
-    expect(result.current.seller?.seller.stripe.charges_enabled).toBe(true);
+    expect(result.current.seller?.seller.status).toBe("suspended");
   });
 });
