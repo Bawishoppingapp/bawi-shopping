@@ -57,5 +57,11 @@ services:
         value: support@bawishopping.com
       - key: BREVO_FROM_NAME
         value: Bawi Shopping
+      - key: RESEND_API_KEY
+        sync: false # server-only Resend key; never commit the value
+      - key: RESEND_FROM_EMAIL
+        value: support@bawishopping.com
+      - key: RESEND_FROM_NAME
+        value: Bawi Shopping
       - key: S3_BUCKET
         value: "" # leave blank to use local disk; see docs/DEPLOYMENT-LOWCOST.md for why that's lossy here

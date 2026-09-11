@@ -68,7 +68,7 @@ export async function recordNotification(
     to: input.to,
     channel: "email",
     template: input.eventType,
-    // Brevo/SendGrid consume `html`; the local provider and notification record
+    // Resend/Brevo/SendGrid consume `html`; the local provider and notification record
     // retain `text`. Supplying both keeps development logs useful and avoids
     // real emails being delivered with an empty body.
     content: { subject: input.subject, text: input.body, html: input.html ?? escapedBody },

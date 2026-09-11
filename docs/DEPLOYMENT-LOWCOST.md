@@ -175,7 +175,7 @@ Once all four services (backend + 3 frontends) have real URLs:
 | Var | Why it stays unset here |
 |---|---|
 | `sk_live_...` (a live Stripe key) | Staging is test-mode only, per this task's own instructions and `CLAUDE.md`'s non-negotiable rule |
-| Real `BREVO_API_KEY` | Required for free transactional email after `bawishopping.com` is verified in Brevo; store it only as a Render secret |
+| Real `RESEND_API_KEY` | Required for free transactional email after `bawishopping.com` is verified in Resend; store it only as a Render secret |
 | AWS-specific S3 IAM-role auth (`authentication_method: "s3-iam-role"`, i.e. leaving `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` blank while `S3_BUCKET` is set) | Only applies on ECS with a task role — not this path. If using R2 here, set explicit `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` instead (R2 has no IAM-role concept) |
 
 **Placeholder business settings** — not env vars at all; they live in the `business_config_entry` table, seeded by §3's `seed-business-config.ts` step with `is_placeholder: true` on each. See §7 — no action needed for staging, only before a real launch.
@@ -199,7 +199,7 @@ Render/Railway free containers have ephemeral disk. Two options, no code change 
 Nothing in this deployment path changes any of these — confirming explicitly since it's this task's own requirement:
 - `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` above are **test mode** (`sk_test_...`/webhook registered under Stripe's test-mode toggle). Never enter a `sk_live_...` key for this environment.
 - `live_payments_enabled`, `real_transfers_enabled`, `real_payouts_enabled`, `real_refunds_enabled`, `real_tax_calculation_enabled`, `real_email_enabled`, `real_sms_enabled`, `real_courier_booking_enabled` all default `false` from `seed-business-config.ts` (§3) and are never touched by anything in this document. Verify with §8's readiness check.
-- `EMAIL_PROVIDER` staying blank keeps every notification on `notification-local`. For beta delivery set it to `brevo`, add `BREVO_API_KEY`, use `support@bawishopping.com`, and deliberately enable `real_email_enabled` after a reset-email test succeeds.
+- `EMAIL_PROVIDER` staying blank keeps every notification on `notification-local`. For beta delivery set it to `resend`, add `RESEND_API_KEY`, use `support@bawishopping.com`, and deliberately enable `real_email_enabled` after a reset-email test succeeds.
 
 ## §7. Remaining placeholder business decisions (unaffected by this deployment)
 

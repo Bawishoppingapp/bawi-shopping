@@ -138,6 +138,20 @@ const emailProviders = [
         },
       ]
     : []),
+  ...(process.env.EMAIL_PROVIDER === "resend"
+    ? [
+        {
+          resolve: "./src/providers/resend-notification",
+          id: "resend",
+          options: {
+            channels: ["email"],
+            api_key: process.env.RESEND_API_KEY,
+            from: process.env.RESEND_FROM_EMAIL ?? "support@bawishopping.com",
+            from_name: process.env.RESEND_FROM_NAME ?? "Bawi Shopping",
+          },
+        },
+      ]
+    : []),
 ]
 
 module.exports = defineConfig({
