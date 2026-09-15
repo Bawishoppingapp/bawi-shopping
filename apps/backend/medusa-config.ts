@@ -109,7 +109,7 @@ const emailProviders = [
   {
     resolve: "@medusajs/notification-local",
     id: "local",
-    options: { channels: ["email"] },
+    options: { channels: ["email-local"] },
   },
   ...(process.env.EMAIL_PROVIDER === "sendgrid"
     ? [

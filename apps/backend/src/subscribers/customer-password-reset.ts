@@ -35,7 +35,9 @@ export default async function customerPasswordResetHandler({
   }
 
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
-  logger.info(`Password reset code for ${data.entity_id}: ${data.token}`)
+  if (process.env.NODE_ENV !== "production") {
+    logger.info(`Password reset code for ${data.entity_id}: ${data.token}`)
+  }
 
   const resetUrlBase = process.env.PASSWORD_RESET_URL_BASE ?? "mobilecustomer://reset-password"
   const separator = resetUrlBase.includes("?") ? "&" : "?"

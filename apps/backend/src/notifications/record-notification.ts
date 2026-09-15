@@ -3,6 +3,8 @@ import { Modules } from "@medusajs/framework/utils"
 import { NOTIFICATION_INBOX_MODULE } from "../modules/notification-inbox"
 import type NotificationInboxModuleService from "../modules/notification-inbox/service"
 import { sendPushForRecipient } from "./send-push"
+import { BUSINESS_CONFIG_MODULE } from "../modules/business-config"
+import type BusinessConfigModuleService from "../modules/business-config/service"
 
 /**
  * Every event this platform notifies a party about - see docs/PRD.md
@@ -64,9 +66,12 @@ export async function recordNotification(
     .replaceAll("'", "&#39;")
     .replaceAll("\n", "<br />")
   const notificationModuleService = container.resolve(Modules.NOTIFICATION)
+  const businessConfig: BusinessConfigModuleService = container.resolve(BUSINESS_CONFIG_MODULE)
+  const realEmailEnabled = await businessConfig.getFeatureFlag("real_email_enabled")
+  const realProviderConfigured = ["resend", "brevo", "sendgrid"].includes(process.env.EMAIL_PROVIDER ?? "")
   const notification = await notificationModuleService.createNotifications({
     to: input.to,
-    channel: "email",
+    channel: realEmailEnabled && realProviderConfigured ? "email" : "email-local",
     template: input.eventType,
     // Resend/Brevo/SendGrid consume `html`; the local provider and notification record
     // retain `text`. Supplying both keeps development logs useful and avoids
