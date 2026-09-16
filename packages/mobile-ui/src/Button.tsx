@@ -28,8 +28,8 @@ const textByVariant: Record<Variant, string> = {
 };
 
 const sizeClasses: Record<Size, { container: string; text: string }> = {
-  md: { container: "h-11 px-4", text: "text-body" },
-  lg: { container: "h-14 px-6", text: "text-h3" },
+  md: { container: "min-h-11 px-4 py-2", text: "text-body" },
+  lg: { container: "min-h-14 px-6 py-3", text: "text-h3" },
 };
 
 /**
@@ -53,6 +53,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={children}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       className={`flex-row items-center justify-center rounded-md ${containerByVariant[variant]} ${
@@ -71,9 +72,7 @@ export function Button({
       ) : (
         <Text
           className={`shrink text-center font-medium ${textByVariant[variant]} ${sizeClasses[size].text}`}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.82}
+          style={{ fontSize: size === "lg" ? 17 : 15, lineHeight: 22, flexShrink: 1 }}
         >
           {children}
         </Text>
