@@ -249,3 +249,5 @@ These are genuine, current gaps — not oversights hidden from this document, an
 # Email routing safety
 
 The local notification provider owns `email-local`, while the configured real provider owns `email`. Notifications use the real channel only when `real_email_enabled` is true and `EMAIL_PROVIDER` selects Resend, Brevo, or SendGrid. This prevents duplicate channel registration from silently routing production email to the local logger. Password-reset tokens are never explicitly logged in production.
+
+Mobile clients can read the current public Store API key from `GET /mobile-config` after a key rotation. The endpoint only returns an active key of type `publishable`, never a secret key. Preview and production EAS environments should still be updated to the current key so all Store API calls work without a bootstrap round trip.
