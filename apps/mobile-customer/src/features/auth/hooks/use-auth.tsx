@@ -57,7 +57,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (input: { firstName: string; lastName: string; email: string; password: string }) => {
-      const registrationToken = await registerCustomerAuthIdentity(input.email, input.password);
+      let registrationToken: string;
+      try {
+        registrationToken = await registerCustomerAuthIdentity(input.email, input.password);
+      } catch (error) {
+        // Registration has two backend steps. If the Store API rejected step
+        // two (for example after a rotated publishable key), the auth identity
+        // already exists but has no customer attached. Prove ownership with
+        // the same password, then finish the interrupted registration.
+        if (!(error instanceof MedusaAuthError) || !/identity with email already exists/i.test(error.message)) {
+          throw error;
+        }
+        registrationToken = await loginCustomer(input.email, input.password);
+        if (await getCurrentCustomer(registrationToken)) {
+          throw new MedusaAuthError("Account already exists");
+        }
+      }
       await createCustomer(registrationToken, {
         email: input.email,
         first_name: input.firstName,

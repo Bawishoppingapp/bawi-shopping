@@ -73,6 +73,26 @@ describe("useAuth", () => {
     expect(result.current.customer?.id).toBe("cus_1");
   });
 
+  test("finishes a registration left with an actorless auth identity", async () => {
+    const existingIdentity = new medusaAuthClient.MedusaAuthError("Identity with email already exists");
+    existingIdentity.message = "Identity with email already exists";
+    mockedClient.registerCustomerAuthIdentity.mockRejectedValueOnce(existingIdentity);
+    mockedClient.loginCustomer.mockResolvedValueOnce("actorless-token").mockResolvedValueOnce("customer-token");
+    mockedClient.getCurrentCustomer.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: "cus_1", email: "a@b.com", first_name: "A", last_name: "B",
+    });
+    mockedClient.createCustomer.mockResolvedValue({ id: "cus_1" });
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => {
+      await result.current.register({ firstName: "A", lastName: "B", email: "a@b.com", password: "pw" });
+    });
+    expect(mockedClient.createCustomer).toHaveBeenCalledWith("actorless-token", {
+      email: "a@b.com", first_name: "A", last_name: "B",
+    });
+    expect(result.current.customer?.id).toBe("cus_1");
+  });
+
   test("logout clears the session token and the customer", async () => {
     mockedClient.loginCustomer.mockResolvedValue("session-token");
     mockedClient.getCurrentCustomer.mockResolvedValue({
