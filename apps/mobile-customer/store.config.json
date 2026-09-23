@@ -1,0 +1,49 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "categories": ["SHOPPING", "LIFESTYLE"],
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "gambling": false,
+      "unrestrictedWebAccess": false,
+      "kidsAgeBand": null,
+      "ageRatingOverride": "NONE",
+      "koreaAgeRatingOverride": "NONE"
+    },
+    "info": {
+      "en-US": {
+        "title": "Bawi Shopping",
+        "subtitle": "Ethiopian fashion marketplace",
+        "description": "Discover fashion from independent sellers with Bawi Shopping. Browse clothing, shoes, accessories, Habesha wear, sportswear, and styles for women, young women, and kids—all in one thoughtfully designed marketplace.\n\nShop with prices shown in Ethiopian birr, save favorites to your wishlist, manage your cart, and follow your orders from payment review through delivery. Customers can pay for physical goods using the in-app Telebirr transfer instructions and upload a confirmation receipt for secure administrator verification.\n\nWant to sell on Bawi? Apply, manage your storefront, submit product photos, and track fulfillment from the same app. Every listing is reviewed before it reaches customers, helping create a consistent and trusted shopping experience.\n\nHighlights:\n• Curated fashion from independent sellers\n• ETB pricing throughout the shopping experience\n• Search by category and product\n• Wishlist and saved delivery addresses\n• Manual Telebirr payment verification\n• Order status and delivery updates\n• Seller application and storefront tools\n• English, Amharic, Tigrinya, Afaan Oromo, Spanish, and Simplified Chinese\n• Light and dark appearance options",
+        "keywords": [
+          "Ethiopia",
+          "fashion",
+          "shopping",
+          "clothing",
+          "Habesha",
+          "marketplace",
+          "shoes",
+          "Telebirr"
+        ],
+        "promoText": "Discover independent Ethiopian fashion, shop in ETB, and follow every order from payment review to delivery.",
+        "supportUrl": "https://bawi-shopping-storefront.vercel.app/support",
+        "privacyPolicyUrl": "https://bawi-shopping-storefront.vercel.app/legal/privacy"
+      }
+    },
+    "release": {
+      "automaticRelease": false,
+      "phasedRelease": false
+    }
+  }
+}
