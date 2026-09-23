@@ -19,7 +19,7 @@ import { type PublicProduct, getPublicProduct } from "@/features/products/servic
 import { type ProductHit, searchProducts } from "@/features/discovery/services/discovery-client";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { toProductCardData } from "@/features/discovery/utils/to-product-card";
-import { recordProductView } from "@/features/discovery/services/recently-viewed";
+import { recordProductView, removeRecentlyViewedProduct } from "@/features/discovery/services/recently-viewed";
 import { useCart } from "@/features/cart/hooks/use-cart";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { useToast } from "@/features/toast/use-toast";
@@ -80,6 +80,10 @@ export default function ProductDetailScreen() {
               setRelatedProducts(searchResult.products.filter((p) => p.productCode !== result.product_code))
             )
             .catch(() => setRelatedProducts([]));
+        } else {
+          // The product was archived, removed, or is no longer approved.
+          // Do not leave its stale device-local card on Home.
+          void removeRecentlyViewedProduct(code);
         }
       })
       .catch(() => {

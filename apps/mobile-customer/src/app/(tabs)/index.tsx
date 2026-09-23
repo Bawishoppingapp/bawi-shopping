@@ -7,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { type CategoryNode, type ProductHit, listCategories, searchProducts } from "@/features/discovery/services/discovery-client";
-import { getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
+import { clearRecentlyViewed, getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { CategoryStrip } from "@/features/home/components/CategoryStrip";
 import { EditorialSpotlight } from "@/features/home/components/EditorialSpotlight";
@@ -56,7 +56,16 @@ export default function HomeScreen() {
       getShippingPolicy(CURRENCY_CODE),
     ]);
     if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
-    if (arrivalsResult.status === "fulfilled") setNewArrivals(arrivalsResult.value.products);
+    if (arrivalsResult.status === "fulfilled") {
+      setNewArrivals(arrivalsResult.value.products);
+      // An empty first page means the public catalog has no approved
+      // products. Remove device-local cards from an older catalog state so
+      // they cannot navigate to detail routes that now correctly return 404.
+      if (arrivalsResult.value.products.length === 0) {
+        await clearRecentlyViewed();
+        setRecentlyViewed([]);
+      }
+    }
     if (shippingResult.status === "fulfilled" && shippingResult.value) {
       setFreeShippingThreshold(shippingResult.value.freeShippingThresholdCents);
     }

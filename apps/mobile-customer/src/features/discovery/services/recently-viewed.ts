@@ -28,3 +28,16 @@ export async function recordProductView(product: ProductHit): Promise<void> {
   );
   await SecureStore.setItemAsync(RECENTLY_VIEWED_KEY, JSON.stringify(next));
 }
+
+/** Removes a product that the public catalog no longer exposes. This keeps
+ * an archived/rejected/deleted listing from lingering as a tappable local
+ * card after the backend has correctly stopped serving its detail page. */
+export async function removeRecentlyViewedProduct(productCode: string): Promise<void> {
+  const existing = await getRecentlyViewed();
+  const next = existing.filter((product) => product.productCode !== productCode);
+  await SecureStore.setItemAsync(RECENTLY_VIEWED_KEY, JSON.stringify(next));
+}
+
+export async function clearRecentlyViewed(): Promise<void> {
+  await SecureStore.deleteItemAsync(RECENTLY_VIEWED_KEY);
+}
