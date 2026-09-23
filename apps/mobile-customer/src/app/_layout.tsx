@@ -66,6 +66,9 @@ function AppShell() {
               screenOptions={{
                 headerStyle: { backgroundColor: themeColors.surface },
                 headerTintColor: themeColors.ink950,
+                // Never expose internal route filenames (for example
+                // "index" or "pitch") as iOS back-button labels.
+                headerBackButtonDisplayMode: "minimal",
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

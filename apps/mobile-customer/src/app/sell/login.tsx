@@ -49,8 +49,7 @@ export default function SellLoginScreen() {
         options={{
           headerShown: true,
           title: "Seller log in",
-          headerBackTitle: "Back",
-          headerBackButtonDisplayMode: "default",
+          headerBackButtonDisplayMode: "minimal",
         }}
       />
       <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
