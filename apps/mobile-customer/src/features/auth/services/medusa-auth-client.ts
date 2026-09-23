@@ -98,11 +98,11 @@ export async function requestPasswordReset(email: string): Promise<void> {
   }
 }
 
-export async function resetPassword(resetToken: string, password: string): Promise<void> {
+export async function resetPassword(email: string, resetToken: string, password: string): Promise<void> {
   const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/update`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${resetToken}` },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ email, password }),
   });
 
   if (!response.ok) {

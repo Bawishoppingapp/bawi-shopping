@@ -10,7 +10,8 @@ import { localizeValidationMessage } from "@/features/i18n/utils/localize-valida
 
 export default function ResetPasswordScreen() {
   const t = useTranslations();
-  const params = useLocalSearchParams<{ token?: string | string[] }>();
+  const params = useLocalSearchParams<{ email?: string | string[]; token?: string | string[] }>();
+  const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,13 +21,15 @@ export default function ResetPasswordScreen() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    const linkedEmail = Array.isArray(params.email) ? params.email[0] : params.email;
     const linkedToken = Array.isArray(params.token) ? params.token[0] : params.token;
+    if (linkedEmail) setEmail(linkedEmail);
     if (linkedToken) setToken(linkedToken);
-  }, [params.token]);
+  }, [params.email, params.token]);
 
   async function onSubmit() {
     setFormError(null);
-    const parsed = resetPasswordSchema.safeParse({ token, password, confirmPassword });
+    const parsed = resetPasswordSchema.safeParse({ email, token, password, confirmPassword });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -39,7 +42,7 @@ export default function ResetPasswordScreen() {
     setFieldErrors({});
     setSubmitting(true);
     try {
-      await resetPassword(parsed.data.token, parsed.data.password);
+      await resetPassword(parsed.data.email, parsed.data.token, parsed.data.password);
       setDone(true);
     } catch {
       setFormError(
@@ -76,6 +79,16 @@ export default function ResetPasswordScreen() {
             <Text className="text-body-sm text-danger">{formError}</Text>
           </View>
         ) : null}
+        <Input
+          label={t("login.email")}
+          value={email}
+          onChangeText={setEmail}
+          error={fieldErrors.email}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+        />
         <Input
           label={t("auth.resetCode")}
           value={token}

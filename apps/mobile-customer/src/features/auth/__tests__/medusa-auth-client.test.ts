@@ -92,7 +92,21 @@ describe("medusa-auth-client", () => {
         ok: false,
         text: () => Promise.resolve(JSON.stringify({ message: "Invalid or expired token" })),
       });
-      await expect(resetPassword("bad-token", "NewPass123")).rejects.toThrow("Invalid or expired token");
+      await expect(resetPassword("a@b.com", "bad-token", "NewPass123")).rejects.toThrow("Invalid or expired token");
+    });
+
+    test("sends the customer email with the new password", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: true, text: () => Promise.resolve("{}") });
+
+      await resetPassword("a@b.com", "reset-token", "NewPass123");
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/auth/customer/emailpass/update"),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: "Bearer reset-token" }),
+          body: JSON.stringify({ email: "a@b.com", password: "NewPass123" }),
+        })
+      );
     });
   });
 

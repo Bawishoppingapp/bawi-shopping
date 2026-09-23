@@ -47,7 +47,11 @@ export default function ForgotPasswordScreen() {
         <Text className="text-center text-body text-ink-500">
           {t("auth.resetSent", { email })}
         </Text>
-        <Button onPress={() => router.replace("/reset-password")}>{t("auth.enterResetCode")}</Button>
+        <Button
+          onPress={() => router.replace({ pathname: "/reset-password", params: { email } })}
+        >
+          {t("auth.enterResetCode")}
+        </Button>
       </View>
     );
   }

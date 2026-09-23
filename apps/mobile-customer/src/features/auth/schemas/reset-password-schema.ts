@@ -12,6 +12,7 @@ const passwordSchema = z.string().superRefine((password, ctx) => {
 
 export const resetPasswordSchema = z
   .object({
+    email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
     token: z.string().trim().min(1, "Reset code is required"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "Confirm your password"),

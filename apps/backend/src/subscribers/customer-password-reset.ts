@@ -41,7 +41,7 @@ export default async function customerPasswordResetHandler({
 
   const resetUrlBase = process.env.PASSWORD_RESET_URL_BASE ?? "mobilecustomer://reset-password"
   const separator = resetUrlBase.includes("?") ? "&" : "?"
-  const resetUrl = `${resetUrlBase}${separator}token=${encodeURIComponent(data.token)}`
+  const resetUrl = `${resetUrlBase}${separator}token=${encodeURIComponent(data.token)}&email=${encodeURIComponent(data.entity_id)}`
 
   await recordNotification(container, {
     idempotencyKey: `password_reset:${data.token}`,

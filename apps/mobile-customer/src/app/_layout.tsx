@@ -2,7 +2,7 @@ import { useThemeColors } from "@bawi/mobile-ui";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import "@/global.css";
 import { AppearanceProvider, useAppearance } from "@/features/appearance/hooks/use-appearance";
@@ -10,6 +10,8 @@ import { AuthProvider } from "@/features/auth/hooks/use-auth";
 import { CartProvider } from "@/features/cart/hooks/use-cart";
 import { CurrencyProvider } from "@/features/currency/hooks/use-currency";
 import { LocaleProvider, useTranslations } from "@/features/i18n/hooks/use-locale";
+import { OnboardingScreen } from "@/features/onboarding/components/OnboardingScreen";
+import { completeOnboarding, hasCompletedOnboarding } from "@/features/onboarding/services/onboarding-storage";
 import { PushNotificationRegistrar } from "@/features/push-notifications/components/push-notification-registrar";
 import { SellerAuthProvider } from "@/features/seller-auth/hooks/use-seller-auth";
 import { ToastProvider } from "@/features/toast/use-toast";
@@ -20,10 +22,38 @@ function AppShell() {
   const themeColors = useThemeColors();
   const { appearance } = useAppearance();
   const t = useTranslations();
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
-    SplashScreen.hideAsync();
+    let mounted = true;
+    hasCompletedOnboarding()
+      .then((completed) => {
+        if (mounted) setShowOnboarding(!completed);
+      })
+      .catch(() => {
+        if (mounted) setShowOnboarding(true);
+      })
+      .finally(() => SplashScreen.hideAsync());
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  const finishOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    void completeOnboarding();
+  }, []);
+
+  if (showOnboarding === null) return null;
+
+  if (showOnboarding) {
+    return (
+      <>
+        <StatusBar style={appearance === "dark" ? "light" : "dark"} />
+        <OnboardingScreen onComplete={finishOnboarding} />
+      </>
+    );
+  }
 
   return (
     <AuthProvider>
