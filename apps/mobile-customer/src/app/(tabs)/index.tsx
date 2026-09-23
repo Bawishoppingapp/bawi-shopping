@@ -12,6 +12,7 @@ import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { CategoryStrip } from "@/features/home/components/CategoryStrip";
 import { EditorialSpotlight } from "@/features/home/components/EditorialSpotlight";
 import { MasonryGrid } from "@/features/home/components/MasonryGrid";
+import { ProductCatalogPlaceholder } from "@/features/home/components/ProductCatalogPlaceholder";
 import { ProductRail } from "@/features/home/components/ProductRail";
 import { PromoBanner } from "@/features/home/components/PromoBanner";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
@@ -35,6 +36,7 @@ export default function HomeScreen() {
   const [recentlyViewed, setRecentlyViewed] = useState<ProductHit[]>([]);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [catalogResolved, setCatalogResolved] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
 
@@ -57,6 +59,7 @@ export default function HomeScreen() {
     ]);
     if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
     if (arrivalsResult.status === "fulfilled") {
+      setCatalogResolved(true);
       setNewArrivals(arrivalsResult.value.products);
       // An empty first page means the public catalog has no approved
       // products. Remove device-local cards from an older catalog state so
@@ -65,6 +68,8 @@ export default function HomeScreen() {
         await clearRecentlyViewed();
         setRecentlyViewed([]);
       }
+    } else {
+      setCatalogResolved(false);
     }
     if (shippingResult.status === "fulfilled" && shippingResult.value) {
       setFreeShippingThreshold(shippingResult.value.freeShippingThresholdCents);
@@ -128,6 +133,10 @@ export default function HomeScreen() {
           ) : null,
       },
       {
+        key: "catalog-placeholder",
+        node: catalogResolved && newArrivals.length === 0 ? <ProductCatalogPlaceholder /> : null,
+      },
+      {
         key: "grid",
         node:
           gridProducts.length > 0 ? (
@@ -140,7 +149,7 @@ export default function HomeScreen() {
           ) : null,
       },
     ],
-    [categories, recentlyViewed, spotlightProducts, gridProducts, freeShippingThreshold, t, formatPrice]
+    [categories, recentlyViewed, spotlightProducts, gridProducts, catalogResolved, newArrivals.length, freeShippingThreshold, t, formatPrice]
   );
 
   if (loading) {

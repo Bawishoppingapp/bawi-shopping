@@ -359,9 +359,8 @@ export default function ProductDetailScreen() {
 
           {shippingPolicy ? (
             <View className="gap-2 rounded-md border border-ink-100 p-3">
-              <View className="flex-row items-center gap-2">
-                <ThemedIcon name="cube-outline" size={18} tone="ink700" />
-                <Text className="flex-1 text-body-sm text-ink-700">
+              <View>
+                <Text className="text-body-sm text-ink-700">
                   {price >= shippingPolicy.freeShippingThresholdCents
                     ? t("product.freeShippingItem")
                     : t("product.freeShippingOver", {
