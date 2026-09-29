@@ -117,10 +117,10 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     businessConfigModuleService.getCategoryValues("shipping"),
     businessConfigModuleService.getCategoryValues("commission"),
   ])
-  const taxRateBasisPoints = Number(taxConfig.mock_rate_basis_points ?? 825)
-  // Tax applies to the item subtotal only, not shipping - a common (not
-  // universal) simplification; revisit once a real tax provider replaces
-  // this mock adapter (see docs/DECISIONS.md).
+  // The approved initial-launch rule is no customer tax. Keep the fallback
+  // at zero as well, so a missing config row cannot silently reintroduce the
+  // obsolete 8.25% development rate during checkout.
+  const taxRateBasisPoints = Number(taxConfig.mock_rate_basis_points ?? 0)
   const taxResult = calculateMockTax(publicCart.subtotal, taxRateBasisPoints)
 
   const shippingQuote = calculateAddressShipping(

@@ -59,13 +59,19 @@ function startTestServer() {
   killStrayTypeWatchers()
 
   return new Promise((resolve, reject) => {
-    const child = spawn("npx", ["medusa", "start", "--port", String(PORT), "--no-color"], {
+    const child = spawn("npx", ["medusa", "start", "--port", String(PORT)], {
       cwd: BACKEND_ROOT,
       detached: true,
       env: {
         ...process.env,
         NODE_ENV: "test",
         ENABLE_TEST_SUPPORT_ROUTES: "true",
+        // Medusa 2.19 no longer accepts the yargs-style `--no-color`
+        // switch. Disable terminal escape sequences through the standard
+        // environment variables instead so the production server command
+        // remains valid in CI and local integration runs.
+        NO_COLOR: "1",
+        FORCE_COLOR: "0",
         PORT: String(PORT),
         // Preserve CI's authenticated URL. The fallback matches the
         // passwordless local Postgres.app setup documented for this repo.
@@ -104,7 +110,7 @@ function startTestServer() {
     child.on("exit", (code) => {
       if (!settled) {
         settled = true
-        reject(new Error(`medusa develop exited early (code ${code}): ${output}`))
+        reject(new Error(`medusa start exited early (code ${code}): ${output}`))
       }
     })
 

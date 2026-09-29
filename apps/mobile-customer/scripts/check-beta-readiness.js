@@ -44,7 +44,27 @@ for (const profile of ["preview", "preview-simulator", "play-internal", "product
 }
 
 const checkout = fs.readFileSync(path.join(root, "src/app/checkout.tsx"), "utf8");
-requireValue(checkout.includes("comingSoon"), "Payment-disabled beta checkout marker is missing");
+requireValue(
+  checkout.includes("startManualCheckout") &&
+    checkout.includes("submitPaymentProof") &&
+    checkout.includes("payment_recipient_phone"),
+  "Manual Telebirr checkout and receipt verification flow is incomplete"
+);
+
+const storeConfig = readJson("store.config.json");
+const appleInfo = storeConfig.apple?.info?.["en-US"];
+requireValue(
+  appleInfo?.privacyPolicyUrl?.startsWith("https://"),
+  "Apple metadata requires a public HTTPS privacy policy URL"
+);
+requireValue(
+  appleInfo?.supportUrl?.startsWith("https://"),
+  "Apple metadata requires a public HTTPS support URL"
+);
+requireValue(
+  eas.submit?.production && typeof eas.submit.production === "object",
+  "Missing production App Store submission profile"
+);
 
 if (errors.length) {
   console.error("Private-beta static readiness FAILED:");
@@ -52,5 +72,5 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log("Private-beta static readiness passed.");
+console.log("Mobile release static readiness passed.");
 console.log("External requirements still checked by EAS: public HTTPS backend and Medusa publishable key.");

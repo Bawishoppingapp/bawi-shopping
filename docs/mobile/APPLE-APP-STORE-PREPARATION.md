@@ -1,6 +1,6 @@
 # Apple App Store Preparation — Bawi Shopping
 
-Last updated: 2026-09-22
+Last updated: 2026-09-28
 
 This is the operational handoff for the first iOS release. Code and metadata preparation may be completed before purchasing Apple Developer Program membership. Signing, TestFlight distribution, and App Store submission require the paid account and must wait for the owner.
 
@@ -14,7 +14,7 @@ This is the operational handoff for the first iOS release. Code and metadata pre
 - Photo-library explanation covers seller product photos and customer payment receipts.
 - No camera, microphone, contacts, location, or tracking permission is requested.
 - Apple privacy manifest explicitly declares no tracking and aggregates required-reason APIs used by React Native and installed Expo modules.
-- Production EAS profile creates a store-distribution build and validates that the bundle points to a public HTTPS backend.
+- Production EAS profile creates a store-distribution build and validates that the bundle points to a public HTTPS backend. The required public backend URL and publishable client key are configured in the EAS `production` environment.
 - App Store metadata is prepared in `apps/mobile-customer/store.config.json` for later EAS Metadata upload.
 - Primary category: Shopping. Secondary category: Lifestyle.
 - Release is intentionally manual after Apple approval.
@@ -44,7 +44,9 @@ Use the following as the first-review notes, updating any details that change:
 >
 > The seller tools are part of the same app. Sellers apply for approval, upload product information and photos, and manage fulfillment. Listings are reviewed by Bawi administrators before customers can purchase them.
 >
-> A customer reviewer account and a separately approved seller reviewer account are provided in the dedicated App Review credential fields. The backend is hosted on Render's free tier during validation, so the first request after inactivity may take up to one minute. Please allow that request to finish rather than treating the initial delay as a network failure.
+> A customer reviewer account and a separately approved seller reviewer account are provided in the dedicated App Review credential fields.
+
+Do not submit while the production backend can take roughly a minute to wake. App Review must receive a responsive service; upgrade Render or move the backend to an always-on host before selecting the build for review.
 
 Never put passwords inside this repository or the review-notes field. Enter the disposable reviewer credentials only in App Store Connect's username/password fields.
 

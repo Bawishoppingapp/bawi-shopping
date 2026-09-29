@@ -9,7 +9,7 @@ Working inventory for counsel, Apple privacy labels, and Google Play Data safety
 | Address information | Delivery and seller business addresses | Shipping, service eligibility, seller review | Backend database; courier only when enabled |
 | Authentication data | Password-derived authentication identity, bearer session token | Secure sign-in | Backend auth system; session token stored in device SecureStore |
 | Purchase information | Cart, order items, totals, returns, refunds, order status | Commerce and customer history | Backend database; future payment provider receives necessary transaction data |
-| Payment references | Provider transaction/reference IDs, status | Payment reconciliation and refunds | Not active in mobile beta; future backend/payment provider |
+| Payment information | Telebirr transaction reference, receipt image, exact amount, review status | Manual payment verification, reconciliation, cancellations, and offline refunds | Backend database and private receipt storage; visible only to authorized administrators |
 | User content | Seller product titles, descriptions, translations, and product photos | Marketplace listings | Backend and configured file storage |
 | Preferences | Language, appearance, display currency | Personalize the app | Device SecureStore; not used for advertising |
 | Saved activity | Wishlist and notification read state | Customer-requested app features | Backend database |
@@ -28,4 +28,3 @@ Items requiring owner/counsel decisions:
 - Minimum age and treatment of minors
 - Data-subject request verification and response process
 - Financial/order records retained after account deletion
-

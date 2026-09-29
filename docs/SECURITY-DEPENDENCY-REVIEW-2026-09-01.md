@@ -1,5 +1,13 @@
 # Dependency Security Review — 2026-09-01
 
+## 2026-09-28 App Store re-review
+
+The mobile-workspace audit was re-run against the current advisory database. Safe compatible updates were applied to `fast-uri` (3.1.7) and Vitest (4.1.11), removing one high and two moderate findings. The mobile dependency tree now reports **5 high, 22 moderate, 0 critical** package findings.
+
+The remaining high-severity package names (`@xmldom/xmldom`, `image-size`, `js-yaml`, `lodash`, and the Metro-owned PostCSS copy) are build, configuration, lint, or test tooling reached through Expo/Jest/Metro; they are not JavaScript executed inside the customer production binary. Their available npm remediations require overriding a zero-major dependency, changing a major package API, or replacing Expo SDK 54 with Expo 57. Those changes are not safe to force immediately before store submission. The remaining moderate Expo and navigation findings have the same framework-major constraint.
+
+Do not describe this as zero dependency risk. It is a reviewed and temporarily accepted build-tool risk. Schedule an isolated Expo 57 migration after the 1.0 release, produce fresh native builds, and repeat the full regression suite before shipping that migration.
+
 `npm audit --omit=dev` currently reports 51 production-tree findings: 22 high, 29 moderate, and 0 critical.
 
 ## Changes safely completed
@@ -17,4 +25,3 @@
 - Vite's remediation is a major 5-to-8 migration. It is build tooling, not code served by the customer mobile binary.
 
 Do not run `npm audit fix --force`; its proposed downgrades and major replacements can break the application while providing a misleading sense of safety. Re-run this audit on every lockfile change. Schedule Expo and Medusa migrations independently, with native builds, full unit/integration tests, and staging regression tests for each.
-

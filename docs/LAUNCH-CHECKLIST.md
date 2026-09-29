@@ -2,11 +2,11 @@
 
 The single, ordered list to work through before Bawi Shopping takes its first real payment. Every item links to the document that explains it in full — this file is an index and a checklist, not a duplicate explanation. Nothing on this list has been done for you as "real" — every checkbox represents a placeholder, a decision, or a human action this session could not and should not take on its own (see `CLAUDE.md`'s action-category rules on hard-to-reverse and real-money actions).
 
-A later production-prep pass built real, runnable scaffolding for most of §1-§3 and §11 with placeholder values throughout (`infra/terraform`, `load-testing/`) — see each section below for exactly what exists vs. what's still a manual step. Three things remain genuinely outside any agent's reach regardless of tooling: §7 (an attorney has to actually review the legal documents), actually running `terraform apply` against a real cloud account (no credentials exist in this environment), and §12's live-Stripe-key/feature-flag switch (a deliberate, human, real-money-enabling action - never automated, never defaulted to placeholder "just in case" values).
+A later production-prep pass built real, runnable scaffolding for most of §1–§3 and §11 (`infra/terraform`, `load-testing/`). The approved first-release payment path is now manual Telebirr transfer plus receipt review; Stripe is not part of the mobile launch path. Account ownership, App Store declarations, physical-device testing, and any paid infrastructure upgrades remain owner actions.
 
 Work top to bottom. Don't skip ahead to §7 (go-live) without completing everything above it.
 
-This checklist assumes the AWS/Terraform infrastructure path (`docs/DEPLOYMENT.md`, `infra/terraform/`). Before onboarding real vendors/customers, `docs/DEPLOYMENT-LOWCOST.md` describes a free/low-cost interim path (Vercel + Render/Railway + Supabase) for validating the product first — most of §2–§6 and §8–§11 below still apply there (feature flags, business config, security headers, legal review are infrastructure-independent); §1's specific AWS resources and §12's production Stripe go-live are what actually change when you're ready to move off the interim path.
+The current launch candidate uses the low-cost Vercel + Render + Supabase path in `docs/DEPLOYMENT-LOWCOST.md`. The AWS/Terraform path remains an optional later migration, not a prerequisite for store submission.
 
 ## 1. Infrastructure provisioned
 
@@ -23,20 +23,22 @@ This checklist assumes the AWS/Terraform infrastructure path (`docs/DEPLOYMENT.m
 - [ ] First admin user created: `npx medusa user -e you@example.com -p <a-real-password>` (`docs/DEPLOYMENT.md` §5 step 5).
 - [ ] Publishable API key + sales channel created in the Medusa admin (`docs/DEPLOYMENT.md` §2.4, §5 step 6).
 
-## 3. Stripe wired (test mode)
+## 3. Manual Telebirr payment configured
 
-- [ ] Webhook endpoint registered against `<backend-url>/webhooks/stripe`, subscribed to at minimum `payment_intent.succeeded`, `payment_intent.payment_failed`, `account.updated`, `charge.dispute.created`, `charge.dispute.closed` (`docs/DEPLOYMENT.md` §2.4).
-- [ ] `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` set to **test-mode** values for this environment (`docs/DEPLOYMENT.md` §2.1) — do not set live keys yet; that's §8 below.
+- [x] Checkout snapshots the exact ETB total and the configured Telebirr recipient, then accepts a transaction reference and receipt image.
+- [x] An authenticated administrator must approve submitted proof before fulfillment begins; receipt upload alone never marks an order paid.
+- [ ] Confirm the production database shows the approved recipient name and number in Admin → Config.
+- [ ] Complete one controlled transfer, receipt submission, rejection, resubmission, approval, cancellation, and offline-refund test on a physical device.
 
 ## 4. Frontends deployed
 
 - [ ] `apps/storefront`, `apps/seller-portal`, `apps/admin` all deployed, each pointing `MEDUSA_BACKEND_URL` at this environment's backend (`docs/DEPLOYMENT.md` §2.2–§2.3).
-- [ ] Storefront's `MEDUSA_PUBLISHABLE_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` set.
+- [ ] Storefront's `MEDUSA_PUBLISHABLE_KEY` is set. No Stripe client key is required for the approved manual-Telebirr launch flow.
 - [ ] Backend's `SELLER_PORTAL_URL` and `COURIER_PORTAL_URL` point at this environment's real seller-portal and admin origins (`docs/DEPLOYMENT.md` §5 step 9).
 
 ## 5. End-to-end smoke test
 
-- [ ] Register a customer → submit and approve a seller application → activate the seller → create and approve a product → add to cart → complete a test-mode checkout → confirm the Stripe webhook splits the order → confirm an in-app notification appears (`docs/DEPLOYMENT.md` §5 step 10).
+- [ ] Register a customer → approve a seller → approve a product → add to cart → submit Telebirr proof → approve it as admin → confirm the order splits for fulfillment → confirm an in-app notification appears.
 - [ ] Confirm the storefront's `/legal/terms`, `/legal/privacy`, `/legal/returns`, `/legal/cookies`, `/legal/acceptable-use`, `/legal/dmca` pages render, and the footer links to all six.
 - [ ] Confirm security headers are present on a live response (`curl -sI <url> | grep -i content-security-policy`) and match `docs/SECURITY.md` §16.
 
@@ -86,23 +88,24 @@ This checklist assumes the AWS/Terraform infrastructure path (`docs/DEPLOYMENT.m
 
 **A note on this session's own dry run**: the first local attempt at `load.js` stalled for 2h43m against what should have been a 3m30s script — diagnosed as sandbox-environment resource contention (this same session independently found and killed two unrelated stuck background processes earlier), not an application bug, confirmed by an immediate clean re-run. Don't assume a single load-test run — anomalous or clean — is the final word; run it more than once.
 
-## 12. Go-live: switching mock values to real (do last, in order)
+## 12. Go-live: manual Telebirr operations (do last, in order)
 
 Full detail in `docs/DEPLOYMENT.md` §8. Do not start this section until §1–§11 above are all checked.
 
 - [ ] Re-run `check-production-readiness.ts` one final time — zero unreviewed placeholders.
-- [ ] Real provider integrations wired for anything you decided to enable in §8 above.
-- [ ] `STRIPE_SECRET_KEY` swapped to a real `sk_live_...` value; a **new**, separate live-mode webhook endpoint registered with its own `STRIPE_WEBHOOK_SECRET`.
-- [ ] `real_transfers_enabled`, `real_payouts_enabled`, `real_refunds_enabled` flipped, each confirmed against one real, small, controlled transaction before flipping the next.
-- [ ] `live_payments_enabled` flipped last — the actual go-live moment.
+- [ ] Telebirr recipient name and number verified directly against the receiving account.
+- [ ] Admin payment reviewers trained to match the exact amount, recipient, reference, receipt, and actual Telebirr balance before approving.
+- [ ] Payment-mistake, duplicate-reference, cancellation-after-payment, and offline-refund procedures documented for support and administrators.
+- [ ] Real email enabled only after registration and password-reset messages reach external inboxes reliably.
+- [ ] Complete one real, small, controlled order through delivery and any cancellation/refund handling before opening public ordering.
 - [ ] Readiness check re-run one more time immediately after, to confirm every flag landed where intended.
 
 ## 13. Mobile store submission
 
 Before the mobile customer app is submitted to either store:
 
-- [ ] Replace the mobile checkout's current "coming soon" screen with the approved Ethiopian payment rail, then complete a real-device test order through payment, order creation, notification, fulfillment, refund, and cancellation.
-- [x] Provider-neutral Ethiopian payment contract is present and fails closed while `ETHIOPIAN_PAYMENT_PROVIDER=disabled`; install and register the chosen bank-specific adapter only after receiving its sandbox specification and credentials.
+- [x] Manual Telebirr checkout, receipt upload, administrator verification, and order-status flow are implemented.
+- [ ] Complete a physical-device order test through payment proof, approval/rejection, fulfillment, cancellation, and offline refund.
 - [ ] Keep the in-app account-deletion flow enabled and verify it against staging with a disposable customer account.
 - [ ] Publish the attorney-approved Privacy Policy at a public HTTPS URL, link it in App Store Connect and Play Console, and complete Apple privacy labels / Google Play Data safety answers from the production SDK and data inventory.
 - [ ] Create signed production EAS builds and test them through TestFlight and a Google Play internal-testing track on physical phones; verify fresh install, upgrade, restart persistence, deep links, image upload, and push delivery.
@@ -112,6 +115,6 @@ Before the mobile customer app is submitted to either store:
 
 ## 14. Post-launch
 
-- [ ] Monitor error tracking, uptime, and Stripe Dashboard closely for the first 24–48 hours.
-- [ ] Confirm the first few real orders complete their full lifecycle (payment capture → vendor-order split → fulfillment → delivery confirmation → payout eligibility) exactly as the smoke test in §5 predicted.
-- [ ] Keep a rollback plan ready — know how to flip `live_payments_enabled` back to `false` and what that does and doesn't undo (it stops new live checkouts; it does not reverse an already-captured payment — see `docs/PAYMENTS.md`).
+- [ ] Monitor error tracking, uptime, and the Telebirr receiving account closely for the first 24–48 hours.
+- [ ] Confirm the first few real orders complete their full lifecycle (receipt review → approval → vendor-order split → fulfillment → delivery confirmation).
+- [ ] Keep a rollback plan ready that disables new checkout while preserving already-submitted payments for manual reconciliation.
