@@ -21,7 +21,7 @@
     "test": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit --passWithNoTests",
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit --passWithNoTests",
     "test:integration": "npm run test:integration:modules && npm run test:integration:http",
-    "test:integration:http": "medusa build && node integration-tests/http/ensure-admin.js && TEST_TYPE=integration:http NODE_OPTIONS='--experimental-vm-modules --max-old-space-size=512' jest --silent=false --runInBand --forceExit --passWithNoTests",
+    "test:integration:http": "medusa build && node integration-tests/http/ensure-admin.js && TEST_TYPE=integration:http NODE_OPTIONS='--experimental-vm-modules --max-old-space-size=256' jest --silent=false --runInBand --forceExit --passWithNoTests",
     "test:integration:modules": "TEST_TYPE=integration:modules NODE_OPTIONS='--experimental-vm-modules --max-old-space-size=1024' jest --silent=false --runInBand --forceExit --passWithNoTests"
   },
   "dependencies": {

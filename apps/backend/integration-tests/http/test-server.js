@@ -77,7 +77,7 @@ function startTestServer() {
         // Jest and this production server coexist on the same small CI
         // runner. Give each a firm heap ceiling so the kernel never has to
         // choose one to kill under aggregate memory pressure.
-        NODE_OPTIONS: "--max-old-space-size=512",
+        NODE_OPTIONS: "--max-old-space-size=384",
         // Medusa 2.19 no longer accepts the yargs-style `--no-color`
         // switch. Disable terminal escape sequences through the standard
         // environment variables instead so the production server command
