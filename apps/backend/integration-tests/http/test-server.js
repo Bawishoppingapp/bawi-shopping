@@ -63,6 +63,7 @@ function startTestServer() {
   killStrayTypeWatchers()
 
   return new Promise((resolve, reject) => {
+    console.log("[test-server] spawning Medusa production server")
     const child = spawn("npx", ["medusa", "start", "--port", String(PORT)], {
       // `medusa build` writes the standalone production app here. Medusa's
       // production server must be started from this directory so its compiled
@@ -98,6 +99,19 @@ function startTestServer() {
     let settled = false
     let output = ""
     let persistedOutputBytes = 0
+    const memoryMonitor = setInterval(() => {
+      const parentRssMb = Math.round(process.memoryUsage().rss / 1024 / 1024)
+      let cgroupMb = "unknown"
+      try {
+        const bytes = Number(fs.readFileSync("/sys/fs/cgroup/memory.current", "utf8").trim())
+        cgroupMb = String(Math.round(bytes / 1024 / 1024))
+      } catch {
+        // macOS and older Linux hosts do not expose cgroup v2 memory.current.
+      }
+      console.log(
+        `[test-server] waiting pid=${child.pid} jest-rss=${parentRssMb}MB cgroup=${cgroupMb}MB`
+      )
+    }, 3000)
     const logStream = fs.createWriteStream(SERVER_LOG_PATH, { flags: "a" })
     logStream.write(`\n--- test-server started at ${new Date().toISOString()} ---\n`)
 
@@ -114,9 +128,12 @@ function startTestServer() {
       // request/query log for the lifetime of a large HTTP suite grows this
       // string without bound and can make the CI kernel kill Jest for OOM.
       if (settled) return
+      process.stdout.write(`[test-server] ${chunk}`)
       output = `${output}${chunk}`.slice(-MAX_CAPTURED_OUTPUT_BYTES)
       if (/Server is ready/i.test(output)) {
         settled = true
+        clearInterval(memoryMonitor)
+        console.log(`[test-server] ready pid=${child.pid}`)
         resolve(child)
         output = ""
       }
@@ -128,6 +145,7 @@ function startTestServer() {
     child.on("error", (err) => {
       if (!settled) {
         settled = true
+        clearInterval(memoryMonitor)
         reject(err)
       }
     })
@@ -136,6 +154,7 @@ function startTestServer() {
       logStream.end()
       if (!settled) {
         settled = true
+        clearInterval(memoryMonitor)
         reject(new Error(`medusa start exited early (code ${code}): ${output}`))
       }
     })
@@ -143,6 +162,7 @@ function startTestServer() {
     setTimeout(() => {
       if (!settled) {
         settled = true
+        clearInterval(memoryMonitor)
         freePort()
         reject(new Error(`Timed out waiting for server to start:\n${output}`))
       }
