@@ -63,7 +63,7 @@ function startTestServer() {
   killStrayTypeWatchers()
 
   return new Promise((resolve, reject) => {
-    console.log("[test-server] spawning Medusa production server")
+    process.stdout.write("[test-server] spawning Medusa production server\n")
     const child = spawn("npx", ["medusa", "start", "--port", String(PORT)], {
       // `medusa build` writes the standalone production app here. Medusa's
       // production server must be started from this directory so its compiled
@@ -108,10 +108,12 @@ function startTestServer() {
       } catch {
         // macOS and older Linux hosts do not expose cgroup v2 memory.current.
       }
-      console.log(
+      process.stdout.write(
         `[test-server] waiting pid=${child.pid} jest-rss=${parentRssMb}MB cgroup=${cgroupMb}MB`
+          + "\n"
       )
     }, 3000)
+    child.memoryMonitor = memoryMonitor
     const logStream = fs.createWriteStream(SERVER_LOG_PATH, { flags: "a" })
     logStream.write(`\n--- test-server started at ${new Date().toISOString()} ---\n`)
 
@@ -132,8 +134,7 @@ function startTestServer() {
       output = `${output}${chunk}`.slice(-MAX_CAPTURED_OUTPUT_BYTES)
       if (/Server is ready/i.test(output)) {
         settled = true
-        clearInterval(memoryMonitor)
-        console.log(`[test-server] ready pid=${child.pid}`)
+        process.stdout.write(`[test-server] ready pid=${child.pid}\n`)
         resolve(child)
         output = ""
       }
@@ -172,6 +173,7 @@ function startTestServer() {
 
 function stopTestServer(child) {
   return new Promise((resolve) => {
+    if (child?.memoryMonitor) clearInterval(child.memoryMonitor)
     const finish = () => {
       freePort()
       killStrayTypeWatchers()
