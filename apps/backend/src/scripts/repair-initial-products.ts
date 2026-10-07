@@ -18,6 +18,7 @@ const PRICES = [
   { amount: 10, currency_code: "eur" },
   { amount: 15, currency_code: "usd" },
 ]
+const PENDING_INVENTORY_METADATA_KEY = "bawi_initial_seed_repair_pending_inventory"
 
 type SeedProduct = {
   title: string
@@ -122,13 +123,21 @@ export async function repairInitialProducts(container: MedusaContainer) {
 
   const existingProducts = await productService.listProducts(
     { handle: SEED_PRODUCTS.map((product) => product.handle) },
-    { select: ["id", "handle"], relations: ["categories"] }
+    { select: ["id", "handle", "metadata"], relations: ["categories"] }
   )
   const existingByHandle = new Map(existingProducts.map((product) => [product.handle, product]))
   const existingShorts = existingByHandle.get("shorts")
   const missingProducts = SEED_PRODUCTS.filter(
     (product) => !existingByHandle.has(product.handle)
   )
+  const pendingInventoryProductIds = existingProducts
+    .filter(
+      (product) =>
+        (product.metadata as Record<string, unknown> | null)?.[
+          PENDING_INVENTORY_METADATA_KEY
+        ] === true
+    )
+    .map((product) => product.id)
 
   // Category names are mutable production data. Only look up and validate the
   // names that are required for work this invocation will actually perform.
@@ -202,6 +211,9 @@ export async function repairInitialProducts(container: MedusaContainer) {
     })
   }
 
+  let createdProductIds: string[] = []
+  let stockLocation: { id: string } | undefined
+
   if (missingProducts.length) {
     const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
     const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
@@ -219,7 +231,7 @@ export async function repairInitialProducts(container: MedusaContainer) {
       ? [preferredStockLocation]
       : await stockLocationService.listStockLocations({})
     const shippingProfile = shippingProfiles[0]
-    const stockLocation = stockLocations[0]
+    stockLocation = stockLocations[0]
 
     if (!salesChannel || !shippingProfile || !stockLocation) {
       throw new MedusaError(
@@ -236,6 +248,7 @@ export async function repairInitialProducts(container: MedusaContainer) {
           description: product.description,
           weight: 400,
           status: ProductStatus.PUBLISHED,
+          metadata: { [PENDING_INVENTORY_METADATA_KEY]: true },
           shipping_profile_id: shippingProfile.id,
           categories: [{ id: categoryByName.get(product.category)! }],
           images: product.images.map((url) => ({ url })),
@@ -250,7 +263,31 @@ export async function repairInitialProducts(container: MedusaContainer) {
         })),
       },
     })
-    const createdProductIds = createdProducts.map((product) => product.id)
+    createdProductIds = createdProducts.map((product) => product.id)
+  }
+
+  const productsNeedingInventoryIds = [
+    ...pendingInventoryProductIds,
+    ...createdProductIds,
+  ]
+  if (productsNeedingInventoryIds.length) {
+    if (!stockLocation) {
+      const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
+      const [preferredStockLocation] = await stockLocationService.listStockLocations({
+        name: "European Warehouse",
+      })
+      const stockLocations = preferredStockLocation
+        ? [preferredStockLocation]
+        : await stockLocationService.listStockLocations({})
+      stockLocation = stockLocations[0]
+    }
+    if (!stockLocation) {
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        "Cannot finish initial-product inventory repair; no stock location exists"
+      )
+    }
+    const inventoryStockLocation = stockLocation
 
     try {
       const { data: variants } = await query.graph({
@@ -260,7 +297,7 @@ export async function repairInitialProducts(container: MedusaContainer) {
           "inventory_items.inventory.id",
           "inventory_items.inventory.location_levels.location_id",
         ],
-        filters: { product_id: createdProductIds },
+        filters: { product_id: productsNeedingInventoryIds },
       })
 
       const missingInventoryLevels = (variants as Record<string, unknown>[]).flatMap((variant) => {
@@ -270,12 +307,12 @@ export async function repairInitialProducts(container: MedusaContainer) {
         return inventoryItems.flatMap((item) => {
           const inventoryId = item.inventory?.id
           const alreadyStocked = item.inventory?.location_levels?.some(
-            (level) => level.location_id === stockLocation.id
+            (level) => level.location_id === inventoryStockLocation.id
           )
           return inventoryId && !alreadyStocked
             ? [
                 {
-                  location_id: stockLocation.id,
+                  location_id: inventoryStockLocation.id,
                   stocked_quantity: 1_000_000,
                   inventory_item_id: inventoryId,
                 },
@@ -289,19 +326,30 @@ export async function repairInitialProducts(container: MedusaContainer) {
           input: { inventory_levels: missingInventoryLevels },
         })
       }
+
+      await updateProductsWorkflow(container).run({
+        input: {
+          products: productsNeedingInventoryIds.map((id) => ({
+            id,
+            metadata: { [PENDING_INVENTORY_METADATA_KEY]: null },
+          })),
+        },
+      })
     } catch (error) {
       // Product creation and inventory-level creation are separate workflows.
       // Compensate if stocking fails so a retry can recreate and stock the
       // products instead of skipping permanently published, unstocked rows.
-      await deleteProductsWorkflow(container).run({
-        input: { ids: createdProductIds },
-      })
+      if (createdProductIds.length) {
+        await deleteProductsWorkflow(container).run({
+          input: { ids: createdProductIds },
+        })
+      }
       throw error
     }
   }
 
   logger.info(
-    `Initial product repair complete: ${missingProducts.length} created, ${existingUpdates.length} reconciled`
+    `Initial product repair complete: ${missingProducts.length} created, ${existingUpdates.length} reconciled, ${pendingInventoryProductIds.length} resumed`
   )
 }
 

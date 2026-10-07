@@ -29,6 +29,7 @@ function setup(
     id: string
     handle: string
     categories?: Array<{ id: string }>
+    metadata?: Record<string, unknown> | null
   }>,
   availableCategories = categories
 ) {
@@ -149,11 +150,13 @@ describe("repairInitialProducts", () => {
       { name: ["Shirts", "Sweatshirts", "Pants", "Bottoms"] },
       { select: ["id", "name"] }
     )
-    expect(updateProductsRun).not.toHaveBeenCalled()
     expect(createProductsRun).toHaveBeenCalledWith({
       input: {
         products: expect.arrayContaining([
-          expect.objectContaining({ handle: "t-shirt" }),
+          expect.objectContaining({
+            handle: "t-shirt",
+            metadata: { bawi_initial_seed_repair_pending_inventory: true },
+          }),
           expect.objectContaining({ handle: "sweatshirt" }),
           expect.objectContaining({ handle: "sweatpants" }),
           expect.objectContaining({
@@ -185,6 +188,19 @@ describe("repairInitialProducts", () => {
             inventory_item_id: "inv-created",
           },
         ],
+      },
+    })
+    expect(updateProductsRun).toHaveBeenCalledWith({
+      input: {
+        products: [
+          "created-t-shirt",
+          "created-sweatshirt",
+          "created-sweatpants",
+          "created-shorts",
+        ].map((id) => ({
+          id,
+          metadata: { bawi_initial_seed_repair_pending_inventory: null },
+        })),
       },
     })
   })
@@ -227,7 +243,7 @@ describe("repairInitialProducts", () => {
     expect(productService.listProducts).toHaveBeenNthCalledWith(
       1,
       { handle: ["t-shirt", "sweatshirt", "sweatpants", "shorts"] },
-      { select: ["id", "handle"], relations: ["categories"] }
+      { select: ["id", "handle", "metadata"], relations: ["categories"] }
     )
     expect(updateProductsRun).toHaveBeenCalledWith({
       input: {
@@ -343,6 +359,45 @@ describe("repairInitialProducts", () => {
       })
     )
     expect(createInventoryLevelsRun).toHaveBeenCalledTimes(1)
+  })
+
+  it("resumes stocking a repair-created product after a process restart", async () => {
+    const pendingProducts = existingScaffoldProducts.map((product) =>
+      product.handle === "shorts"
+        ? {
+            ...product,
+            metadata: { bawi_initial_seed_repair_pending_inventory: true },
+          }
+        : product
+    )
+    const {
+      container,
+      createProductsRun,
+      createInventoryLevelsRun,
+      updateProductsRun,
+      queryGraph,
+    } = setup(pendingProducts)
+
+    await repairInitialProducts(container)
+
+    expect(createProductsRun).not.toHaveBeenCalled()
+    expect(queryGraph).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity: "product_variant",
+        filters: { product_id: ["prod-shorts"] },
+      })
+    )
+    expect(createInventoryLevelsRun).toHaveBeenCalledTimes(1)
+    expect(updateProductsRun).toHaveBeenCalledWith({
+      input: {
+        products: [
+          {
+            id: "prod-shorts",
+            metadata: { bawi_initial_seed_repair_pending_inventory: null },
+          },
+        ],
+      },
+    })
   })
 
   it("removes newly created products when inventory setup fails so recovery can retry", async () => {
