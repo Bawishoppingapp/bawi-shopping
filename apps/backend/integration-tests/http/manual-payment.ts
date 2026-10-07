@@ -52,6 +52,23 @@ async function readAdminPayment(options: {
   )
 }
 
+async function waitForApprovalToSettle(options: {
+  baseUrl: string
+  orderId: string
+  adminToken: string
+}) {
+  let payment = await readAdminPayment(options).catch(() => null)
+  for (
+    let attempt = 0;
+    payment?.payment_status === "under_review" && attempt < 40;
+    attempt += 1
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    payment = await readAdminPayment(options).catch(() => null)
+  }
+  return payment
+}
+
 export async function submitManualPaymentProof({
   baseUrl,
   orderId,
@@ -164,17 +181,21 @@ export async function approveManualPayment({
   try {
     response = await approve()
   } catch (firstError) {
-    const payment = await readAdminPayment({ baseUrl, orderId, adminToken }).catch(() => null)
+    // The route persists under_review before awaiting capture. Let that
+    // in-flight request reach succeeded or roll back to proof_submitted before
+    // deciding whether a retry is safe.
+    const payment = await waitForApprovalToSettle({ baseUrl, orderId, adminToken })
     if (payment?.payment_status === "succeeded") {
       return { status: 200, data: { order_id: orderId, payment_status: "succeeded" } }
+    }
+    if (payment?.payment_status === "under_review") {
+      throw firstError
     }
     retriedAfterReset = true
     try {
       response = await approve()
     } catch {
-      const retriedPayment = await readAdminPayment({ baseUrl, orderId, adminToken }).catch(
-        () => null
-      )
+      const retriedPayment = await waitForApprovalToSettle({ baseUrl, orderId, adminToken })
       if (retriedPayment?.payment_status === "succeeded") {
         return { status: 200, data: { order_id: orderId, payment_status: "succeeded" } }
       }
@@ -183,7 +204,7 @@ export async function approveManualPayment({
   }
   const data = await responseBody(response)
   if (retriedAfterReset && response.status === 409) {
-    const payment = await readAdminPayment({ baseUrl, orderId, adminToken }).catch(() => null)
+    const payment = await waitForApprovalToSettle({ baseUrl, orderId, adminToken })
     if (payment?.payment_status === "succeeded") {
       return { status: 200, data: { order_id: orderId, payment_status: "succeeded" } }
     }
