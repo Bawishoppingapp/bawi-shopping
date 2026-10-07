@@ -13,3 +13,5 @@ export {
   ProductGridEmpty,
   ProductGridError,
 } from "./ProductGrid"
+export { ImageWorkflow } from "./ImageWorkflow"
+export type { ImageWorkflowData, ImageCommand } from "./ImageWorkflow"

@@ -25,6 +25,8 @@ export const ProductListing = model.define("product_listing", {
   reviewed_at: model.dateTime().nullable(),
   // AI imagery is an admin-owned, reviewable derivative. The seller's
   // original gallery remains untouched and is always the factual source.
+  ai_image_workflow: model.json().nullable(),
+  ai_image_pending: model.boolean().default(false),
   ai_preview_status: model
     .enum(["not_requested", "ready_for_generation", "generated", "approved", "rejected"])
     .default("not_requested"),

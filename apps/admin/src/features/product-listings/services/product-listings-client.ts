@@ -60,6 +60,7 @@ export interface ProductListingDetail extends ProductListingSummary {
   rejection_reason: string | null
   reviewed_by: string | null
   reviewed_at: string | null
+  ai_image_workflow?: Record<string, unknown> | null
   ai_preview_status: "not_requested" | "ready_for_generation" | "generated" | "approved" | "rejected"
   ai_preview_url: string | null
   ai_preview_rejection_reason: string | null

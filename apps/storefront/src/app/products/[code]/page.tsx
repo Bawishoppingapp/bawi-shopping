@@ -23,12 +23,12 @@ export default async function ProductDetailPage({
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-16 md:flex-row">
       <div className="flex flex-1 flex-wrap gap-2">
-        {product.images.length === 0 ? (
+        {!product.ai_preview_url && product.images.length === 0 ? (
           <div className="flex h-80 w-full items-center justify-center rounded-md bg-neutral-100 text-sm text-neutral-400">
             {product.title}
           </div>
         ) : (
-          product.images.map((url) => (
+          [...(product.ai_preview_url ? [product.ai_preview_url] : []), ...product.images].map((url) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={url}
@@ -41,6 +41,7 @@ export default async function ProductDetailPage({
       </div>
 
       <div className="flex flex-1 flex-col gap-3">
+        {product.ai_preview_url ? <p className="text-xs text-neutral-500">{translate(locale, "product.aiPreview")}</p> : null}
         <h1 className="text-2xl font-semibold text-neutral-900">{product.title}</h1>
         <p className="text-sm text-neutral-500">
           {translate(locale, "product.soldBy")} {product.brand}

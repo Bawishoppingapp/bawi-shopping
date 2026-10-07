@@ -1,3 +1,4 @@
+import { Modules } from "@medusajs/framework/utils"
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { uploadFilesWorkflow } from "@medusajs/medusa/core-flows"
 import { PRODUCT_LISTING_MODULE } from "../../../../../modules/product-listing"
@@ -8,10 +9,12 @@ import type AuditLogModuleService from "../../../../../modules/audit-log/service
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"])
 
 export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse): Promise<void> {
+  await req.scope.resolve(Modules.LOCKING).execute(`product-image:${req.params.id}`, async () => {
   const adminId = req.auth_context.actor_id
   const listings: ProductListingModuleService = req.scope.resolve(PRODUCT_LISTING_MODULE)
   const listing = await listings.retrieveProductListing(req.params.id).catch(() => null)
   if (!listing) { res.status(404).json({ message: "Product listing not found" }); return }
+  if (listing.ai_image_workflow) { res.status(409).json({ message: "Use Bawi image studio to review this workflow." }); return }
   const action = String((req.body as Record<string, unknown> | undefined)?.action ?? "upload")
   if (action === "approve") {
     if (!listing.ai_preview_url) { res.status(409).json({ message: "Upload a generated preview first." }); return }
@@ -30,4 +33,5 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
   const audit: AuditLogModuleService = req.scope.resolve(AUDIT_LOG_MODULE)
   await audit.record({ actorType: "user", actorId: adminId, action: `product.ai_preview_${action}`, entityType: "product_listing", entityId: listing.id, vendorId: listing.vendor_id, beforeState: { status: listing.ai_preview_status }, afterState: { status: updated.ai_preview_status, url: updated.ai_preview_url } })
   res.json({ listing: updated })
+  })
 }

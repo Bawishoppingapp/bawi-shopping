@@ -1,3 +1,5 @@
+import { ImageWorkflow } from "@bawi/ui"
+import { readImageWorkflow, sendImageWorkflow } from "@/features/product-images/actions"
 import Link from "next/link"
 import { cookies } from "next/headers"
 import { redirect, notFound } from "next/navigation"
@@ -79,7 +81,7 @@ export default async function ProductDetailPage({
         </div>
       )}
 
-      <section className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4">
+      {!listing.ai_image_workflow && <section className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4">
         <div><h2 className="font-medium text-neutral-900">AI model preview</h2><p className="text-sm text-neutral-500">Generate from the seller originals, preserving the exact garment. The original gallery remains visible as the factual product record.</p></div>
         <p className="text-sm">Status: <strong>{listing.ai_preview_status.replaceAll("_", " ")}</strong></p>
         {listing.ai_preview_url ? <div className="flex items-start gap-4">
@@ -90,7 +92,7 @@ export default async function ProductDetailPage({
         <form action={updateAiPreviewAction.bind(null, listing.id)} className="flex flex-col gap-2 sm:flex-row" encType="multipart/form-data"><input type="hidden" name="action" value="upload"/><input required type="file" name="file" accept="image/jpeg,image/png,image/webp" className="flex-1 rounded border p-2 text-sm"/><button className="rounded bg-neutral-950 px-4 py-2 text-sm text-white">Upload generated preview</button></form>
         {listing.ai_preview_url && listing.ai_preview_status !== "approved" ? <div className="flex flex-col gap-2 sm:flex-row"><form action={updateAiPreviewAction.bind(null, listing.id)}><input type="hidden" name="action" value="approve"/><button className="rounded bg-emerald-700 px-4 py-2 text-sm text-white">Approve preview</button></form><form action={updateAiPreviewAction.bind(null, listing.id)} className="flex flex-1 gap-2"><input type="hidden" name="action" value="reject"/><input required minLength={3} name="reason" placeholder="Why this preview is inaccurate" className="flex-1 rounded border px-3 py-2 text-sm"/><button className="rounded border border-red-300 px-4 py-2 text-sm text-red-700">Reject preview</button></form></div> : null}
         {listing.ai_preview_rejection_reason ? <p className="rounded bg-red-50 p-3 text-sm text-red-800">{listing.ai_preview_rejection_reason}</p> : null}
-      </section>
+      </section>}
 
       <div className="flex flex-col gap-1">
         <h2 className="text-sm font-medium text-neutral-900">Variants</h2>
@@ -100,6 +102,8 @@ export default async function ProductDetailPage({
           ))}
         </ul>
       </div>
+
+      <ImageWorkflow admin originals={product.images.map((image) => image.url)} read={readImageWorkflow.bind(null, id)} send={sendImageWorkflow.bind(null, id)} />
 
       {listing.status === "rejected" && listing.rejection_reason && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">

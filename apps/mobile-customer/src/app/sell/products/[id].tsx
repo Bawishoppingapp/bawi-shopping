@@ -1,3 +1,4 @@
+import { SellerImageWorkflow } from "@/features/seller-products/components/image-workflow";
 import { Button, Input, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -184,6 +185,8 @@ export default function SellProductDetailScreen() {
             <Text className="text-body-sm text-danger">{formError}</Text>
           </View>
         ) : null}
+
+        <SellerImageWorkflow id={id} originals={detail.product.images} />
 
         <ImageUploader
           listingId={id}

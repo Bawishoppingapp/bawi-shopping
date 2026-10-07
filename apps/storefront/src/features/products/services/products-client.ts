@@ -17,6 +17,7 @@ export interface PublicProduct {
   // The selling seller's currency (see apps/backend's Seller.currency_code).
   currency_code: string
   images: string[]
+  ai_preview_url?: string | null
   thumbnail: string | null
   colors: string[]
   sizes: string[]

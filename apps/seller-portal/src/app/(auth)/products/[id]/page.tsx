@@ -1,3 +1,5 @@
+import { ImageWorkflow } from "@bawi/ui"
+import { readImageWorkflow, sendImageWorkflow } from "@/features/product-images/actions"
 import { cookies } from "next/headers"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
@@ -81,6 +83,8 @@ export default async function EditProductPage({
           </Link>
         </div>
       </div>
+
+      <ImageWorkflow originals={product.images.map((image) => image.url)} read={readImageWorkflow.bind(null, id)} send={sendImageWorkflow.bind(null, id)} />
 
       {listing.status === "rejected" && listing.rejection_reason && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
