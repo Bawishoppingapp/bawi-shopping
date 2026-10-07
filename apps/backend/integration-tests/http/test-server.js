@@ -6,6 +6,7 @@ const os = require("os")
 const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const BUILD_ROOT = path.join(BACKEND_ROOT, ".medusa/server")
 const PORT = 9199
+const MAX_STARTUP_OUTPUT_BYTES = 256 * 1024
 // The child's own stdout/stderr is only ever buffered in memory for the
 // "did it start" check below, never surfaced anywhere - if it crashes
 // mid-suite the real cause is otherwise invisible. Persisting a copy here
@@ -94,11 +95,18 @@ function startTestServer() {
     logStream.write(`\n--- test-server started at ${new Date().toISOString()} ---\n`)
 
     const onData = (data) => {
-      output += data.toString()
-      logStream.write(data)
-      if (!settled && /Server is ready/i.test(output)) {
+      const chunk = data.toString()
+      logStream.write(chunk)
+
+      // Only retain enough output to diagnose startup failures. Keeping every
+      // request/query log for the lifetime of a large HTTP suite grows this
+      // string without bound and can make the CI kernel kill Jest for OOM.
+      if (settled) return
+      output = `${output}${chunk}`.slice(-MAX_STARTUP_OUTPUT_BYTES)
+      if (/Server is ready/i.test(output)) {
         settled = true
         resolve(child)
+        output = ""
       }
     }
 
@@ -113,6 +121,7 @@ function startTestServer() {
     })
 
     child.on("exit", (code) => {
+      logStream.end()
       if (!settled) {
         settled = true
         reject(new Error(`medusa start exited early (code ${code}): ${output}`))
