@@ -119,13 +119,13 @@ export async function repairInitialProducts(container: MedusaContainer) {
   const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
   const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
 
-  const categories = await productService.listProductCategories({
-    name: SEED_PRODUCTS.map((product) => product.category),
-  })
-  const categoryByName = new Map(categories.map((category) => [category.name, category.id]))
-  const missingCategories = SEED_PRODUCTS.map((product) => product.category).filter(
-    (name) => !categoryByName.has(name)
+  const expectedCategoryNames = SEED_PRODUCTS.map((product) => product.category)
+  const categories = await productService.listProductCategories(
+    { name: [...expectedCategoryNames, "Merch"] },
+    { select: ["id", "name"] }
   )
+  const categoryByName = new Map(categories.map((category) => [category.name, category.id]))
+  const missingCategories = expectedCategoryNames.filter((name) => !categoryByName.has(name))
   if (missingCategories.length) {
     throw new MedusaError(
       MedusaError.Types.UNEXPECTED_STATE,
@@ -156,22 +156,37 @@ export async function repairInitialProducts(container: MedusaContainer) {
     )
   }
 
-  const existingProducts = await productService.listProducts({
-    handle: SEED_PRODUCTS.map((product) => product.handle),
-  })
+  const existingProducts = await productService.listProducts(
+    { handle: SEED_PRODUCTS.map((product) => product.handle) },
+    { select: ["id", "handle"], relations: ["categories"] }
+  )
   const existingByHandle = new Map(existingProducts.map((product) => [product.handle, product]))
 
-  const existingUpdates = SEED_PRODUCTS.flatMap((product) => {
-    const existing = existingByHandle.get(product.handle)
-    return existing
-      ? [
-          {
-            id: existing.id,
-            categories: [{ id: categoryByName.get(product.category)! }],
-          },
-        ]
-      : []
-  })
+  const existingShorts = existingByHandle.get("shorts")
+  const legacyMerchCategoryId = categoryByName.get("Merch")
+  const bottomsCategoryId = categoryByName.get("Bottoms")!
+  const existingShortsCategoryIds = existingShorts?.categories?.map((category) => category.id) ?? []
+  const needsLegacyShortsRepair = Boolean(
+    existingShorts &&
+      legacyMerchCategoryId &&
+      existingShortsCategoryIds.includes(legacyMerchCategoryId)
+  )
+  const repairedShortsCategoryIds = needsLegacyShortsRepair
+    ? Array.from(
+        new Set([
+          ...existingShortsCategoryIds.filter((id) => id !== legacyMerchCategoryId),
+          bottomsCategoryId,
+        ])
+      )
+    : []
+  const existingUpdates = needsLegacyShortsRepair
+    ? [
+        {
+          id: existingShorts!.id,
+          categories: repairedShortsCategoryIds.map((id) => ({ id })),
+        },
+      ]
+    : []
   if (existingUpdates.length) {
     await updateProductsWorkflow(container).run({
       input: { products: existingUpdates },
@@ -206,9 +221,10 @@ export async function repairInitialProducts(container: MedusaContainer) {
     })
   }
 
-  const repairedProducts = await productService.listProducts({
-    handle: SEED_PRODUCTS.map((product) => product.handle),
-  })
+  const repairedProducts = await productService.listProducts(
+    { handle: SEED_PRODUCTS.map((product) => product.handle) },
+    { select: ["id", "handle"] }
+  )
   const { data: variants } = await query.graph({
     entity: "product_variant",
     fields: [
