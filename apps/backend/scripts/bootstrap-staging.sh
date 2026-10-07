@@ -22,6 +22,12 @@ npx medusa db:migrate
 npx medusa exec ./src/migration-scripts/initial-data-seed.ts || \
   echo "initial-data-seed.ts errored (likely already applied by an earlier attempt) - continuing"
 
+# Always reconcile the four scaffold products after the one-shot seed. This
+# repairs both already-seeded databases where Shorts still points at the old
+# Merch category and partial runs that aborted before any products were made.
+# The repair is idempotent, so it is safe on first boot and every redeploy.
+npx medusa exec ./src/scripts/repair-initial-products.ts
+
 npx medusa exec ./src/scripts/seed-business-config.ts
 
 # Same reasoning as above: tolerate "user already exists" specifically,
