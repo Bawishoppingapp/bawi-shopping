@@ -44,7 +44,7 @@ export default function RegisterScreen() {
         setFormError(
           /already exists/i.test(error.message)
             ? t("auth.accountExists")
-            : error.message
+            : t("common.error")
         );
       } else {
         // Not a MedusaAuthError means the fetch itself threw (no

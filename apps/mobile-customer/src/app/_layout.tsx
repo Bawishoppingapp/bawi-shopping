@@ -9,7 +9,7 @@ import { AppearanceProvider, useAppearance } from "@/features/appearance/hooks/u
 import { AuthProvider } from "@/features/auth/hooks/use-auth";
 import { CartProvider } from "@/features/cart/hooks/use-cart";
 import { CurrencyProvider } from "@/features/currency/hooks/use-currency";
-import { LocaleProvider, useTranslations } from "@/features/i18n/hooks/use-locale";
+import { LocaleProvider, useLocaleReady, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { OnboardingScreen } from "@/features/onboarding/components/OnboardingScreen";
 import { completeOnboarding, hasCompletedOnboarding } from "@/features/onboarding/services/onboarding-storage";
 import { PushNotificationRegistrar } from "@/features/push-notifications/components/push-notification-registrar";
@@ -22,6 +22,7 @@ function AppShell() {
   const themeColors = useThemeColors();
   const { appearance } = useAppearance();
   const t = useTranslations();
+  const localeReady = useLocaleReady();
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -32,8 +33,7 @@ function AppShell() {
       })
       .catch(() => {
         if (mounted) setShowOnboarding(true);
-      })
-      .finally(() => SplashScreen.hideAsync());
+      });
     return () => {
       mounted = false;
     };
@@ -44,7 +44,11 @@ function AppShell() {
     void completeOnboarding();
   }, []);
 
-  if (showOnboarding === null) return null;
+  useEffect(() => {
+    if (localeReady && showOnboarding !== null) void SplashScreen.hideAsync();
+  }, [localeReady, showOnboarding]);
+
+  if (!localeReady || showOnboarding === null) return null;
 
   if (showOnboarding) {
     return (

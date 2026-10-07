@@ -96,6 +96,18 @@ export default function SearchScreen() {
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
+  const [categoryTitle, setCategoryTitle] = useState("");
+  useEffect(() => {
+    let active = true;
+    setCategoryTitle("");
+    if (params.category) listCategories(locale).then((nodes) => {
+      const find = (items: CategoryNode[]): string | undefined => {
+        for (const item of items) { if (item.id === params.category) return item.name; const nested = find(item.children); if (nested) return nested; }
+      };
+      if (active) setCategoryTitle(find(nodes) ?? "");
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [params.category, locale]);
   const showDiscovery = debouncedQuery.trim().length === 0 && !params.category;
 
   // Debounce typed input into a live search - not on every keystroke.
@@ -104,8 +116,10 @@ export default function SearchScreen() {
     return () => clearTimeout(handle);
   }, [query]);
 
+  const searchVersion = useRef(0);
   const runSearch = useCallback(
     async (opts: { reset: boolean; cursor?: string | null }) => {
+      const version = ++searchVersion.current;
       if (opts.reset) setLoading(true);
       else setLoadingMore(true);
       try {
@@ -119,15 +133,15 @@ export default function SearchScreen() {
           limit: PAGE_SIZE,
           locale,
         });
+        if (version !== searchVersion.current) return;
         setItems((prev) => (opts.reset ? result.products : [...prev, ...result.products]));
         setCursor(result.next_cursor);
         setHasMore(result.has_more);
         setFacets(result.facets);
       } catch {
-        if (opts.reset) setItems([]);
+        if (version === searchVersion.current && opts.reset) setItems([]);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (version === searchVersion.current) { setLoading(false); setLoadingMore(false); }
       }
     },
     [debouncedQuery, sort, size, color, params.category, locale]
@@ -217,9 +231,9 @@ export default function SearchScreen() {
               </Pressable>
             ))}
           </ScrollView>
-        ) : params.categoryName ? (
+        ) : categoryTitle ? (
           <View className="px-4 pb-3">
-            <Text className="text-h2 text-ink-950">{params.categoryName}</Text>
+            <Text className="text-h2 text-ink-950">{categoryTitle}</Text>
           </View>
         ) : null}
       </View>

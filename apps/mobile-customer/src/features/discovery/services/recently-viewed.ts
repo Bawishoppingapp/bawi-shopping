@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 
+import { getPublicProduct } from "@/features/products/services/products-client";
 import type { ProductHit } from "./discovery-client";
 
 // Device-local only, same reasoning as search-history.ts. Stores the
@@ -9,12 +10,21 @@ import type { ProductHit } from "./discovery-client";
 const RECENTLY_VIEWED_KEY = "bawi_recently_viewed";
 const MAX_RECENTLY_VIEWED = 12;
 
-export async function getRecentlyViewed(): Promise<ProductHit[]> {
+export async function getRecentlyViewed(locale?: string): Promise<ProductHit[]> {
   const raw = await SecureStore.getItemAsync(RECENTLY_VIEWED_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const items: ProductHit[] = parsed.slice(0, MAX_RECENTLY_VIEWED);
+    if (!locale) return items;
+    // Saved titles belong to the language used when viewing the product.
+    // Resolve fresh approved translations instead of displaying stale English.
+    const products = await Promise.all(items.map(async (item) => {
+      const product = await getPublicProduct(item.productCode, locale);
+      return product ? { ...item, title: product.title, thumbnail: product.thumbnail } : null;
+    }));
+    return products.filter((item): item is ProductHit => item !== null);
   } catch {
     return [];
   }

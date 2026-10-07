@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, isLocale, type Locale } from "@bawi/i18n/locales";
 import { createTranslator } from "@bawi/i18n/translate";
 import * as SecureStore from "expo-secure-store";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 // Native equivalent of packages/i18n's LocaleProvider/useLocale/
 // useTranslations (locale-context.tsx) - not imported directly because
@@ -27,19 +27,25 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   const [isLoading, setIsLoading] = useState(true);
 
+  const changed = useRef(false);
+  const writes = useRef(Promise.resolve());
   useEffect(() => {
-    (async () => {
-      const stored = await SecureStore.getItemAsync(LOCALE_COOKIE_NAME);
-      if (stored && isLocale(stored)) {
-        setLocaleState(stored);
-      }
-      setIsLoading(false);
-    })();
+    let active = true;
+    SecureStore.getItemAsync(LOCALE_COOKIE_NAME)
+      .then((stored) => {
+        if (active && !changed.current && stored && isLocale(stored)) setLocaleState(stored);
+      })
+      .catch(() => { /* A storage failure must not prevent shopping. */ })
+      .finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
   }, []);
 
   const setLocale = useCallback((next: Locale) => {
+    if (!isLocale(next)) return;
+    changed.current = true;
     setLocaleState(next);
-    SecureStore.setItemAsync(LOCALE_COOKIE_NAME, next);
+    // Serialize writes so a slow earlier selection cannot win after restart.
+    writes.current = writes.current.then(() => SecureStore.setItemAsync(LOCALE_COOKIE_NAME, next)).catch(() => {});
   }, []);
 
   const value = useMemo(() => ({ locale, setLocale, isLoading }), [locale, setLocale, isLoading]);
@@ -67,4 +73,10 @@ export function useSetLocale(): (locale: Locale) => void {
 export function useTranslations() {
   const locale = useLocale();
   return useMemo(() => createTranslator(locale), [locale]);
+}
+
+export function useLocaleReady() {
+  const ctx = useContext(LocaleContext);
+  if (!ctx) throw new Error("useLocaleReady must be used within a LocaleProvider");
+  return !ctx.isLoading;
 }

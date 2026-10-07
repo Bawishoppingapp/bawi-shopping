@@ -1,3 +1,4 @@
+import { LocaleProvider } from "@/features/i18n/hooks/use-locale";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import type { ReactNode } from "react";
@@ -16,7 +17,7 @@ const mockedClient = cartClient as jest.Mocked<typeof cartClient>;
 const mockedUseAuth = useAuth as jest.Mock;
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <CartProvider>{children}</CartProvider>;
+  return <LocaleProvider><CartProvider>{children}</CartProvider></LocaleProvider>;
 }
 
 const emptyCart = {

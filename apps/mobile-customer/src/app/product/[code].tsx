@@ -159,11 +159,11 @@ export default function ProductDetailScreen() {
         actionLabel: t("cart.viewCart"),
         onPress: () => router.push("/(tabs)/cart"),
       });
-    } catch (error) {
+    } catch {
       setLastAddResult({
         variantId,
         status: "error",
-        message: error instanceof Error ? error.message : t("cart.errorGeneric"),
+        message: t("cart.errorGeneric"),
       });
     } finally {
       setAdding(false);

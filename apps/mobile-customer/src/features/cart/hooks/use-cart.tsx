@@ -1,3 +1,4 @@
+import { useProductTitles } from "@/features/i18n/hooks/use-product-titles";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -92,9 +93,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart(result);
   }, []);
 
+  const titles = useProductTitles(cart?.items.map((item) => item.product_code) ?? []);
+  const localizedCart = useMemo(() => cart ? { ...cart, items: cart.items.map((item) => ({ ...item, title: (item.product_code && titles[item.product_code]) || item.title })) } : null, [cart, titles]);
   const value = useMemo(
-    () => ({ cart, isLoading, addItem, updateQuantity, removeItem, refresh }),
-    [cart, isLoading, addItem, updateQuantity, removeItem, refresh]
+    () => ({ cart: localizedCart, isLoading, addItem, updateQuantity, removeItem, refresh }),
+    [localizedCart, isLoading, addItem, updateQuantity, removeItem, refresh]
   );
 
   // Known TS false positive: see the identical comment on

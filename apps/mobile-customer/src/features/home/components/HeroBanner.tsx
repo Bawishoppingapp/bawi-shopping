@@ -1,8 +1,10 @@
 import { Gradient } from "@bawi/mobile-ui";
+import { Image } from "expo-image";
 import { router } from "expo-router";
-import { Pressable, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 interface HeroBannerProps {
+  imageUri?: string | null;
   eyebrow: string;
   headline: string;
   body: string;
@@ -11,14 +13,11 @@ interface HeroBannerProps {
 }
 
 /**
- * Full-width editorial cover for the top of Home - a solid dark
- * gradient rather than a photo, since no seller has uploaded real
- * product photography yet (every thumbnail in the catalog is still
- * null). Once photography exists this is the natural place to swap in a
- * campaign image behind the same gradient-and-text treatment; the
- * layout doesn't need to change for that.
+ * Full-width Bawi cover with cached real catalog photography when available.
+ * The lightweight dark overlay keeps long translated text readable on Android
+ * without live blur, animation loops, or fixed text heights.
  */
-export function HeroBanner({ eyebrow, headline, body, ctaLabel, ctaHref }: HeroBannerProps) {
+export function HeroBanner({ imageUri, eyebrow, headline, body, ctaLabel, ctaHref }: HeroBannerProps) {
   return (
     <Gradient
       colors={["#2A2320", "#151210"]}
@@ -27,6 +26,10 @@ export function HeroBanner({ eyebrow, headline, body, ctaLabel, ctaHref }: HeroB
       style={{ borderRadius: 20 }}
       className="mx-4 gap-4 overflow-hidden px-6 py-8"
     >
+      {imageUri ? <>
+        <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" accessible={false} />
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(21,18,16,0.72)" }]} />
+      </> : null}
       <Text className="text-overline text-gold-500">{eyebrow}</Text>
       <Text className="font-serif text-hero text-white">{headline}</Text>
       {/* text-white/70, not a theme-reactive ink token: this gradient is

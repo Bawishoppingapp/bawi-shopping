@@ -90,16 +90,16 @@ export default function NotificationsScreen() {
               className={`gap-1 rounded-md border p-4 ${unread ? "border-ink-950 bg-ink-100" : "border-ink-100"}`}
             >
               <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center gap-2">
+                <View className="flex-1 flex-row items-center gap-2 pr-2">
                   {unread ? <View className="h-2 w-2 rounded-full bg-ink-solid" /> : null}
                   <Text className={`text-body-sm ${unread ? "font-semibold" : "font-medium"} text-ink-950`}>
-                    {hasLocalizedCopy ? badge.label : item.subject}
+                    {hasLocalizedCopy ? badge.label : t("account.notifications")}
                   </Text>
                 </View>
-                <Text className="text-caption uppercase text-ink-500">{badge.label}</Text>
+                <Text className="text-caption uppercase text-ink-500">{hasLocalizedCopy ? badge.label : t("account.notifications")}</Text>
               </View>
               <Text className="text-body-sm text-ink-700">
-                {hasLocalizedCopy ? t("notifications.updateBody") : item.body}
+                {t("notifications.updateBody")}
               </Text>
               <Text className="text-caption text-ink-500">
                 {new Date(item.created_at).toLocaleDateString(locale)}

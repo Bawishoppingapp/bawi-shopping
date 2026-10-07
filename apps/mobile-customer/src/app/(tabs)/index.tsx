@@ -1,7 +1,7 @@
 import { ProductCardSkeleton, ThemedIcon } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -9,6 +9,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { type CategoryNode, type ProductHit, listCategories, searchProducts } from "@/features/discovery/services/discovery-client";
 import { clearRecentlyViewed, getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
+import { HeroBanner } from "@/features/home/components/HeroBanner";
 import { CategoryStrip } from "@/features/home/components/CategoryStrip";
 import { EditorialSpotlight } from "@/features/home/components/EditorialSpotlight";
 import { MasonryGrid } from "@/features/home/components/MasonryGrid";
@@ -46,17 +47,22 @@ export default function HomeScreen() {
   // immediately without a manual pull-to-refresh.
   useFocusEffect(
     useCallback(() => {
-      getRecentlyViewed().then(setRecentlyViewed);
-    }, [])
+      let active = true;
+      getRecentlyViewed(locale).then((items) => { if (active) setRecentlyViewed(items); }).catch(() => {});
+      return () => { active = false; };
+    }, [locale])
   );
 
+  const loadVersion = useRef(0);
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setError(false);
     const [categoriesResult, arrivalsResult, shippingResult] = await Promise.allSettled([
       listCategories(locale),
       searchProducts({ sort: "newest", limit: NEW_ARRIVALS_LIMIT, locale }),
       getShippingPolicy(CURRENCY_CODE),
     ]);
+    if (version !== loadVersion.current) return;
     if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
     if (arrivalsResult.status === "fulfilled") {
       setCatalogResolved(true);
@@ -90,7 +96,7 @@ export default function HomeScreen() {
   }
 
   const spotlightProducts = newArrivals.slice(0, SPOTLIGHT_COUNT);
-  const gridProducts = newArrivals.slice(SPOTLIGHT_COUNT);
+  const gridProducts = newArrivals.length >= SPOTLIGHT_COUNT ? newArrivals.slice(SPOTLIGHT_COUNT) : newArrivals;
 
   // A plain array, not a switch/registry - reordering or dropping a
   // section on Home is just reordering or deleting an entry here. Each
@@ -98,6 +104,10 @@ export default function HomeScreen() {
   // of contents for the page rather than a wall of JSX.
   const sections = useMemo(
     () => [
+      {
+        key: "cover",
+        node: <HeroBanner imageUri={newArrivals[0]?.thumbnail} eyebrow="Bawi" headline={t("home.hero.title")} body={t("home.hero.subtitle")} ctaLabel={t("home.hero.cta")} ctaHref="/(tabs)/search" />,
+      },
       {
         key: "categories",
         node: categories.length > 0 ? <CategoryStrip categories={categories} /> : null,
@@ -149,7 +159,7 @@ export default function HomeScreen() {
           ) : null,
       },
     ],
-    [categories, recentlyViewed, spotlightProducts, gridProducts, catalogResolved, newArrivals.length, freeShippingThreshold, t, formatPrice]
+    [categories, recentlyViewed, spotlightProducts, gridProducts, catalogResolved, newArrivals, freeShippingThreshold, t, formatPrice]
   );
 
   if (loading) {
@@ -175,7 +185,7 @@ export default function HomeScreen() {
       >
         <View className="gap-5 border-b border-ink-100 px-4 pb-5 pt-3">
           <View className="flex-row items-center justify-between">
-            <View className="gap-1">
+            <View className="flex-1 gap-1 pr-3">
               <Text className="font-serif text-display text-ink-950">
                 {customer?.first_name ? t("home.welcome", { name: customer.first_name }) : "Bawi"}
               </Text>

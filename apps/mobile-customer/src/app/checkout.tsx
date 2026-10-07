@@ -10,7 +10,7 @@ import { listAddresses, type CustomerAddress } from "@/features/addresses/servic
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSessionToken } from "@/features/auth/services/token-storage";
 import { useCart } from "@/features/cart/hooks/use-cart";
-import { CheckoutClientError, startManualCheckout, submitPaymentProof, type ManualCheckout } from "@/features/checkout/services/manual-checkout-client";
+import { startManualCheckout, submitPaymentProof, type ManualCheckout } from "@/features/checkout/services/manual-checkout-client";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
 
@@ -44,7 +44,7 @@ export default function CheckoutScreen() {
     try {
       const token = await getSessionToken();
       if (token) setCheckout(await startManualCheckout(token, toShippingAddress(address), `mobile-${Date.now()}-${Math.random().toString(36).slice(2)}`));
-    } catch (err) { setError(err instanceof CheckoutClientError ? err.message : t("checkout.errorGeneric")); }
+    } catch { setError(t("checkout.errorGeneric")); }
     finally { setSubmitting(false); }
   }
 
@@ -64,7 +64,7 @@ export default function CheckoutScreen() {
       await submitPaymentProof(token, checkout.order_id, reference.trim(), { uri: receipt.uri, name: receipt.fileName ?? "telebirr-receipt.jpg", type: receipt.mimeType ?? "image/jpeg" });
       await refresh();
       router.replace(`/order/${checkout.order_id}`);
-    } catch (err) { setError(err instanceof CheckoutClientError ? err.message : t("checkout.errorGeneric")); }
+    } catch { setError(t("checkout.errorGeneric")); }
     finally { setSubmitting(false); }
   }
 

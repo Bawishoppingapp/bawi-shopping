@@ -37,4 +37,17 @@ describe("translate", () => {
       expect(value, `en-US.json key "${key}" is empty`).toBeTruthy()
     }
   })
+  test("every supported language covers all interface keys and interpolation parameters", () => {
+    const english = MESSAGES_BY_LOCALE[DEFAULT_LOCALE]
+    for (const locale of LOCALES) {
+      const messages = MESSAGES_BY_LOCALE[locale]
+      expect(Object.keys(messages).sort()).toEqual(Object.keys(english).sort())
+      for (const [key, value] of Object.entries(english)) {
+        const localized = messages[key as keyof typeof messages] ?? ""
+        expect(localized.trim()).not.toBe("")
+        expect((localized.match(/\{[^}]+\}/g) ?? []).sort()).toEqual((value.match(/\{[^}]+\}/g) ?? []).sort())
+      }
+    }
+  })
+
 })
