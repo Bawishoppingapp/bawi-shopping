@@ -392,6 +392,9 @@ describe("Seller finance: commission ledger, payouts, returns, and refunds (real
     )
     await deliverVendorOrder(seller.token, adminToken, vendorOrderId)
 
+    const balanceBeforeReturn = await get("/seller/finance/balance", { token: seller.token })
+    expect(balanceBeforeReturn.status).toBe(200)
+
     const createReturn = await post(
       "/store/return-requests",
       { vendor_order_item_id: itemId, reason: "damaged" },
@@ -408,7 +411,8 @@ describe("Seller finance: commission ledger, payouts, returns, and refunds (real
     expect(deny.data.return_request.status).toBe("denied")
 
     const balance = await get("/seller/finance/balance", { token: seller.token })
-    expect(balance.data.balance.available).toBe(10000)
+    expect(balance.status).toBe(200)
+    expect(balance.data.balance).toEqual(balanceBeforeReturn.data.balance)
 
     const { rows } = await dbClient.query(
       "SELECT * FROM commission_ledger_entry WHERE vendor_order_id = $1 AND reason = 'refund_reversal'",
