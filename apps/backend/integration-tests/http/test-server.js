@@ -4,6 +4,7 @@ const fs = require("fs")
 const os = require("os")
 
 const BACKEND_ROOT = path.resolve(__dirname, "../..")
+const BUILD_ROOT = path.join(BACKEND_ROOT, ".medusa/server")
 const PORT = 9199
 // The child's own stdout/stderr is only ever buffered in memory for the
 // "did it start" check below, never surfaced anywhere - if it crashes
@@ -60,7 +61,10 @@ function startTestServer() {
 
   return new Promise((resolve, reject) => {
     const child = spawn("npx", ["medusa", "start", "--port", String(PORT)], {
-      cwd: BACKEND_ROOT,
+      // `medusa build` writes the standalone production app here. Medusa's
+      // production server must be started from this directory so its compiled
+      // config and `public/admin/index.html` resolve relative to the build.
+      cwd: BUILD_ROOT,
       detached: true,
       env: {
         ...process.env,
