@@ -51,6 +51,7 @@ jobs:
   backend-integration:
     name: Backend integration tests (real Postgres)
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:16
@@ -132,7 +133,10 @@ jobs:
       - name: Run integration tests
         working-directory: apps/backend
         env:
-          # Jest runs in-band, so one connection per Medusa module is enough
-          # and keeps the aggregate below Postgres's default client limit.
-          DATABASE_POOL_MAX: "1"
+          # Payment finalization runs nested Medusa workflows. A one-connection
+          # pool deadlocks those operations until Knex's 60-second acquisition
+          # timeout; two connections allow the nested transaction to proceed.
+          # Postgres is raised to 300 connections above, so the aggregate
+          # module pools remain comfortably within the CI service capacity.
+          DATABASE_POOL_MAX: "2"
         run: npm run test:integration
