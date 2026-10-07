@@ -66,6 +66,7 @@ function startTestServer() {
         ...process.env,
         NODE_ENV: "test",
         ENABLE_TEST_SUPPORT_ROUTES: "true",
+        DISABLE_MEDUSA_ADMIN_UI: "true",
         // Medusa 2.19 no longer accepts the yargs-style `--no-color`
         // switch. Disable terminal escape sequences through the standard
         // environment variables instead so the production server command

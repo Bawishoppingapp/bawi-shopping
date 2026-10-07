@@ -155,6 +155,7 @@ const emailProviders = [
 ]
 
 module.exports = defineConfig({
+  admin: { ...(process.env.DISABLE_MEDUSA_ADMIN_UI === "true" ? { disable: true } : {}) },
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
     ...(databaseDriverOptions ? { databaseDriverOptions } : {}),

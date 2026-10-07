@@ -4,7 +4,7 @@ import { startTestServer, stopTestServer, PORT } from "./test-server"
 jest.setTimeout(180 * 1000)
 
 const BASE_URL = `http://localhost:${PORT}`
-const TEST_DATABASE_URL = "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
+const TEST_DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
 
 // Medusa's built-in /store/* middleware requires a publishable API key
 // header on every store route, including our custom /store/cart/* ones -

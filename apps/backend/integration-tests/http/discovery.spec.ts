@@ -8,7 +8,7 @@ jest.setTimeout(180 * 1000)
 const BASE_URL = `http://localhost:${PORT}`
 const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATABASE_URL =
-  "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
+  process.env.DATABASE_URL ?? "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
 
 async function post(path: string, body?: unknown, token?: string) {
   const response = await fetch(`${BASE_URL}${path}`, {
