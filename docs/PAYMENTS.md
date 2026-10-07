@@ -60,7 +60,7 @@ This is preferred over the alternative **Destination Charges** pattern (one `Pay
 - A `refund_reversal` entry's `available_at` is set to "now" (never a fresh hold period) — it nets immediately against whichever bucket its original entry currently sits in.
 - Refund creation always computes the refund amount from stored order/item data server-side (capped at the item's own `line_total`) — never from a client-supplied amount.
 - Approving a return also restocks inventory for restockable reasons (`incorrect`, `customer_remorse`) but not for unsellable ones (`damaged`, `defective`) — a v1 policy decision, see [`DECISIONS.md`](DECISIONS.md).
-- A pre-preparation cancellation (`cancel-vendor-order` workflow, customer-initiated, allowed only while `awaiting_preparation` per `business-config` `cancellation.cancellation_cutoff`) produces a full refund, a full ledger reversal, and a full inventory restock, with an `OrderRefund` row that has no `return_request_id` (nullable, since there's no return request behind a cancellation).
+- A pre-pickup cancellation (`cancel-vendor-order` workflow, customer-initiated, allowed through `ready_for_pickup` while `business-config` `cancellation.cancellation_cutoff` is `picked_up`) produces a full refund, a full ledger reversal, and a full inventory restock, with an `OrderRefund` row that has no `return_request_id` (nullable, since there's no return request behind a cancellation).
 - If a seller's account is closed/suspended with an outstanding negative balance, that is handled as an Admin-visible manual reconciliation case (not an automated clawback against the seller's bank account, which Stripe Connect does not support for this account type without an explicit debit reversal flow).
 
 ## 7. Webhook handling

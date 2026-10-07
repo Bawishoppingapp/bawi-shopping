@@ -8,8 +8,8 @@ import { cancelVendorOrderWorkflow } from "../../../../../workflows/cancel-vendo
 /**
  * A customer cancels one seller's portion of their order, while it's still
  * within the business-config `cancellation.cancellation_cutoff` window
- * ("preparing" - i.e. allowed only while still `awaiting_preparation`, see
- * docs/PAYMENTS.md). Ownership is re-derived from the vendor_order's
+ * (currently `picked_up`, so awaiting/preparing/ready-for-pickup are allowed,
+ * see docs/PAYMENTS.md). Ownership is re-derived from the vendor_order's
  * parent marketplace order's own `customer_id`, never trusted from the
  * request.
  */

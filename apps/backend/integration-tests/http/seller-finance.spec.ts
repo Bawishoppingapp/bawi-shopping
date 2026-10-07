@@ -41,6 +41,8 @@ async function request(
 const get = (path: string, opts?: { token?: string }) => request("GET", path, opts)
 const post = (path: string, body?: unknown, opts?: { token?: string }) =>
   request("POST", path, { ...opts, body })
+const put = (path: string, body?: unknown, opts?: { token?: string }) =>
+  request("PUT", path, { ...opts, body })
 
 async function postWebhook(body: unknown, signature: string | undefined) {
   const response = await fetch(`${BASE_URL}/webhooks/stripe`, {
@@ -94,9 +96,25 @@ describe("Seller finance: commission ledger, payouts, returns, and refunds (real
       password: TEST_ADMIN_PASSWORD,
     })
     adminToken = adminLogin.data.token
+
+    // Production intentionally launches with returns disabled. This suite
+    // enables a finite window explicitly so it can exercise the return and
+    // refund workflows, then restores the launch default in afterAll.
+    await put(
+      "/admin/business-config/returns/return_window_days",
+      { value: 14 },
+      { token: adminToken }
+    )
   })
 
   afterAll(async () => {
+    if (adminToken) {
+      await put(
+        "/admin/business-config/returns/return_window_days",
+        { value: 0 },
+        { token: adminToken }
+      ).catch(() => undefined)
+    }
     await dbClient?.end()
     await stopTestServer(serverProcess)
   })
@@ -244,10 +262,10 @@ describe("Seller finance: commission ledger, payouts, returns, and refunds (real
       { token: undefined }
     ).catch(() => null)
     const { rows } = await dbClient.query(
-      "SELECT delivery_confirmation_code FROM tracking_code WHERE vendor_order_id = $1",
+      "SELECT code FROM tracking_code WHERE vendor_order_id = $1",
       [vendorOrderId]
     )
-    const deliveryCode = rows[0]?.delivery_confirmation_code as string
+    const deliveryCode = rows[0]?.code as string
     await post(
       `/courier/assignments/${vendorOrderId}/confirm-delivery`,
       { code: deliveryCode },
@@ -439,7 +457,7 @@ describe("Seller finance: commission ledger, payouts, returns, and refunds (real
     expect(refundRows[0].status).toBe("pending")
   })
 
-  test("cancellation is rejected once the seller has started preparing", async () => {
+  test("cancellation remains available while the seller is preparing before courier pickup", async () => {
     const seller = await provisionSeller("cancel-cutoff")
     const product = await createApprovedProduct(seller.token)
     const customer = await createCustomer()
@@ -452,7 +470,8 @@ describe("Seller finance: commission ledger, payouts, returns, and refunds (real
     const cancel = await post(`/store/vendor-orders/${vendorOrderId}/cancel`, {}, {
       token: customer.token,
     })
-    expect(cancel.status).toBe(422)
+    expect(cancel.status).toBe(200)
+    expect(cancel.data.status).toBe("cancelled")
   })
 
   test("a verified manual Telebirr payment stores no customer Stripe payment intent", async () => {
