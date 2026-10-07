@@ -106,10 +106,10 @@ jobs:
 
       - name: Add swap for real-server integration tests
         run: |
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo fallocate -l 2G /mnt/bawi-integration.swap
+          sudo chmod 600 /mnt/bawi-integration.swap
+          sudo mkswap /mnt/bawi-integration.swap
+          sudo swapon /mnt/bawi-integration.swap
 
       - name: Increase integration database connection capacity
         run: |
