@@ -6,6 +6,7 @@ import {
   ProductStatus,
 } from "@medusajs/framework/utils"
 import {
+  createProductCategoriesWorkflow,
   createInventoryLevelsWorkflow,
   createProductsWorkflow,
   deleteProductsWorkflow,
@@ -144,6 +145,24 @@ export async function repairInitialProducts(container: MedusaContainer) {
       )
     : []
   const categoryByName = new Map(categories.map((category) => [category.name, category.id]))
+  const legacyMerchCategoryId = categoryByName.get("Merch")
+  const existingShortsCategoryIds = existingShorts?.categories?.map((category) => category.id) ?? []
+  const needsLegacyShortsRepair = Boolean(
+    existingShorts &&
+      legacyMerchCategoryId &&
+      existingShortsCategoryIds.includes(legacyMerchCategoryId)
+  )
+  const needsBottomsCategory =
+    needsLegacyShortsRepair ||
+    missingProducts.some((product) => product.category === "Bottoms")
+  if (needsBottomsCategory && !categoryByName.has("Bottoms")) {
+    const { result: createdCategories } = await createProductCategoriesWorkflow(container).run({
+      input: {
+        product_categories: [{ name: "Bottoms", is_active: true }],
+      },
+    })
+    categoryByName.set("Bottoms", createdCategories[0].id)
+  }
   const missingCategories = missingProducts
     .map((product) => product.category)
     .filter((name) => !categoryByName.has(name))
@@ -154,13 +173,6 @@ export async function repairInitialProducts(container: MedusaContainer) {
     )
   }
 
-  const legacyMerchCategoryId = categoryByName.get("Merch")
-  const existingShortsCategoryIds = existingShorts?.categories?.map((category) => category.id) ?? []
-  const needsLegacyShortsRepair = Boolean(
-    existingShorts &&
-      legacyMerchCategoryId &&
-      existingShortsCategoryIds.includes(legacyMerchCategoryId)
-  )
   const bottomsCategoryId = categoryByName.get("Bottoms")
   if (needsLegacyShortsRepair && !bottomsCategoryId) {
     throw new MedusaError(

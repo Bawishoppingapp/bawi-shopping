@@ -1,6 +1,7 @@
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import {
   createInventoryLevelsWorkflow,
+  createProductCategoriesWorkflow,
   createProductsWorkflow,
   deleteProductsWorkflow,
   updateProductsWorkflow,
@@ -9,6 +10,7 @@ import { repairInitialProducts } from "../repair-initial-products"
 
 jest.mock("@medusajs/medusa/core-flows", () => ({
   createInventoryLevelsWorkflow: jest.fn(),
+  createProductCategoriesWorkflow: jest.fn(),
   createProductsWorkflow: jest.fn(),
   deleteProductsWorkflow: jest.fn(),
   updateProductsWorkflow: jest.fn(),
@@ -40,11 +42,17 @@ function setup(
   )
   const updateProductsRun = jest.fn().mockResolvedValue({ result: [] })
   const createInventoryLevelsRun = jest.fn().mockResolvedValue({ result: [] })
+  const createProductCategoriesRun = jest.fn().mockResolvedValue({
+    result: [{ id: "created-cat-bottoms", name: "Bottoms" }],
+  })
   const deleteProductsRun = jest.fn().mockResolvedValue({ result: [] })
   ;(createProductsWorkflow as unknown as jest.Mock).mockReturnValue({ run: createProductsRun })
   ;(updateProductsWorkflow as unknown as jest.Mock).mockReturnValue({ run: updateProductsRun })
   ;(createInventoryLevelsWorkflow as unknown as jest.Mock).mockReturnValue({
     run: createInventoryLevelsRun,
+  })
+  ;(createProductCategoriesWorkflow as unknown as jest.Mock).mockReturnValue({
+    run: createProductCategoriesRun,
   })
   ;(deleteProductsWorkflow as unknown as jest.Mock).mockReturnValue({ run: deleteProductsRun })
 
@@ -91,6 +99,7 @@ function setup(
     createProductsRun,
     updateProductsRun,
     createInventoryLevelsRun,
+    createProductCategoriesRun,
     deleteProductsRun,
     queryGraph,
     listSalesChannels,
@@ -232,6 +241,40 @@ describe("repairInitialProducts", () => {
     })
     expect(queryGraph).not.toHaveBeenCalled()
     expect(createInventoryLevelsRun).not.toHaveBeenCalled()
+  })
+
+  it("creates Bottoms when repairing a legacy database that only has Merch", async () => {
+    const legacyProducts = existingScaffoldProducts.map((product) =>
+      product.handle === "shorts"
+        ? { ...product, categories: [{ id: "cat-merch" }] }
+        : product
+    )
+    const {
+      container,
+      createProductCategoriesRun,
+      updateProductsRun,
+    } = setup(
+      legacyProducts,
+      categories.filter((category) => category.name !== "Bottoms")
+    )
+
+    await repairInitialProducts(container)
+
+    expect(createProductCategoriesRun).toHaveBeenCalledWith({
+      input: {
+        product_categories: [{ name: "Bottoms", is_active: true }],
+      },
+    })
+    expect(updateProductsRun).toHaveBeenCalledWith({
+      input: {
+        products: [
+          {
+            id: "prod-shorts",
+            categories: [{ id: "created-cat-bottoms" }],
+          },
+        ],
+      },
+    })
   })
 
   it("does not rewrite category assignments after the legacy category is gone", async () => {
