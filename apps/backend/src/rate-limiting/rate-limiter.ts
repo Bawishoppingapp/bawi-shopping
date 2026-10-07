@@ -59,6 +59,19 @@ export function resetRateLimiterState(): void {
 
 export function rateLimit({ windowMs, max, message }: RateLimitOptions) {
   return (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) => {
+    // Real-server integration suites intentionally exercise many auth and
+    // application flows from one loopback address. The opt-out is set only
+    // on the child test server; production and ordinary unit tests never set
+    // it, so the deployed limiter cannot be disabled accidentally by
+    // NODE_ENV alone.
+    if (
+      process.env.NODE_ENV === "test" &&
+      process.env.DISABLE_RATE_LIMITING_FOR_TESTS === "true"
+    ) {
+      next()
+      return
+    }
+
     const key = req.ip ?? "unknown"
     const now = Date.now()
     sweepExpired(now)

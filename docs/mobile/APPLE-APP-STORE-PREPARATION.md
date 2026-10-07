@@ -95,9 +95,9 @@ Use an accepted 6.9-inch portrait size, preferably `1320 × 2868`, or another si
 
 ## Remaining owner steps
 
-1. Purchase/enroll in the Apple Developer Program and finish identity verification.
-2. Create the App Store Connect app using bundle ID `com.bawishopping.mobilecustomer`.
-3. Provide the Apple Team ID and App Store Connect Apple ID (`ascAppId`) so EAS Submit can be completed.
+1. Confirm the Apple Developer membership for team `59Z7RLUM56` remains active.
+2. Confirm the existing App Store Connect record still uses bundle ID `com.bawishopping.mobilecustomer` and app ID `6819915197` (already configured as `ascAppId` in `eas.json`).
+3. Confirm the EAS account has Apple credentials authorized for team `59Z7RLUM56`.
 4. Confirm the registered copyright owner name.
 5. Create disposable customer and approved-seller reviewer accounts.
 6. Enter App Review contact name, email, and international-format phone number.
@@ -107,7 +107,7 @@ Use an accepted 6.9-inch portrait size, preferably `1320 × 2868`, or another si
 10. Re-check App Privacy against every enabled production provider.
 11. Select the tested build and submit it manually for App Review.
 
-## Commands to run after Apple enrollment
+## Commands for the signed build and TestFlight upload
 
 From `apps/mobile-customer`:
 

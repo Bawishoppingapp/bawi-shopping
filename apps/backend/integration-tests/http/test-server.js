@@ -4,7 +4,12 @@ const fs = require("fs")
 const os = require("os")
 
 const BACKEND_ROOT = path.resolve(__dirname, "../..")
+const BUILD_ROOT = path.join(BACKEND_ROOT, ".medusa/server")
+const MEDUSA_CLI = require.resolve("@medusajs/cli/cli.js")
 const PORT = 9199
+const TEST_ADMIN_EMAIL = "integration-admin@example.test"
+const TEST_ADMIN_PASSWORD = "correct-horse-battery-admin"
+const MAX_CAPTURED_OUTPUT_BYTES = 256 * 1024
 // The child's own stdout/stderr is only ever buffered in memory for the
 // "did it start" check below, never surfaced anywhere - if it crashes
 // mid-suite the real cause is otherwise invisible. Persisting a copy here
@@ -59,14 +64,23 @@ function startTestServer() {
   killStrayTypeWatchers()
 
   return new Promise((resolve, reject) => {
-    const child = spawn("npx", ["medusa", "start", "--port", String(PORT)], {
-      cwd: BACKEND_ROOT,
+    process.stdout.write("[test-server] spawning Medusa production server\n")
+    const child = spawn(process.execPath, [MEDUSA_CLI, "start", "--port", String(PORT)], {
+      // `medusa build` writes the standalone production app here. Medusa's
+      // production server must be started from this directory so its compiled
+      // config and `public/admin/index.html` resolve relative to the build.
+      cwd: BUILD_ROOT,
       detached: true,
       env: {
         ...process.env,
         NODE_ENV: "test",
         ENABLE_TEST_SUPPORT_ROUTES: "true",
+        DISABLE_RATE_LIMITING_FOR_TESTS: "true",
         DISABLE_MEDUSA_ADMIN_UI: "true",
+        // Jest and this production server coexist on the same small CI
+        // runner. Give each a firm heap ceiling so the kernel never has to
+        // choose one to kill under aggregate memory pressure.
+        NODE_OPTIONS: "--max-old-space-size=224",
         // Medusa 2.19 no longer accepts the yargs-style `--no-color`
         // switch. Disable terminal escape sequences through the standard
         // environment variables instead so the production server command
@@ -86,15 +100,63 @@ function startTestServer() {
 
     let settled = false
     let output = ""
+    let persistedOutputBytes = 0
+    const memoryMonitor = setInterval(() => {
+      const parentRssMb = Math.round(process.memoryUsage().rss / 1024 / 1024)
+      let serverRssMb = "unknown"
+      try {
+        const rssValues = execSync(`ps -o rss= -g ${child.pid}`, { encoding: "utf8" })
+          .trim()
+          .split(/\s+/)
+          .map(Number)
+          .filter(Number.isFinite)
+        serverRssMb = String(Math.round(rssValues.reduce((total, rss) => total + rss, 0) / 1024))
+      } catch {
+        // The process group may be between exec and startup when sampled.
+      }
+      let cgroupMb = "unknown"
+      try {
+        const bytes = Number(fs.readFileSync("/sys/fs/cgroup/memory.current", "utf8").trim())
+        cgroupMb = String(Math.round(bytes / 1024 / 1024))
+      } catch {
+        try {
+          const bytes = Number(
+            fs.readFileSync("/sys/fs/cgroup/memory/memory.usage_in_bytes", "utf8").trim()
+          )
+          cgroupMb = String(Math.round(bytes / 1024 / 1024))
+        } catch {
+          // macOS and hosts without a per-job memory cgroup expose neither path.
+        }
+      }
+      process.stdout.write(
+        `[test-server] waiting pid=${child.pid} jest-rss=${parentRssMb}MB server-rss=${serverRssMb}MB cgroup=${cgroupMb}MB`
+          + "\n"
+      )
+    }, 3000)
+    child.memoryMonitor = memoryMonitor
     const logStream = fs.createWriteStream(SERVER_LOG_PATH, { flags: "a" })
     logStream.write(`\n--- test-server started at ${new Date().toISOString()} ---\n`)
 
     const onData = (data) => {
-      output += data.toString()
-      logStream.write(data)
-      if (!settled && /Server is ready/i.test(output)) {
+      const chunk = data.toString()
+      const remainingLogBytes = MAX_CAPTURED_OUTPUT_BYTES - persistedOutputBytes
+      if (remainingLogBytes > 0) {
+        const capturedChunk = Buffer.from(chunk).subarray(0, remainingLogBytes)
+        persistedOutputBytes += capturedChunk.byteLength
+        logStream.write(capturedChunk)
+      }
+
+      // Only retain enough output to diagnose startup failures. Keeping every
+      // request/query log for the lifetime of a large HTTP suite grows this
+      // string without bound and can make the CI kernel kill Jest for OOM.
+      if (settled) return
+      process.stdout.write(`[test-server] ${chunk}`)
+      output = `${output}${chunk}`.slice(-MAX_CAPTURED_OUTPUT_BYTES)
+      if (/Server is ready/i.test(output)) {
         settled = true
+        process.stdout.write(`[test-server] ready pid=${child.pid}\n`)
         resolve(child)
+        output = ""
       }
     }
 
@@ -104,13 +166,16 @@ function startTestServer() {
     child.on("error", (err) => {
       if (!settled) {
         settled = true
+        clearInterval(memoryMonitor)
         reject(err)
       }
     })
 
     child.on("exit", (code) => {
+      logStream.end()
       if (!settled) {
         settled = true
+        clearInterval(memoryMonitor)
         reject(new Error(`medusa start exited early (code ${code}): ${output}`))
       }
     })
@@ -118,6 +183,7 @@ function startTestServer() {
     setTimeout(() => {
       if (!settled) {
         settled = true
+        clearInterval(memoryMonitor)
         freePort()
         reject(new Error(`Timed out waiting for server to start:\n${output}`))
       }
@@ -127,6 +193,7 @@ function startTestServer() {
 
 function stopTestServer(child) {
   return new Promise((resolve) => {
+    if (child?.memoryMonitor) clearInterval(child.memoryMonitor)
     const finish = () => {
       freePort()
       killStrayTypeWatchers()
@@ -149,4 +216,10 @@ function stopTestServer(child) {
   })
 }
 
-module.exports = { startTestServer, stopTestServer, PORT }
+module.exports = {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+}

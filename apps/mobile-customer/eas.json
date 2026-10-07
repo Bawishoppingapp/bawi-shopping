@@ -45,6 +45,10 @@
         "track": "internal"
       }
     },
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6819915197"
+      }
+    }
   }
 }

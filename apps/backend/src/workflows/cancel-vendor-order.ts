@@ -17,9 +17,9 @@ import { recordNotification } from "../notifications/record-notification"
 import { refundProcessedTemplate } from "../notifications/templates"
 
 /**
- * A customer cancels a vendor_order still in awaiting_preparation (the
- * cutoff - business-config `cancellation.cancellation_cutoff`, checked in
- * the route before this workflow runs). A full refund, a full commission
+ * A customer cancels a vendor_order before the configured cancellation
+ * cutoff (business-config `cancellation.cancellation_cutoff`, checked in the
+ * route before this workflow runs). A full refund, a full commission
  * reversal, and a full inventory restoration (the final deduction already
  * happened at checkout capture, per docs/DECISIONS.md - this undoes it).
  */

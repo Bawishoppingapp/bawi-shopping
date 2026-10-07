@@ -1,5 +1,11 @@
 import { Client } from "pg"
-import { startTestServer, stopTestServer, PORT } from "./test-server"
+import {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+} from "./test-server"
 
 jest.setTimeout(180 * 1000)
 
@@ -58,6 +64,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
   let serverProcess: Awaited<ReturnType<typeof startTestServer>>
   let dbClient: Client
   let baseCategoryId: string
+  let adminToken: string
 
   const suffix = Date.now()
 
@@ -77,6 +84,12 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
 
     const keyResponse = await get("/seller-test-support/publishable-key")
     publishableApiKey = keyResponse.data.token
+
+    const adminLogin = await post("/auth/user/emailpass", {
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
+    })
+    adminToken = adminLogin.data.token
   })
 
   afterAll(async () => {
@@ -129,21 +142,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
   }
 
   async function createAdmin() {
-    const { execFileSync } = await import("node:child_process")
-    const path = await import("node:path")
-    const email = `cart-admin-${suffix}-${Math.random().toString(36).slice(2, 8)}@example.test`
-    const password = "correct-horse-battery-admin"
-    execFileSync(
-      "npx",
-      ["medusa", "user", "-e", email, "-p", password],
-      {
-        cwd: path.resolve(__dirname, "../.."),
-        env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-        stdio: "pipe",
-      }
-    )
-    const login = await post("/auth/user/emailpass", { email, password })
-    return login.data.token as string
+    return adminToken
   }
 
   async function createCustomer() {
@@ -341,7 +340,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
       })
 
       expect(added.status).toBe(200)
-      expect(added.data.cart.items[0].unit_price).toBe(5000)
+      expect(added.data.cart.items[0].unit_price).toBe(5500)
     })
 
     test("a draft (unsubmitted) product cannot be added to the cart", async () => {
@@ -451,7 +450,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
       })
 
       const added = await post("/store/cart/items", { variant_id: variantId, quantity: 1 })
-      expect(added.data.cart.items[0].unit_price).toBe(4000)
+      expect(added.data.cart.items[0].unit_price).toBe(4400)
       const cartId = added.data.cart.id as string
 
       await post("/seller-test-support/set-variant-availability", {
@@ -460,7 +459,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
       })
 
       const refetched = await get("/store/cart", { cartId })
-      expect(refetched.data.cart.items[0].unit_price).toBe(6000)
+      expect(refetched.data.cart.items[0].unit_price).toBe(6600)
       expect(
         refetched.data.cart.warnings.some(
           (w: { code: string }) => w.code === "price_changed"

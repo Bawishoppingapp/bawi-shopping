@@ -51,6 +51,7 @@ jobs:
   backend-integration:
     name: Backend integration tests (real Postgres)
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:16
@@ -89,6 +90,10 @@ jobs:
       COURIER_PORTAL_URL: http://localhost:3002/courier
       # Network-free fake Stripe client only - see docs/DECISIONS.md.
       ENABLE_TEST_SUPPORT_ROUTES: "true"
+      # HTTP tests exercise only the backend API. Skipping the Admin UI keeps
+      # the integration-only build and server below the hosted runner's memory
+      # limit; the normal production-build job still builds the Admin UI.
+      DISABLE_MEDUSA_ADMIN_UI: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -99,6 +104,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Add swap for real-server integration tests
+        run: |
+          sudo fallocate -l 2G /mnt/bawi-integration.swap
+          sudo chmod 600 /mnt/bawi-integration.swap
+          sudo mkswap /mnt/bawi-integration.swap
+          sudo swapon /mnt/bawi-integration.swap
 
       - name: Increase integration database connection capacity
         run: |
@@ -121,7 +133,10 @@ jobs:
       - name: Run integration tests
         working-directory: apps/backend
         env:
-          # Jest runs in-band, so one connection per Medusa module is enough
-          # and keeps the aggregate below Postgres's default client limit.
-          DATABASE_POOL_MAX: "1"
+          # Payment finalization runs nested Medusa workflows. A one-connection
+          # pool deadlocks those operations until Knex's 60-second acquisition
+          # timeout; two connections allow the nested transaction to proceed.
+          # Postgres is raised to 300 connections above, so the aggregate
+          # module pools remain comfortably within the CI service capacity.
+          DATABASE_POOL_MAX: "2"
         run: npm run test:integration

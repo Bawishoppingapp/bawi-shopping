@@ -22,6 +22,11 @@ npx medusa db:migrate
 npx medusa exec ./src/migration-scripts/initial-data-seed.ts || \
   echo "initial-data-seed.ts errored (likely already applied by an earlier attempt) - continuing"
 
+# Reconcile the four scaffold products as part of this explicit one-time
+# bootstrap. Normal server startup never runs this repair, so later intentional
+# catalog edits are preserved.
+npx medusa exec ./src/scripts/repair-initial-products.ts
+
 npx medusa exec ./src/scripts/seed-business-config.ts
 
 # Same reasoning as above: tolerate "user already exists" specifically,

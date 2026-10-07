@@ -1,12 +1,15 @@
-import { execFileSync } from "node:child_process"
-import path from "node:path"
 import { Client } from "pg"
-import { startTestServer, stopTestServer, PORT } from "./test-server"
+import {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+} from "./test-server"
 
 jest.setTimeout(180 * 1000)
 
 const BASE_URL = `http://localhost:${PORT}`
-const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATABASE_URL =
   process.env.DATABASE_URL ?? "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
 
@@ -53,33 +56,22 @@ async function postWebhook(body: unknown, signature: string | undefined) {
   return { status: response.status, data: await response.json() }
 }
 
-function createAdmin(email: string, password: string) {
-  execFileSync("npx", ["medusa", "user", "-e", email, "-p", password], {
-    cwd: BACKEND_ROOT,
-    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-    stdio: "pipe",
-  })
-}
-
 describe("Stripe Connect seller onboarding, business configuration, and webhooks", () => {
   let serverProcess: Awaited<ReturnType<typeof startTestServer>>
   let dbClient: Client
   let adminToken: string
 
   const suffix = Date.now()
-  const adminEmail = `stripe-admin-${suffix}@example.test`
-  const adminPassword = "correct-horse-battery-admin"
 
   beforeAll(async () => {
-    createAdmin(adminEmail, adminPassword)
     serverProcess = await startTestServer()
 
     dbClient = new Client({ connectionString: TEST_DATABASE_URL })
     await dbClient.connect()
 
     const adminLogin = await post("/auth/user/emailpass", {
-      email: adminEmail,
-      password: adminPassword,
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
     })
     adminToken = adminLogin.data.token
   })
@@ -286,7 +278,7 @@ describe("Stripe Connect seller onboarding, business configuration, and webhooks
           e.category === "commission" && e.key === "platform_default_rate_basis_points"
       )
       expect(commission).toBeDefined()
-      expect(commission.is_placeholder).toBe(true)
+      expect(commission.is_placeholder).toBe(false)
       const flag = response.data.entries.find(
         (e: { category: string; key: string }) =>
           e.category === "feature_flag" && e.key === "live_payments_enabled"

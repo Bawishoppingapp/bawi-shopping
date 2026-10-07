@@ -64,7 +64,8 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # modules same as it does from apps/backend directly.
 # Migrations are NOT run automatically on container start (see
 # docs/DEPLOYMENT.md/docs/DATABASE.md §6: migrations run as their own
-# explicit step, staging before production, never implicitly on boot) -
-# and still run from apps/backend (via Shell or bootstrap-staging.sh),
-# not from here, since they use ts-node against the original src/ tree.
-CMD ["sh", "-c", "cd .medusa/server && npm run start"]
+# explicit step, staging before production, never implicitly on boot).
+# Catalog seeding and repair are explicit one-time deployment operations. The
+# normal production process must never recreate products that an operator has
+# intentionally removed or renamed.
+CMD ["sh", "-c", "cd .medusa/server && exec npm run start"]

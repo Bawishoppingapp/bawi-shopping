@@ -6,7 +6,7 @@ This file records the current iOS/Android release posture. The initial commerce 
 
 ## Completed technical preparation
 
-- Expo SDK 54 customer app is linked to `@bawishopping/mobile-customer` with iOS bundle identifier `com.bawishopping.mobilecustomer`.
+- Expo SDK 54 customer app is linked to the dedicated `@nnamdi01/bawi-shopping` project (`8d4d3c80-ce1f-4ac4-a7e4-2b4a2f91618c`) with iOS bundle identifier `com.bawishopping.mobilecustomer`.
 - Preview and production EAS environments contain the public backend URL and Medusa publishable client key.
 - Release guards reject localhost, non-HTTPS backend URLs, and missing publishable keys.
 - App icon, splash screen, phone-only configuration, encryption declaration, privacy manifest, support URL, privacy URL, initial App Store copy, categories, age-rating draft, and manual-release preference are present.
@@ -25,8 +25,8 @@ The Render free service can sleep and previously required roughly 90 seconds for
 
 ## Items that still require an owner or physical device
 
-- Create the Bawi Shopping record in App Store Connect.
-- Supply the App Store Connect app ID, Apple Team ID, final copyright owner, review contact, and disposable customer/seller reviewer accounts.
+- Bawi Shopping is created in App Store Connect as app ID `6819915197` under Apple team `59Z7RLUM56`.
+- Supply the final copyright owner, review contact, and disposable customer/seller reviewer accounts.
 - Create a signed production iOS build with Apple credentials and test that exact build on a physical iPhone through TestFlight.
 - Capture clean screenshots from the tested build with approved products and no private customer data.
 - Complete Apple's privacy and age-rating questionnaires and confirm all answers against the enabled production providers.

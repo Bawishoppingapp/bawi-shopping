@@ -1,5 +1,12 @@
 import { Client } from "pg"
-import { startTestServer, stopTestServer, PORT } from "./test-server"
+import {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+} from "./test-server"
+import { settleManualPayment } from "./manual-payment"
 
 jest.setTimeout(180 * 1000)
 
@@ -34,6 +41,8 @@ async function request(
 const get = (path: string, opts?: { token?: string }) => request("GET", path, opts)
 const post = (path: string, body?: unknown, opts?: { token?: string }) =>
   request("POST", path, { ...opts, body })
+const put = (path: string, body?: unknown, opts?: { token?: string }) =>
+  request("PUT", path, { ...opts, body })
 
 async function postWebhook(body: unknown, signature: string | undefined) {
   const response = await fetch(`${BASE_URL}/webhooks/stripe`, {
@@ -47,11 +56,7 @@ async function postWebhook(body: unknown, signature: string | undefined) {
   return { status: response.status, data: await response.json() }
 }
 
-function paymentIntentIdFromClientSecret(clientSecret: string): string {
-  return clientSecret.replace(/_secret_test$/, "")
-}
-
-describe("Seller finance: commission ledger, payouts, returns, refunds, disputes (real server, real Postgres)", () => {
+describe("Seller finance: commission ledger, payouts, returns, and refunds (real server, real Postgres)", () => {
   let serverProcess: Awaited<ReturnType<typeof startTestServer>>
   let dbClient: Client
   let baseCategoryId: string
@@ -62,12 +67,11 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
   const shippingAddress = {
     first_name: "Ada",
     last_name: "Lovelace",
-    address_1: "123 Main St",
-    city: "Dallas",
-    province: "TX",
-    postal_code: "75201",
-    country_code: "US",
-    phone: "+15555550100",
+    address_1: "123 Bole Road",
+    city: "Addis Ababa",
+    sub_city: "Bole",
+    country_code: "ET",
+    phone: "+251911123456",
   }
 
   beforeAll(async () => {
@@ -87,22 +91,30 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
     const keyResponse = await get("/seller-test-support/publishable-key")
     publishableApiKey = keyResponse.data.token
 
-    const { execFileSync } = await import("node:child_process")
-    const path = await import("node:path")
-    const adminEmail = `finance-admin-${suffix}@example.test`
-    execFileSync("npx", ["medusa", "user", "-e", adminEmail, "-p", "correct-horse-battery-admin"], {
-      cwd: path.resolve(__dirname, "../.."),
-      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-      stdio: "pipe",
-    })
     const adminLogin = await post("/auth/user/emailpass", {
-      email: adminEmail,
-      password: "correct-horse-battery-admin",
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
     })
     adminToken = adminLogin.data.token
+
+    // Production intentionally launches with returns disabled. This suite
+    // enables a finite window explicitly so it can exercise the return and
+    // refund workflows, then restores the launch default in afterAll.
+    await put(
+      "/admin/business-config/returns/return_window_days",
+      { value: 14 },
+      { token: adminToken }
+    )
   })
 
   afterAll(async () => {
+    if (adminToken) {
+      await put(
+        "/admin/business-config/returns/return_window_days",
+        { value: 0 },
+        { token: adminToken }
+      ).catch(() => undefined)
+    }
     await dbClient?.end()
     await stopTestServer(serverProcess)
   })
@@ -186,15 +198,16 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
       { shipping_address: shippingAddress, idempotency_key: `idem-${suffix}-${Math.random()}` },
       { token: customerToken }
     )
-    const paymentIntentId = paymentIntentIdFromClientSecret(checkout.data.client_secret)
-    await postWebhook(
-      {
-        id: `evt_${suffix}_${Math.random()}`,
-        type: "payment_intent.succeeded",
-        data: { object: { id: paymentIntentId } },
-      },
-      "test-signature"
-    )
+    if (checkout.status !== 200) {
+      throw new Error(`Checkout failed (${checkout.status}): ${JSON.stringify(checkout.data)}`)
+    }
+    await settleManualPayment({
+      baseUrl: BASE_URL,
+      orderId: checkout.data.order_id,
+      customerToken,
+      adminToken,
+      publishableApiKey,
+    })
     const orderDetail = await get(`/store/orders/${checkout.data.order_id}`, { token: customerToken })
     return {
       orderId: checkout.data.order_id as string,
@@ -249,10 +262,10 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
       { token: undefined }
     ).catch(() => null)
     const { rows } = await dbClient.query(
-      "SELECT delivery_confirmation_code FROM tracking_code WHERE vendor_order_id = $1",
+      "SELECT code FROM tracking_code WHERE vendor_order_id = $1",
       [vendorOrderId]
     )
-    const deliveryCode = rows[0]?.delivery_confirmation_code as string
+    const deliveryCode = rows[0]?.code as string
     await post(
       `/courier/assignments/${vendorOrderId}/confirm-delivery`,
       { code: deliveryCode },
@@ -269,8 +282,9 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
 
     const balance = await get("/seller/finance/balance", { token: seller.token })
     expect(balance.status).toBe(200)
-    // 10000 subtotal * default 15% commission = 1500 commission, 8500 net.
-    expect(balance.data.balance.pending).toBe(8500)
+    // The customer pays the 10% markup (11,000); the seller's base 10,000
+    // remains the pending balance.
+    expect(balance.data.balance.pending).toBe(10000)
     expect(balance.data.balance.available).toBe(0)
   })
 
@@ -291,16 +305,16 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
     )
 
     const balanceBefore = await get("/seller/finance/balance", { token: seller.token })
-    expect(balanceBefore.data.balance.available).toBe(8500)
+    expect(balanceBefore.data.balance.available).toBe(10000)
 
     const payout = await post("/admin/finance/payouts", { vendor_id: vendorId }, { token: adminToken })
     expect(payout.status).toBe(200)
-    expect(payout.data.payout.amount).toBe(8500)
+    expect(payout.data.payout.amount).toBe(10000)
     expect(payout.data.payout.stripe_transfer_id).toMatch(/^tr_test_/)
 
     const balanceAfter = await get("/seller/finance/balance", { token: seller.token })
     expect(balanceAfter.data.balance.available).toBe(0)
-    expect(balanceAfter.data.balance.paid).toBe(8500)
+    expect(balanceAfter.data.balance.paid).toBe(10000)
 
     // Re-running the batch finds nothing left eligible (claimed by the
     // unique payout_line_item.commission_ledger_entry_id constraint).
@@ -345,15 +359,15 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
       [returnRequestId]
     )
     expect(refundRows).toHaveLength(1)
-    expect(refundRows[0].amount).toBe(10000)
-    expect(refundRows[0].stripe_refund_id).toMatch(/^re_test_/)
+    expect(refundRows[0].amount).toBe(11000)
+    expect(refundRows[0].stripe_refund_id).toBeNull()
 
     const { rows: reversalRows } = await dbClient.query(
       "SELECT * FROM commission_ledger_entry WHERE vendor_order_id = $1 AND reason = 'refund_reversal'",
       [vendorOrderId]
     )
     expect(reversalRows).toHaveLength(1)
-    expect(Number(reversalRows[0].net_amount)).toBe(-8500)
+    expect(Number(reversalRows[0].net_amount)).toBe(-10000)
 
     // customer_remorse is restockable - inventory should be back to 10.
     const { rows: inventoryRows } = await dbClient.query(
@@ -378,6 +392,9 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
     )
     await deliverVendorOrder(seller.token, adminToken, vendorOrderId)
 
+    const balanceBeforeReturn = await get("/seller/finance/balance", { token: seller.token })
+    expect(balanceBeforeReturn.status).toBe(200)
+
     const createReturn = await post(
       "/store/return-requests",
       { vendor_order_item_id: itemId, reason: "damaged" },
@@ -394,7 +411,8 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
     expect(deny.data.return_request.status).toBe("denied")
 
     const balance = await get("/seller/finance/balance", { token: seller.token })
-    expect(balance.data.balance.available).toBe(8500)
+    expect(balance.status).toBe(200)
+    expect(balance.data.balance).toEqual(balanceBeforeReturn.data.balance)
 
     const { rows } = await dbClient.query(
       "SELECT * FROM commission_ledger_entry WHERE vendor_order_id = $1 AND reason = 'refund_reversal'",
@@ -427,17 +445,23 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
       [vendorOrderId]
     )
     expect(reversalRows).toHaveLength(1)
-    expect(Number(reversalRows[0].net_amount)).toBe(-8500)
+    expect(Number(reversalRows[0].net_amount)).toBe(-10000)
 
     const { rows: refundRows } = await dbClient.query(
       "SELECT * FROM order_refund WHERE vendor_order_id = $1",
       [vendorOrderId]
     )
     expect(refundRows[0].return_request_id).toBeNull()
-    expect(refundRows[0].amount).toBe(10000)
+    const { rows: vendorOrderTotals } = await dbClient.query(
+      "SELECT total_amount FROM vendor_order WHERE id = $1",
+      [vendorOrderId]
+    )
+    expect(refundRows[0].amount).toBe(vendorOrderTotals[0].total_amount)
+    expect(refundRows[0].stripe_refund_id).toBeNull()
+    expect(refundRows[0].status).toBe("pending")
   })
 
-  test("cancellation is rejected once the seller has started preparing", async () => {
+  test("cancellation remains available while the seller is preparing before courier pickup", async () => {
     const seller = await provisionSeller("cancel-cutoff")
     const product = await createApprovedProduct(seller.token)
     const customer = await createCustomer()
@@ -450,58 +474,29 @@ describe("Seller finance: commission ledger, payouts, returns, refunds, disputes
     const cancel = await post(`/store/vendor-orders/${vendorOrderId}/cancel`, {}, {
       token: customer.token,
     })
-    expect(cancel.status).toBe(422)
+    expect(cancel.status).toBe(200)
+    expect(cancel.data.status).toBe("cancelled")
   })
 
-  test("a Stripe dispute freezes the ledger entry and a won dispute releases it", async () => {
-    const seller = await provisionSeller("dispute-flow")
+  test("a verified manual Telebirr payment stores no customer Stripe payment intent", async () => {
+    const seller = await provisionSeller("manual-payment")
     const product = await createApprovedProduct(seller.token)
     const customer = await createCustomer()
 
-    const { orderId, vendorOrderId } = await checkoutOneVendorOrder(
+    const { orderId } = await checkoutOneVendorOrder(
       seller.token,
       customer.token,
       product.variantId
     )
     const { rows: orderRows } = await dbClient.query(
-      "SELECT stripe_payment_intent_id FROM marketplace_order WHERE id = $1",
+      "SELECT payment_method, payment_status, stripe_payment_intent_id FROM marketplace_order WHERE id = $1",
       [orderId]
     )
-    const paymentIntentId = orderRows[0].stripe_payment_intent_id as string
-
-    const disputeId = `dp_test_${suffix}_${Math.random().toString(36).slice(2, 8)}`
-    await postWebhook(
-      {
-        id: `evt_${suffix}_${Math.random()}`,
-        type: "charge.dispute.created",
-        data: {
-          object: { id: disputeId, payment_intent: paymentIntentId, amount: 8500, reason: "fraudulent" },
-        },
-      },
-      "test-signature"
-    )
-
-    const balanceDisputed = await get("/seller/finance/balance", { token: seller.token })
-    expect(balanceDisputed.data.balance.disputed).toBe(8500)
-    expect(balanceDisputed.data.balance.pending).toBe(0)
-
-    const disputesList = await get("/admin/finance/disputes", { token: adminToken })
-    expect(disputesList.data.disputes.some((d: { stripe_dispute_id: string }) => d.stripe_dispute_id === disputeId)).toBe(
-      true
-    )
-
-    await postWebhook(
-      {
-        id: `evt_${suffix}_${Math.random()}`,
-        type: "charge.dispute.closed",
-        data: { object: { id: disputeId, status: "won" } },
-      },
-      "test-signature"
-    )
-
-    const balanceResolved = await get("/seller/finance/balance", { token: seller.token })
-    expect(balanceResolved.data.balance.disputed).toBe(0)
-    expect(balanceResolved.data.balance.pending).toBe(8500)
+    expect(orderRows[0]).toMatchObject({
+      payment_method: "manual_telebirr",
+      payment_status: "succeeded",
+      stripe_payment_intent_id: null,
+    })
   })
 
   test("a seller cannot see another seller's balance, payouts, or return requests", async () => {
