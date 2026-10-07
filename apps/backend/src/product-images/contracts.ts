@@ -17,7 +17,7 @@ export const validationSchema = z.object({
 })
 export const generationSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("pending"), jobId: z.string().min(1).max(200) }),
-  z.object({ status: z.literal("succeeded"), jobId: z.string().min(1).max(200), imageUrl: z.string().url().refine((url) => url.startsWith("https://")) }),
+  z.object({ status: z.literal("succeeded"), jobId: z.string().min(1).max(200), imageData: z.string().regex(/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/).max(30_000_000) }),
   z.object({ status: z.literal("failed"), jobId: z.string().min(1).max(200) }),
 ])
 export type ImageWorkflow = {
@@ -25,6 +25,7 @@ export type ImageWorkflow = {
   status: "validating" | "needs_correction" | "admin_review" | "queued" | "generating" | "review" | "approved" | "rejected" | "failed";
   validation: z.infer<typeof validationSchema> | null;
   jobId?: string; imageUrl?: string; sellerApproved?: boolean;
+  providerSubmissionStartedAt?: string;
   regenerationCount: number; createdAt: string; updatedAt: string;
   error?: "provider_unavailable" | "provider_error" | "generation_failed" | "generation_timeout";
 }

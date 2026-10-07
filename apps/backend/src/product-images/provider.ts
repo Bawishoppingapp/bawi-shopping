@@ -9,33 +9,66 @@ export interface ProductImageGenerationProvider {
   getGenerationStatus(jobId: string): Promise<z.infer<typeof generationSchema>>
 }
 
-/** Server-only gateway contract; a vendor adapter must implement this protocol.
- * No default/mock production vendor. Credentials and licensed profile are all required.
- */
+const FASHN_API = "https://api.fashn.ai/v1"
+
+/** FASHN's native API adapter. The key and licensed identity reference stay server-side. */
 export function imageProvider(): ProductImageGenerationProvider | null {
-  const endpoint = process.env.BAWI_IMAGE_PROVIDER_URL
   const token = process.env.BAWI_IMAGE_PROVIDER_KEY
-  if (!endpoint || !token || !process.env.BAWI_IMAGE_MODEL_PROFILE) return null
-  let base: URL
-  try { base = new URL(endpoint) } catch { return null }
-  if (base.protocol !== "https:" || base.username || base.password || base.search || base.hash) return null
-  async function request(path: string, body?: unknown, key?: string) {
-    const response = await fetch(`${base.href.replace(/\/$/, "")}${path}`, {
-      method: body ? "POST" : "GET", redirect: "error", signal: AbortSignal.timeout(20000),
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(key ? { "Idempotency-Key": key } : {}) },
+  const modelProfile = process.env.BAWI_IMAGE_MODEL_PROFILE
+  const faceReference = process.env.BAWI_IMAGE_FACE_REFERENCE_URL
+  if (!token || !modelProfile || !faceReference) return null
+  try {
+    const ref = new URL(faceReference)
+    if (ref.protocol !== "https:" || ref.username || ref.password || ref.search || ref.hash) return null
+  } catch { return null }
+
+  async function request(path: string, method: "POST" | "GET", body?: unknown) {
+    const response = await fetch(`${FASHN_API}${path}`, {
+      method, redirect: "error", signal: AbortSignal.timeout(20000),
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
     if (!response.ok) throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Image provider request failed")
     return response.json()
   }
   return {
-    name: base.origin,
-    async validateSourceImages(sources, key) {
-      return validationSchema.parse(await request("/validate", { sources, minimumResolution: 1024, checks: ["full_garment", "single_product", "straight_on", "neutral_background", "even_lighting", "true_color", "no_screenshot", "no_watermark_text_border", "no_obstruction", "minimal_folds"] }, `${key}:validate`))
+    name: "fashn:product-to-model",
+    async validateSourceImages() {
+      // FASHN has no source-photo compliance endpoint. Require a human check
+      // rather than claiming an automated approval we cannot substantiate.
+      return validationSchema.parse({ status: "ADMIN_REVIEW", reasons: ["Bawi review required: verify both original photos meet source-photo requirements before generation"] })
     },
     async generateStandardizedModelImage(sources, modelProfile, key) {
-      return generationSchema.parse(await request("/generations", { sources, modelProfile, count: 1, style: "Bawi: consistent neutral background, crop, lighting and composition; preserve garment color, cut, pattern, neckline, sleeves, fastenings, length, texture and silhouette" }, key))
+      if (modelProfile !== process.env.BAWI_IMAGE_MODEL_PROFILE) throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Model profile changed")
+      const result = await request("/run", "POST", {
+        model_name: "product-to-model",
+        inputs: {
+          product_image: sources.front,
+          face_reference: faceReference,
+          face_reference_mode: "match_reference",
+          prompt: "Bawi fashion catalog. Full-length single model, neutral studio background, soft even light, centered editorial composition. Preserve the garment exactly: its color, cut, print, neckline, sleeves, fastenings, length, fabric texture and silhouette. Do not add accessories or alter the garment.",
+          aspect_ratio: "3:4",
+          resolution: "1k",
+          generation_mode: "fast",
+          num_images: 1,
+          output_format: "png",
+          return_base64: true,
+        },
+      })
+      if (!result || typeof result.id !== "string") throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Image provider response was invalid")
+      return generationSchema.parse({ status: "pending", jobId: result.id })
     },
-    async getGenerationStatus(jobId) { return generationSchema.parse(await request(`/generations/${encodeURIComponent(jobId)}`)) },
+    async getGenerationStatus(jobId) {
+      const result = await request(`/status/${encodeURIComponent(jobId)}`, "GET")
+      if (result.status === "starting" || result.status === "in_queue" || result.status === "processing") {
+        return generationSchema.parse({ status: "pending", jobId })
+      }
+      if (result.status === "failed") return generationSchema.parse({ status: "failed", jobId })
+      const output = Array.isArray(result.output) ? result.output[0] : null
+      if (result.status !== "completed" || typeof output !== "string" || !output.startsWith("data:image/png;base64,")) {
+        throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Image provider result was invalid")
+      }
+      return generationSchema.parse({ status: "succeeded", jobId, imageData: output })
+    },
   }
 }

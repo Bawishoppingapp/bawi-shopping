@@ -45,57 +45,72 @@ pending reuse the current job. Retry uses the SAME generation idempotency key, e
 if a provider timeout happened after it accepted the request. Explicit regeneration
 uses a new key and requires a human action; seller attempts are capped at three
 regenerations/corrections per listing, after which admin assistance is required.
-External errors are reduced to safe codes. Jobs time out after 24 hours; explicit
-retry restarts the local timeout without changing the provider idempotency key.
+External errors are reduced to safe codes. Jobs time out after 24 hours. A known
+provider job can be safely polled again; a submission with no saved provider job ID
+must be reconciled before it can be retried or regenerated.
+
+## Selected provider: FASHN Product to Model
+
+The backend now calls FASHN's native `POST /v1/run` and `GET /v1/status/{id}` API
+directly. It requests one 1k PNG using the `product-to-model` endpoint, sends the
+front source photo and a configured licensed face-reference asset, then polls the
+provider job. A successful base64 result is immediately uploaded to Bawi's Medusa
+file provider; only that durable Bawi URL is stored and shown for review. The vendor's
+temporary output URL is never published or saved.
+
+FASHN lists Product to Model as Preview. It has no API for automatically checking
+source garment completeness, image quality, watermarks, or product compliance, so
+the adapter sends every source submission to Bawi admin review before any generation
+credit is used. Admins must inspect both originals against the source-photo checklist
+above. This is an explicit manual gate, not a fake automated verdict. FASHN API calls
+do not document idempotency support; the worker records a submission marker before
+the call and blocks retry/regeneration if a request may have been accepted but its job
+ID was not saved. An admin must reconcile that case in the FASHN dashboard before
+clearing/restarting it.
 
 ## Required external setup (feature stays unavailable until configured)
 
-1. Choose a vendor and deploy a server-side adapter implementing the gateway below.
-   This repository supplies the real HTTP boundary, not a vendor account, a trained
-   model, or a simulated production result. No selected vendor is assumed.
-2. Supply a commercially licensed Bawi model profile and confirm its rights outside
-   the app. The adapter must resolve this profile to the authorized reference.
-3. Set these BACKEND-ONLY environment variables (never `EXPO_PUBLIC_*`):
-   - `BAWI_IMAGE_PROVIDER_URL`: HTTPS adapter base URL, no credentials/query/hash.
-   - `BAWI_IMAGE_PROVIDER_KEY`: adapter bearer credential.
-   - `BAWI_IMAGE_MODEL_PROFILE`: licensed profile ID.
-4. Run `medusa db:migrate` to apply `Migration20261006000000`, deploy the backend
-   scheduled worker, and use the existing Redis locking provider for multiple
-   backend instances. Configure outbound access only to the approved adapter.
-5. Test the real vendor with approved garments, corrections, uncertain cases,
-   mismatches, provider timeouts, permanent storage and billing before enabling it.
+1. A Bawi account owner must review FASHN's current API and business terms, data
+   processing terms, and Preview-stage stability, and select an API plan. FASHN says
+   credits must be purchased before an API key can be created. No account, purchase,
+   terms acceptance, or key was created by this code change.
+2. Choose a model-reference image owned by Bawi or licensed for this commercial
+   use, obtain any required model consent/release, and confirm rights to send it to
+   FASHN. FASHN permits commercial use subject to the selected plan and rights to all
+   uploaded content; it does not guarantee that outputs are unique or independently
+   protected by IP. The operator must confirm these facts; the application cannot
+   infer licensing from an environment variable.
+3. Add the following as backend deployment secrets/configuration only. Never use
+   `EXPO_PUBLIC_*`, mobile app config, or browser-visible variables:
+   - `BAWI_IMAGE_PROVIDER_KEY`: FASHN API key.
+   - `BAWI_IMAGE_MODEL_PROFILE`: Bawi's internal ID for the approved commercial model.
+   - `BAWI_IMAGE_FACE_REFERENCE_URL`: stable HTTPS URL to its authorized reference;
+     no credentials, query string, or fragment. Keep the asset access-controlled and
+     make it fetchable by FASHN without exposing unrelated seller/customer data.
+4. Apply `Migration20261006000000` to the target database, deploy the backend release
+   (including the `bawi-product-images` every-minute scheduled job), and verify the
+   configured shared Redis locking provider for multiple instances. The worker is
+   part of the backend deployment; it is not a separate public endpoint.
+5. Run a controlled real-account review with approved garments, invalid/corrected
+   photos, ambiguous cases, mismatch rejection, generated image retention, billing,
+   and mobile/web disclosure before enabling sellers at scale.
 
-Without all configuration, requests fail closed and the UI explains unavailability;
-sellers can continue normal original-photo product submission. No credentials or
-provider setup were added to production by this code change.
+Until all three configuration values exist, generation fails closed and sellers can
+continue with original photos and product submission. Test-only providers exist in
+Jest; no test provider or simulated image is available in production.
 
-## Adapter protocol
+## Provider contract details
 
-All requests use `Authorization: Bearer <server-key>` and a 20-second HTTP timeout;
-redirects are refused. Return JSON. Long-running work must return promptly as a job.
+All requests use `Authorization: Bearer <server-key>`, a 20-second timeout and
+redirect refusal. FASHN's status endpoint reports `starting`, `in_queue`, `processing`,
+`completed`, or `failed`. The adapter requests `return_base64: true` so the result can
+be moved immediately into Bawi storage instead of relying on FASHN's three-day CDN
+URL expiry. FASHN does not document idempotency for `/v1/run`; therefore ambiguous
+submissions are not automatically repeated.
 
-- `POST /validate`, `Idempotency-Key: <workflow-id>:validate`:
-  body `{ sources: {front, back, detail?, attributes}, minimumResolution: 1024,
-  checks: [...] }`.
-  Response `{status: "APPROVED" | "NEEDS_CORRECTION" | "ADMIN_REVIEW", reasons: string[]}`.
-  Validation must fetch and inspect the originals; never trust seller declarations
-  as proof of image quality. Treat ambiguous checks as ADMIN_REVIEW.
-- `POST /generations`, `Idempotency-Key: <workflow-id>`:
-  body `{sources, modelProfile, count: 1, style}`. Preserve garment color/cut/print,
-  neckline/sleeves/fastenings/length/fabric/silhouette; use the consistent Bawi crop,
-  background, light and composition. Atomically deduplicate by idempotency key and
-  retain results for retries. Repeated requests MUST NOT spend credits twice.
-- `GET /generations/<encoded-job-id>`:
-  return the same generation result shape without creating work.
-- Generation result: `{status: "pending", jobId}`, `{status: "failed", jobId}`, or
-  `{status: "succeeded", jobId, imageUrl}`. `imageUrl` must be a durable HTTPS image
-  stored separately from originals in approved storage, not an expiring vendor URL.
-  Never return API credentials in URLs/reasons. Set retention/access terms with the
-  vendor; do not transfer unrelated seller/customer data.
-
-The provider interface can be replaced in `src/product-images/provider.ts` without
-changing screens, moderation or jobs. Track provider billing by the persisted
-workflow/job IDs and audit records; no dashboard cost estimates are fabricated.
+The provider can be replaced in `src/product-images/provider.ts` without changing
+screens, moderation, or scheduled jobs. A replacement should add actual server-side
+source analysis and documented idempotent submission before automating those steps.
 
 ## Verification and release boundaries
 

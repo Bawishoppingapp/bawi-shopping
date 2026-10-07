@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { Modules, MedusaError } from "@medusajs/framework/utils"
+import { uploadFilesWorkflow } from "@medusajs/medusa/core-flows"
 import { PRODUCT_LISTING_MODULE } from "../modules/product-listing"
 import type ProductListingModuleService from "../modules/product-listing/service"
 import { AUDIT_LOG_MODULE } from "../modules/audit-log"
@@ -21,6 +22,7 @@ export async function imageAction(container: MedusaContainer, id: string, actor:
       if (!imageProvider()) return conflict("AI image generation is not configured")
       if (state && pending(state)) return state // Repeated taps cannot spend twice.
       if (action === "regenerate" && (!state || !["review", "rejected", "failed"].includes(state.status))) return conflict("Review the current image first")
+      if (action === "regenerate" && state?.providerSubmissionStartedAt && !state.jobId) return conflict("Reconcile the provider job before regenerating to avoid duplicate charges")
       if (action === "request" && state && !["needs_correction", "rejected", "failed"].includes(state.status)) return conflict("Review the current image first")
       const parsed = sourceSchema.safeParse(action === "regenerate" ? state?.sources : input)
       if (!parsed.success) throw new MedusaError(MedusaError.Types.INVALID_DATA, "Choose distinct front/back photos and complete all garment attributes")
@@ -34,6 +36,7 @@ export async function imageAction(container: MedusaContainer, id: string, actor:
       if (!state) return conflict("Request an image first")
       if (action === "retry") {
         if (state.status !== "failed") return conflict("Only failed jobs can be retried")
+        if (state.providerSubmissionStartedAt && !state.jobId) return conflict("Reconcile the provider job before retrying to avoid duplicate charges")
         if (!imageProvider()) return conflict("AI image generation is not configured")
         state.status = state.validation?.status === "APPROVED" ? "queued" : "validating"
         state.createdAt = new Date().toISOString()
@@ -82,9 +85,26 @@ export async function processImage(container: MedusaContainer, id: string) {
         state.validation = await provider.validateSourceImages(state.sources, state.id)
         state.status = state.validation.status === "APPROVED" ? "queued" : state.validation.status === "NEEDS_CORRECTION" ? "needs_correction" : "admin_review"
       } else {
+        if (!state.jobId && state.providerSubmissionStartedAt) {
+          // FASHN does not document request idempotency. A timed-out submission
+          // may have been accepted, so fail closed rather than spend twice.
+          state.status = "failed"; state.error = "provider_error"
+          state.updatedAt = new Date().toISOString()
+          await listings.updateProductListings({ id, ai_image_workflow: state, ai_image_pending: false })
+          return
+        }
+        if (!state.jobId) {
+          state.providerSubmissionStartedAt = new Date().toISOString()
+          await listings.updateProductListings({ id, ai_image_workflow: state, ai_image_pending: true })
+        }
         const result = state.jobId ? await provider.getGenerationStatus(state.jobId) : await provider.generateStandardizedModelImage(state.sources, state.modelProfile, state.id)
         state.jobId = result.jobId
-        if (result.status === "succeeded") { state.status = "review"; state.imageUrl = result.imageUrl }
+        if (result.status === "succeeded") {
+          const [header, content] = result.imageData.split(",", 2)
+          const { result: uploaded } = await uploadFilesWorkflow(container).run({ input: { files: [{ filename: `bawi-ai-${state.id}.png`, mimeType: header.slice(5, header.indexOf(";")), content, access: "public" as const }] } })
+          if (!uploaded[0]?.url || !uploaded[0].url.startsWith("https://")) throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Generated image storage unavailable")
+          state.status = "review"; state.imageUrl = uploaded[0].url
+        }
         else if (result.status === "failed") { state.status = "failed"; state.error = "generation_failed" }
         else state.status = "generating"
       }

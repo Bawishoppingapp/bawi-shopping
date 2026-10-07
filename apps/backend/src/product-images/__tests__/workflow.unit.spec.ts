@@ -6,12 +6,13 @@ import { PRODUCT_LISTING_MODULE } from "../../modules/product-listing"
 import { AUDIT_LOG_MODULE } from "../../modules/audit-log"
 
 jest.mock("../provider", () => ({ imageProvider: jest.fn() }))
+jest.mock("@medusajs/medusa/core-flows", () => ({ uploadFilesWorkflow: jest.fn(() => ({ run: async () => ({ result: [{ url: "https://stored.example/hero.png" }] }) })) }))
 const sources = { front: "https://images.example/front.jpg", back: "https://images.example/back.jpg", attributes: { category: "dress", color: "red", material: "cotton", pattern: "plain", sleeves: "short", neckline: "round", length: "midi", fit: "regular", sizes: "S–L" } }
 const seller = { type: "seller_user" as const, id: "seller-user", vendorId: "vendor-1" }
 const admin = { type: "user" as const, id: "admin" }
 function setup() {
   let listing: Record<string, any> = { id: "listing-1", vendor_id: "vendor-1", product_id: "product-1", ai_image_workflow: null }
-  const provider = { name: "test-provider", validateSourceImages: jest.fn().mockResolvedValue({ status: "APPROVED", reasons: [] }), generateStandardizedModelImage: jest.fn().mockResolvedValue({ status: "pending", jobId: "job-1" }), getGenerationStatus: jest.fn().mockResolvedValue({ status: "succeeded", jobId: "job-1", imageUrl: "https://images.example/hero.jpg" }) }
+  const provider = { name: "test-provider", validateSourceImages: jest.fn().mockResolvedValue({ status: "APPROVED", reasons: [] }), generateStandardizedModelImage: jest.fn().mockResolvedValue({ status: "pending", jobId: "job-1" }), getGenerationStatus: jest.fn().mockResolvedValue({ status: "succeeded", jobId: "job-1", imageData: "data:image/png;base64,aGVsbG8=" }) }
   ;(imageProvider as jest.Mock).mockReturnValue(provider)
   const updateProducts = jest.fn()
   const audit = { record: jest.fn().mockResolvedValue({}) }
@@ -80,7 +81,7 @@ describe("product image workflow", () => {
     await imageAction(container, "listing-1", seller, "mismatch", "Wrong neckline")
     expect(get().ai_preview_status).not.toBe("approved")
   })
-  it("retries provider failures with the same idempotency key, while explicit regeneration creates a new job", async () => {
+  it("blocks retry after an ambiguous provider submission to prevent duplicate charges", async () => {
     const { container, provider, get } = setup()
     await imageAction(container, "listing-1", seller, "request", sources)
     await processImage(container, "listing-1")
@@ -89,14 +90,11 @@ describe("product image workflow", () => {
     const id = get().ai_image_workflow.id
     expect(get().ai_image_workflow.error).toBe("provider_error")
     expect(JSON.stringify(get())).not.toContain("private provider details")
-    await imageAction(container, "listing-1", seller, "retry")
+    expect(provider.generateStandardizedModelImage.mock.calls.map((c) => c[2])).toEqual([id])
+    await expect(imageAction(container, "listing-1", seller, "retry")).rejects.toThrow("Reconcile the provider job")
+    await expect(imageAction(container, "listing-1", seller, "regenerate")).rejects.toThrow("Reconcile the provider job")
     await processImage(container, "listing-1")
-    expect(provider.generateStandardizedModelImage.mock.calls.map((c) => c[2])).toEqual([id, id])
-    await processImage(container, "listing-1")
-    await imageAction(container, "listing-1", seller, "regenerate")
-    expect(get().ai_image_workflow.id).not.toBe(id)
-    expect(get().ai_image_workflow.regenerationCount).toBe(1)
-    expect(get().ai_preview_url).toBeNull()
+    expect(provider.generateStandardizedModelImage).toHaveBeenCalledTimes(1)
   })
   it("records terminal generation failure without blocking the product", async () => {
     const { container, provider, get } = setup()
