@@ -5,6 +5,7 @@ const os = require("os")
 
 const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const BUILD_ROOT = path.join(BACKEND_ROOT, ".medusa/server")
+const MEDUSA_CLI = require.resolve("@medusajs/cli/cli.js")
 const PORT = 9199
 const TEST_ADMIN_EMAIL = "integration-admin@example.test"
 const TEST_ADMIN_PASSWORD = "correct-horse-battery-admin"
@@ -64,7 +65,7 @@ function startTestServer() {
 
   return new Promise((resolve, reject) => {
     process.stdout.write("[test-server] spawning Medusa production server\n")
-    const child = spawn("npx", ["medusa", "start", "--port", String(PORT)], {
+    const child = spawn(process.execPath, [MEDUSA_CLI, "start", "--port", String(PORT)], {
       // `medusa build` writes the standalone production app here. Medusa's
       // production server must be started from this directory so its compiled
       // config and `public/admin/index.html` resolve relative to the build.
@@ -78,7 +79,7 @@ function startTestServer() {
         // Jest and this production server coexist on the same small CI
         // runner. Give each a firm heap ceiling so the kernel never has to
         // choose one to kill under aggregate memory pressure.
-        NODE_OPTIONS: "--max-old-space-size=256",
+        NODE_OPTIONS: "--max-old-space-size=224",
         // Medusa 2.19 no longer accepts the yargs-style `--no-color`
         // switch. Disable terminal escape sequences through the standard
         // environment variables instead so the production server command
