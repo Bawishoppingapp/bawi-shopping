@@ -6,7 +6,7 @@ const os = require("os")
 const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const BUILD_ROOT = path.join(BACKEND_ROOT, ".medusa/server")
 const PORT = 9199
-const MAX_STARTUP_OUTPUT_BYTES = 256 * 1024
+const MAX_CAPTURED_OUTPUT_BYTES = 256 * 1024
 // The child's own stdout/stderr is only ever buffered in memory for the
 // "did it start" check below, never surfaced anywhere - if it crashes
 // mid-suite the real cause is otherwise invisible. Persisting a copy here
@@ -72,6 +72,10 @@ function startTestServer() {
         NODE_ENV: "test",
         ENABLE_TEST_SUPPORT_ROUTES: "true",
         DISABLE_MEDUSA_ADMIN_UI: "true",
+        // Jest and this production server coexist on the same small CI
+        // runner. Give each a firm heap ceiling so the kernel never has to
+        // choose one to kill under aggregate memory pressure.
+        NODE_OPTIONS: "--max-old-space-size=1024",
         // Medusa 2.19 no longer accepts the yargs-style `--no-color`
         // switch. Disable terminal escape sequences through the standard
         // environment variables instead so the production server command
@@ -91,18 +95,24 @@ function startTestServer() {
 
     let settled = false
     let output = ""
+    let persistedOutputBytes = 0
     const logStream = fs.createWriteStream(SERVER_LOG_PATH, { flags: "a" })
     logStream.write(`\n--- test-server started at ${new Date().toISOString()} ---\n`)
 
     const onData = (data) => {
       const chunk = data.toString()
-      logStream.write(chunk)
+      const remainingLogBytes = MAX_CAPTURED_OUTPUT_BYTES - persistedOutputBytes
+      if (remainingLogBytes > 0) {
+        const capturedChunk = Buffer.from(chunk).subarray(0, remainingLogBytes)
+        persistedOutputBytes += capturedChunk.byteLength
+        logStream.write(capturedChunk)
+      }
 
       // Only retain enough output to diagnose startup failures. Keeping every
       // request/query log for the lifetime of a large HTTP suite grows this
       // string without bound and can make the CI kernel kill Jest for OOM.
       if (settled) return
-      output = `${output}${chunk}`.slice(-MAX_STARTUP_OUTPUT_BYTES)
+      output = `${output}${chunk}`.slice(-MAX_CAPTURED_OUTPUT_BYTES)
       if (/Server is ready/i.test(output)) {
         settled = true
         resolve(child)
