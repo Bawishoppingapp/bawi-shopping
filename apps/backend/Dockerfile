@@ -64,7 +64,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # modules same as it does from apps/backend directly.
 # Migrations are NOT run automatically on container start (see
 # docs/DEPLOYMENT.md/docs/DATABASE.md §6: migrations run as their own
-# explicit step, staging before production, never implicitly on boot) -
-# and still run from apps/backend (via Shell or bootstrap-staging.sh),
-# not from here, since they use ts-node against the original src/ tree.
-CMD ["sh", "-c", "cd .medusa/server && npm run start"]
+# explicit step, staging before production, never implicitly on boot).
+# The product repair is deliberately different: it is idempotent data
+# reconciliation, so normal deployments run it from apps/backend before
+# entering the compiled server directory. This also repairs databases that
+# completed the one-time bootstrap before the repair existed.
+CMD ["sh", "-c", "npx medusa exec ./src/scripts/repair-initial-products.ts && cd .medusa/server && exec npm run start"]
