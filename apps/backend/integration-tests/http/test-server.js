@@ -78,7 +78,7 @@ function startTestServer() {
         // Jest and this production server coexist on the same small CI
         // runner. Give each a firm heap ceiling so the kernel never has to
         // choose one to kill under aggregate memory pressure.
-        NODE_OPTIONS: "--max-old-space-size=384",
+        NODE_OPTIONS: "--max-old-space-size=192",
         // Medusa 2.19 no longer accepts the yargs-style `--no-color`
         // switch. Disable terminal escape sequences through the standard
         // environment variables instead so the production server command
@@ -101,15 +101,33 @@ function startTestServer() {
     let persistedOutputBytes = 0
     const memoryMonitor = setInterval(() => {
       const parentRssMb = Math.round(process.memoryUsage().rss / 1024 / 1024)
+      let serverRssMb = "unknown"
+      try {
+        const rssValues = execSync(`ps -o rss= -g ${child.pid}`, { encoding: "utf8" })
+          .trim()
+          .split(/\s+/)
+          .map(Number)
+          .filter(Number.isFinite)
+        serverRssMb = String(Math.round(rssValues.reduce((total, rss) => total + rss, 0) / 1024))
+      } catch {
+        // The process group may be between exec and startup when sampled.
+      }
       let cgroupMb = "unknown"
       try {
         const bytes = Number(fs.readFileSync("/sys/fs/cgroup/memory.current", "utf8").trim())
         cgroupMb = String(Math.round(bytes / 1024 / 1024))
       } catch {
-        // macOS and older Linux hosts do not expose cgroup v2 memory.current.
+        try {
+          const bytes = Number(
+            fs.readFileSync("/sys/fs/cgroup/memory/memory.usage_in_bytes", "utf8").trim()
+          )
+          cgroupMb = String(Math.round(bytes / 1024 / 1024))
+        } catch {
+          // macOS and hosts without a per-job memory cgroup expose neither path.
+        }
       }
       process.stdout.write(
-        `[test-server] waiting pid=${child.pid} jest-rss=${parentRssMb}MB cgroup=${cgroupMb}MB`
+        `[test-server] waiting pid=${child.pid} jest-rss=${parentRssMb}MB server-rss=${serverRssMb}MB cgroup=${cgroupMb}MB`
           + "\n"
       )
     }, 3000)
