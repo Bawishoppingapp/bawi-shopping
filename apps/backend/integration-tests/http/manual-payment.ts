@@ -59,9 +59,12 @@ export async function submitManualPaymentProof({
   publishableApiKey,
   reference = `TB-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
 }: Omit<ManualPaymentOptions, "adminToken">) {
+  // Match the API's canonical form so an ambiguous first response can be
+  // reconciled against the value persisted by the server.
+  const normalizedReference = reference.trim().toUpperCase()
   const submit = () => {
     const form = new FormData()
-    form.set("transaction_reference", reference)
+    form.set("transaction_reference", normalizedReference)
     form.set("file", new Blob(["integration-test-receipt"], { type: "image/png" }), "receipt.png")
     return fetch(`${baseUrl}/store/orders/${orderId}/payment-proof`, {
       method: "POST",
@@ -84,10 +87,14 @@ export async function submitManualPaymentProof({
       publishableApiKey,
     }).catch(() => null)
     if (
-      order?.payment_reference === reference &&
+      order?.payment_reference === normalizedReference &&
       ["proof_submitted", "under_review", "succeeded"].includes(order.payment_status ?? "")
     ) {
-      return { status: 201, data: { order_id: orderId, payment_status: order.payment_status }, reference }
+      return {
+        status: 201,
+        data: { order_id: orderId, payment_status: order.payment_status },
+        reference: normalizedReference,
+      }
     }
     retriedAfterReset = true
     try {
@@ -100,7 +107,7 @@ export async function submitManualPaymentProof({
         publishableApiKey,
       }).catch(() => null)
       if (
-        retriedOrder?.payment_reference === reference &&
+        retriedOrder?.payment_reference === normalizedReference &&
         ["proof_submitted", "under_review", "succeeded"].includes(
           retriedOrder.payment_status ?? ""
         )
@@ -108,7 +115,7 @@ export async function submitManualPaymentProof({
         return {
           status: 201,
           data: { order_id: orderId, payment_status: retriedOrder.payment_status },
-          reference,
+          reference: normalizedReference,
         }
       }
       throw firstError
@@ -123,16 +130,20 @@ export async function submitManualPaymentProof({
       publishableApiKey,
     }).catch(() => null)
     if (
-      order?.payment_reference === reference &&
+      order?.payment_reference === normalizedReference &&
       ["proof_submitted", "under_review", "succeeded"].includes(order.payment_status ?? "")
     ) {
-      return { status: 201, data: { order_id: orderId, payment_status: order.payment_status }, reference }
+      return {
+        status: 201,
+        data: { order_id: orderId, payment_status: order.payment_status },
+        reference: normalizedReference,
+      }
     }
   }
   if (response.status !== 201) {
     throw new Error(`Payment proof submission failed (${response.status}): ${JSON.stringify(data)}`)
   }
-  return { status: response.status, data, reference }
+  return { status: response.status, data, reference: normalizedReference }
 }
 
 export async function approveManualPayment({
