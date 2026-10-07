@@ -1,12 +1,15 @@
-import { execFileSync } from "node:child_process"
-import path from "node:path"
 import { Client } from "pg"
-import { startTestServer, stopTestServer, PORT } from "./test-server"
+import {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+} from "./test-server"
 
 jest.setTimeout(120 * 1000)
 
 const BASE_URL = `http://localhost:${PORT}`
-const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATABASE_URL =
   process.env.DATABASE_URL ?? "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
 
@@ -53,14 +56,6 @@ async function withForcedFailure(
   }
 }
 
-function createAdmin(email: string, password: string) {
-  execFileSync("npx", ["medusa", "user", "-e", email, "-p", password], {
-    cwd: BACKEND_ROOT,
-    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-    stdio: "pipe",
-  })
-}
-
 function validApplicationPayload(overrides: Record<string, unknown> = {}) {
   return {
     legal_business_name: "Acme Denim LLC",
@@ -93,19 +88,16 @@ describe("Seller application, admin review, and approval", () => {
   let activatedSellerToken: string
 
   const suffix = Date.now()
-  const adminEmail = `admin-${suffix}@example.test`
-  const adminPassword = "correct-horse-battery-admin"
 
   beforeAll(async () => {
-    createAdmin(adminEmail, adminPassword)
     serverProcess = await startTestServer()
 
     dbClient = new Client({ connectionString: TEST_DATABASE_URL })
     await dbClient.connect()
 
     const adminLogin = await post("/auth/user/emailpass", {
-      email: adminEmail,
-      password: adminPassword,
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
     })
     adminToken = adminLogin.data.token
 

@@ -1,5 +1,11 @@
 import { Client } from "pg"
-import { startTestServer, stopTestServer, PORT } from "./test-server"
+import {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+} from "./test-server"
 
 jest.setTimeout(180 * 1000)
 
@@ -74,15 +80,6 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
   }
 
   beforeAll(async () => {
-    const { execFileSync } = await import("node:child_process")
-    const path = await import("node:path")
-    const adminEmail = `checkout-admin-${suffix}@example.test`
-    execFileSync("npx", ["medusa", "user", "-e", adminEmail, "-p", "correct-horse-battery-admin"], {
-      cwd: path.resolve(__dirname, "../.."),
-      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-      stdio: "pipe",
-    })
-
     serverProcess = await startTestServer()
 
     dbClient = new Client({ connectionString: TEST_DATABASE_URL })
@@ -100,8 +97,8 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
     publishableApiKey = keyResponse.data.token
 
     const adminLogin = await post("/auth/user/emailpass", {
-      email: adminEmail,
-      password: "correct-horse-battery-admin",
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
     })
     adminToken = adminLogin.data.token
   })

@@ -6,6 +6,8 @@ const os = require("os")
 const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const BUILD_ROOT = path.join(BACKEND_ROOT, ".medusa/server")
 const PORT = 9199
+const TEST_ADMIN_EMAIL = "integration-admin@example.test"
+const TEST_ADMIN_PASSWORD = "correct-horse-battery-admin"
 const MAX_CAPTURED_OUTPUT_BYTES = 256 * 1024
 // The child's own stdout/stderr is only ever buffered in memory for the
 // "did it start" check below, never surfaced anywhere - if it crashes
@@ -172,4 +174,10 @@ function stopTestServer(child) {
   })
 }
 
-module.exports = { startTestServer, stopTestServer, PORT }
+module.exports = {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+}

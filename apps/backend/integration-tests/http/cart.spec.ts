@@ -1,12 +1,15 @@
 import { Client } from "pg"
-import { execFileSync } from "node:child_process"
-import path from "node:path"
-import { startTestServer, stopTestServer, PORT } from "./test-server"
+import {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+} from "./test-server"
 
 jest.setTimeout(180 * 1000)
 
 const BASE_URL = `http://localhost:${PORT}`
-const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
 
 // Medusa's built-in /store/* middleware requires a publishable API key
@@ -64,19 +67,8 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
   let adminToken: string
 
   const suffix = Date.now()
-  const adminEmail = `cart-admin-${suffix}@example.test`
-  const adminPassword = "correct-horse-battery-admin"
 
   beforeAll(async () => {
-    // Provision the suite's single admin before starting Medusa. Spawning the
-    // CLI while Jest and the production server are both resident can exceed a
-    // small CI runner's memory, and creating a new admin for every cart case is
-    // unnecessary because these tests only need an authenticated review token.
-    execFileSync("npx", ["medusa", "user", "-e", adminEmail, "-p", adminPassword], {
-      cwd: BACKEND_ROOT,
-      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-      stdio: "pipe",
-    })
     serverProcess = await startTestServer()
 
     dbClient = new Client({ connectionString: TEST_DATABASE_URL })
@@ -94,8 +86,8 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
     publishableApiKey = keyResponse.data.token
 
     const adminLogin = await post("/auth/user/emailpass", {
-      email: adminEmail,
-      password: adminPassword,
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
     })
     adminToken = adminLogin.data.token
   })

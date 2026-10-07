@@ -1,12 +1,15 @@
-import { execFileSync } from "node:child_process"
-import path from "node:path"
 import { Client } from "pg"
-import { startTestServer, stopTestServer, PORT } from "./test-server"
+import {
+  startTestServer,
+  stopTestServer,
+  PORT,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+} from "./test-server"
 
 jest.setTimeout(120 * 1000)
 
 const BASE_URL = `http://localhost:${PORT}`
-const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATABASE_URL =
   process.env.DATABASE_URL ?? "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
 
@@ -38,14 +41,6 @@ async function putRequest(path: string, body: unknown, token: string) {
   return { status: response.status, data: await response.json() }
 }
 
-function createAdmin(email: string, password: string) {
-  execFileSync("npx", ["medusa", "user", "-e", email, "-p", password], {
-    cwd: BACKEND_ROOT,
-    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-    stdio: "pipe",
-  })
-}
-
 function validProductPayload(overrides: Record<string, unknown> = {}, categoryId: string) {
   return {
     title: `Test Product ${Date.now()}-${Math.random()}`,
@@ -67,11 +62,8 @@ describe("Seller product creation, admin review, and public visibility", () => {
   let categoryId: string
 
   const suffix = Date.now()
-  const adminEmail = `product-admin-${suffix}@example.test`
-  const adminPassword = "correct-horse-battery-admin"
 
   beforeAll(async () => {
-    createAdmin(adminEmail, adminPassword)
     serverProcess = await startTestServer()
 
     dbClient = new Client({ connectionString: TEST_DATABASE_URL })
@@ -86,8 +78,8 @@ describe("Seller product creation, admin review, and public visibility", () => {
     categoryId = rows[0].id
 
     const adminLogin = await post("/auth/user/emailpass", {
-      email: adminEmail,
-      password: adminPassword,
+      email: TEST_ADMIN_EMAIL,
+      password: TEST_ADMIN_PASSWORD,
     })
     adminToken = adminLogin.data.token
 
