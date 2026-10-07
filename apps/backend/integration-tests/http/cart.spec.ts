@@ -1,9 +1,12 @@
 import { Client } from "pg"
+import { execFileSync } from "node:child_process"
+import path from "node:path"
 import { startTestServer, stopTestServer, PORT } from "./test-server"
 
 jest.setTimeout(180 * 1000)
 
 const BASE_URL = `http://localhost:${PORT}`
+const BACKEND_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://bawishopping@127.0.0.1:5544/bawi_shopping_test"
 
 // Medusa's built-in /store/* middleware requires a publishable API key
@@ -58,10 +61,22 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
   let serverProcess: Awaited<ReturnType<typeof startTestServer>>
   let dbClient: Client
   let baseCategoryId: string
+  let adminToken: string
 
   const suffix = Date.now()
+  const adminEmail = `cart-admin-${suffix}@example.test`
+  const adminPassword = "correct-horse-battery-admin"
 
   beforeAll(async () => {
+    // Provision the suite's single admin before starting Medusa. Spawning the
+    // CLI while Jest and the production server are both resident can exceed a
+    // small CI runner's memory, and creating a new admin for every cart case is
+    // unnecessary because these tests only need an authenticated review token.
+    execFileSync("npx", ["medusa", "user", "-e", adminEmail, "-p", adminPassword], {
+      cwd: BACKEND_ROOT,
+      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
+      stdio: "pipe",
+    })
     serverProcess = await startTestServer()
 
     dbClient = new Client({ connectionString: TEST_DATABASE_URL })
@@ -77,6 +92,12 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
 
     const keyResponse = await get("/seller-test-support/publishable-key")
     publishableApiKey = keyResponse.data.token
+
+    const adminLogin = await post("/auth/user/emailpass", {
+      email: adminEmail,
+      password: adminPassword,
+    })
+    adminToken = adminLogin.data.token
   })
 
   afterAll(async () => {
@@ -129,21 +150,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
   }
 
   async function createAdmin() {
-    const { execFileSync } = await import("node:child_process")
-    const path = await import("node:path")
-    const email = `cart-admin-${suffix}-${Math.random().toString(36).slice(2, 8)}@example.test`
-    const password = "correct-horse-battery-admin"
-    execFileSync(
-      "npx",
-      ["medusa", "user", "-e", email, "-p", password],
-      {
-        cwd: path.resolve(__dirname, "../.."),
-        env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-        stdio: "pipe",
-      }
-    )
-    const login = await post("/auth/user/emailpass", { email, password })
-    return login.data.token as string
+    return adminToken
   }
 
   async function createCustomer() {

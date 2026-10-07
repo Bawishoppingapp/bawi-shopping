@@ -71,6 +71,15 @@ describe("Private fulfillment and delivery (real server, real Postgres)", () => 
   }
 
   beforeAll(async () => {
+    const { execFileSync } = await import("node:child_process")
+    const path = await import("node:path")
+    const adminEmail = `fulfillment-admin-${suffix}@example.test`
+    execFileSync("npx", ["medusa", "user", "-e", adminEmail, "-p", "correct-horse-battery-admin"], {
+      cwd: path.resolve(__dirname, "../.."),
+      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
+      stdio: "pipe",
+    })
+
     serverProcess = await startTestServer()
 
     dbClient = new Client({ connectionString: TEST_DATABASE_URL })
@@ -87,14 +96,6 @@ describe("Private fulfillment and delivery (real server, real Postgres)", () => 
     const keyResponse = await get("/seller-test-support/publishable-key")
     publishableApiKey = keyResponse.data.token
 
-    const { execFileSync } = await import("node:child_process")
-    const path = await import("node:path")
-    const adminEmail = `fulfillment-admin-${suffix}@example.test`
-    execFileSync("npx", ["medusa", "user", "-e", adminEmail, "-p", "correct-horse-battery-admin"], {
-      cwd: path.resolve(__dirname, "../.."),
-      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-      stdio: "pipe",
-    })
     const adminLogin = await post("/auth/user/emailpass", {
       email: adminEmail,
       password: "correct-horse-battery-admin",
