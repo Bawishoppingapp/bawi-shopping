@@ -75,6 +75,7 @@ function startTestServer() {
         ...process.env,
         NODE_ENV: "test",
         ENABLE_TEST_SUPPORT_ROUTES: "true",
+        DISABLE_RATE_LIMITING_FOR_TESTS: "true",
         DISABLE_MEDUSA_ADMIN_UI: "true",
         // Jest and this production server coexist on the same small CI
         // runner. Give each a firm heap ceiling so the kernel never has to

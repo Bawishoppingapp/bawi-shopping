@@ -12,6 +12,11 @@ function mockReqRes(ip: string) {
 describe("rateLimit", () => {
   beforeEach(() => {
     resetRateLimiterState()
+    delete process.env.DISABLE_RATE_LIMITING_FOR_TESTS
+  })
+
+  afterEach(() => {
+    delete process.env.DISABLE_RATE_LIMITING_FOR_TESTS
   })
 
   it("allows requests under the limit", () => {
@@ -80,5 +85,17 @@ describe("rateLimit", () => {
     expect(json).toHaveBeenCalledWith({
       message: "Too many requests. Please try again later.",
     })
+  })
+
+  it("can be disabled only for the explicit real-server test environment", () => {
+    process.env.NODE_ENV = "test"
+    process.env.DISABLE_RATE_LIMITING_FOR_TESTS = "true"
+    const middleware = rateLimit({ windowMs: 60_000, max: 0 })
+    const { req, res, next } = mockReqRes("7.7.7.7")
+
+    middleware(req, res, next)
+
+    expect(next).toHaveBeenCalledTimes(1)
+    expect(res.status).not.toHaveBeenCalled()
   })
 })

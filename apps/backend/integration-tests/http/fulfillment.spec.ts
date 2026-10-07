@@ -6,6 +6,7 @@ import {
   TEST_ADMIN_EMAIL,
   TEST_ADMIN_PASSWORD,
 } from "./test-server"
+import { settleManualPayment } from "./manual-payment"
 
 jest.setTimeout(180 * 1000)
 
@@ -41,22 +42,6 @@ const get = (path: string, opts?: { token?: string }) => request("GET", path, op
 const post = (path: string, body?: unknown, opts?: { token?: string }) =>
   request("POST", path, { ...opts, body })
 
-async function postWebhook(body: unknown, signature: string | undefined) {
-  const response = await fetch(`${BASE_URL}/webhooks/stripe`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(signature ? { "Stripe-Signature": signature } : {}),
-    },
-    body: JSON.stringify(body),
-  })
-  return { status: response.status, data: await response.json() }
-}
-
-function paymentIntentIdFromClientSecret(clientSecret: string): string {
-  return clientSecret.replace(/_secret_test$/, "")
-}
-
 describe("Private fulfillment and delivery (real server, real Postgres)", () => {
   let serverProcess: Awaited<ReturnType<typeof startTestServer>>
   let dbClient: Client
@@ -68,12 +53,11 @@ describe("Private fulfillment and delivery (real server, real Postgres)", () => 
   const shippingAddress = {
     first_name: "Ada",
     last_name: "Lovelace",
-    address_1: "123 Main St",
-    city: "Dallas",
-    province: "TX",
-    postal_code: "75201",
-    country_code: "US",
-    phone: "+15555550100",
+    address_1: "123 Bole Road",
+    city: "Addis Ababa",
+    sub_city: "Bole",
+    country_code: "ET",
+    phone: "+251911123456",
   }
 
   beforeAll(async () => {
@@ -170,15 +154,16 @@ describe("Private fulfillment and delivery (real server, real Postgres)", () => 
       { shipping_address: shippingAddress, idempotency_key: `idem-${suffix}-${Math.random()}` },
       { token: customerToken }
     )
-    const paymentIntentId = paymentIntentIdFromClientSecret(checkout.data.client_secret)
-    await postWebhook(
-      {
-        id: `evt_${suffix}_${Math.random()}`,
-        type: "payment_intent.succeeded",
-        data: { object: { id: paymentIntentId } },
-      },
-      "test-signature"
-    )
+    if (checkout.status !== 200) {
+      throw new Error(`Checkout failed (${checkout.status}): ${JSON.stringify(checkout.data)}`)
+    }
+    await settleManualPayment({
+      baseUrl: BASE_URL,
+      orderId: checkout.data.order_id,
+      customerToken,
+      adminToken,
+      publishableApiKey,
+    })
     const orderDetail = await get(`/store/orders/${checkout.data.order_id}`, { token: customerToken })
     return {
       orderId: checkout.data.order_id as string,

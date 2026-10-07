@@ -6,6 +6,11 @@ import {
   TEST_ADMIN_EMAIL,
   TEST_ADMIN_PASSWORD,
 } from "./test-server"
+import {
+  approveManualPayment,
+  settleManualPayment,
+  submitManualPaymentProof,
+} from "./manual-payment"
 
 jest.setTimeout(180 * 1000)
 
@@ -41,25 +46,6 @@ const get = (path: string, opts?: { token?: string }) => request("GET", path, op
 const post = (path: string, body?: unknown, opts?: { token?: string }) =>
   request("POST", path, { ...opts, body })
 
-async function postWebhook(body: unknown, signature: string | undefined) {
-  const response = await fetch(`${BASE_URL}/webhooks/stripe`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(signature ? { "Stripe-Signature": signature } : {}),
-    },
-    body: JSON.stringify(body),
-  })
-  return { status: response.status, data: await response.json() }
-}
-
-/** The fake payment client's client_secret is always `${paymentIntentId}_secret_test`
- * (see src/payments/stripe-payment-client.ts's FakeStripePaymentClient) - extracting
- * the id back out lets tests simulate the webhook Stripe would normally send. */
-function paymentIntentIdFromClientSecret(clientSecret: string): string {
-  return clientSecret.replace(/_secret_test$/, "")
-}
-
 describe("Checkout and multi-vendor order splitting (real server, real Postgres)", () => {
   let serverProcess: Awaited<ReturnType<typeof startTestServer>>
   let dbClient: Client
@@ -71,12 +57,11 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
   const shippingAddress = {
     first_name: "Ada",
     last_name: "Lovelace",
-    address_1: "123 Main St",
-    city: "Dallas",
-    province: "TX",
-    postal_code: "75201",
-    country_code: "US",
-    phone: "+15555550100",
+    address_1: "123 Bole Road",
+    city: "Addis Ababa",
+    sub_city: "Bole",
+    country_code: "ET",
+    phone: "+251911123456",
   }
 
   beforeAll(async () => {
@@ -184,15 +169,17 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
       { token: customer.token }
     )
     expect(checkout.status).toBe(200)
-    expect(checkout.data.client_secret).toBeTruthy()
+    expect(checkout.data.payment_method).toBe("manual_telebirr")
+    expect(checkout.data.payment_recipient_phone).toBeTruthy()
     const orderId = checkout.data.order_id as string
 
-    const paymentIntentId = paymentIntentIdFromClientSecret(checkout.data.client_secret)
-    const webhook = await postWebhook(
-      { id: `evt_${suffix}_multi`, type: "payment_intent.succeeded", data: { object: { id: paymentIntentId } } },
-      "test-signature"
-    )
-    expect(webhook.status).toBe(200)
+    await settleManualPayment({
+      baseUrl: BASE_URL,
+      orderId,
+      customerToken: customer.token,
+      adminToken,
+      publishableApiKey,
+    })
 
     const orderDetail = await get(`/store/orders/${orderId}`, { token: customer.token })
     expect(orderDetail.data.order.status).toBe("paid")
@@ -218,8 +205,8 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
     expect(cart.data.cart.items).toHaveLength(0)
   })
 
-  test("a duplicate payment_intent.succeeded webhook delivery does not create duplicate vendor orders", async () => {
-    const seller = await provisionSeller("checkout-idempotent-webhook")
+  test("a repeated manual-payment approval does not create duplicate vendor orders", async () => {
+    const seller = await provisionSeller("checkout-idempotent-payment")
     const product = await createApprovedProduct(seller.token)
     const customer = await createCustomer()
 
@@ -230,17 +217,19 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
       { token: customer.token }
     )
     const orderId = checkout.data.order_id as string
-    const paymentIntentId = paymentIntentIdFromClientSecret(checkout.data.client_secret)
-    const eventId = `evt_${suffix}_dup`
-
-    await postWebhook(
-      { id: eventId, type: "payment_intent.succeeded", data: { object: { id: paymentIntentId } } },
-      "test-signature"
+    await submitManualPaymentProof({
+      baseUrl: BASE_URL,
+      orderId,
+      customerToken: customer.token,
+      publishableApiKey,
+    })
+    await approveManualPayment({ baseUrl: BASE_URL, orderId, adminToken })
+    const repeatedApproval = await post(
+      `/admin/payments/${orderId}/approve`,
+      undefined,
+      { token: adminToken }
     )
-    await postWebhook(
-      { id: eventId, type: "payment_intent.succeeded", data: { object: { id: paymentIntentId } } },
-      "test-signature"
-    )
+    expect(repeatedApproval.status).toBe(409)
 
     const orderDetail = await get(`/store/orders/${orderId}`, { token: customer.token })
     expect(orderDetail.data.order.vendor_orders).toHaveLength(1)
@@ -297,8 +286,8 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
     expect(asOther.status).toBe(404)
   })
 
-  test("a failed payment releases the inventory reservation and leaves the cart intact", async () => {
-    const seller = await provisionSeller("checkout-payment-failed")
+  test("a rejected manual-payment proof keeps the reservation and cart available for resubmission", async () => {
+    const seller = await provisionSeller("checkout-payment-rejected")
     const product = await createApprovedProduct(seller.token)
     const customer = await createCustomer()
 
@@ -310,17 +299,22 @@ describe("Checkout and multi-vendor order splitting (real server, real Postgres)
     )
     expect(await availableQuantity(product.productCode, product.variantId)).toBe(9)
 
-    const paymentIntentId = paymentIntentIdFromClientSecret(checkout.data.client_secret)
-    await postWebhook(
-      {
-        id: `evt_${suffix}_failed`,
-        type: "payment_intent.payment_failed",
-        data: { object: { id: paymentIntentId } },
-      },
-      "test-signature"
+    const orderId = checkout.data.order_id as string
+    await submitManualPaymentProof({
+      baseUrl: BASE_URL,
+      orderId,
+      customerToken: customer.token,
+      publishableApiKey,
+    })
+    const rejected = await post(
+      `/admin/payments/${orderId}/reject`,
+      { reason: "The receipt could not be verified." },
+      { token: adminToken }
     )
+    expect(rejected.status).toBe(200)
+    expect(rejected.data.payment_status).toBe("rejected")
 
-    expect(await availableQuantity(product.productCode, product.variantId)).toBe(10)
+    expect(await availableQuantity(product.productCode, product.variantId)).toBe(9)
 
     const cart = await get("/store/cart", { token: customer.token })
     expect(cart.data.cart.items).toHaveLength(1)

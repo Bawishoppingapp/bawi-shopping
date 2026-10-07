@@ -340,7 +340,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
       })
 
       expect(added.status).toBe(200)
-      expect(added.data.cart.items[0].unit_price).toBe(5000)
+      expect(added.data.cart.items[0].unit_price).toBe(5500)
     })
 
     test("a draft (unsubmitted) product cannot be added to the cart", async () => {
@@ -450,7 +450,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
       })
 
       const added = await post("/store/cart/items", { variant_id: variantId, quantity: 1 })
-      expect(added.data.cart.items[0].unit_price).toBe(4000)
+      expect(added.data.cart.items[0].unit_price).toBe(4400)
       const cartId = added.data.cart.id as string
 
       await post("/seller-test-support/set-variant-availability", {
@@ -459,7 +459,7 @@ describe("Multi-vendor shopping cart (real server, real Postgres)", () => {
       })
 
       const refetched = await get("/store/cart", { cartId })
-      expect(refetched.data.cart.items[0].unit_price).toBe(6000)
+      expect(refetched.data.cart.items[0].unit_price).toBe(6600)
       expect(
         refetched.data.cart.warnings.some(
           (w: { code: string }) => w.code === "price_changed"

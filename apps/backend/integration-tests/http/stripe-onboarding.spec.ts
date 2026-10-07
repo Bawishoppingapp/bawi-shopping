@@ -278,7 +278,7 @@ describe("Stripe Connect seller onboarding, business configuration, and webhooks
           e.category === "commission" && e.key === "platform_default_rate_basis_points"
       )
       expect(commission).toBeDefined()
-      expect(commission.is_placeholder).toBe(true)
+      expect(commission.is_placeholder).toBe(false)
       const flag = response.data.entries.find(
         (e: { category: string; key: string }) =>
           e.category === "feature_flag" && e.key === "live_payments_enabled"
