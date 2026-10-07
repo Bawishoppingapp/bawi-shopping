@@ -116,66 +116,61 @@ export async function repairInitialProducts(container: MedusaContainer) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const productService = container.resolve(Modules.PRODUCT)
-  const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
-  const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
-
-  const expectedCategoryNames = SEED_PRODUCTS.map((product) => product.category)
-  const categories = await productService.listProductCategories(
-    { name: [...expectedCategoryNames, "Merch"] },
-    { select: ["id", "name"] }
-  )
-  const categoryByName = new Map(categories.map((category) => [category.name, category.id]))
-  const missingCategories = expectedCategoryNames.filter((name) => !categoryByName.has(name))
-  if (missingCategories.length) {
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      `Cannot repair initial products; missing categories: ${missingCategories.join(", ")}`
-    )
-  }
-
-  const [salesChannel] = await salesChannelService.listSalesChannels({
-    name: "Default Sales Channel",
-  })
-  const { data: shippingProfiles } = await query.graph({
-    entity: "shipping_profile",
-    fields: ["id"],
-  })
-  const [preferredStockLocation] = await stockLocationService.listStockLocations({
-    name: "European Warehouse",
-  })
-  const stockLocations = preferredStockLocation
-    ? [preferredStockLocation]
-    : await stockLocationService.listStockLocations({})
-  const shippingProfile = shippingProfiles[0]
-  const stockLocation = stockLocations[0]
-
-  if (!salesChannel || !shippingProfile || !stockLocation) {
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      "Cannot repair initial products; the default sales channel, shipping profile, or stock location is missing"
-    )
-  }
 
   const existingProducts = await productService.listProducts(
     { handle: SEED_PRODUCTS.map((product) => product.handle) },
     { select: ["id", "handle"], relations: ["categories"] }
   )
   const existingByHandle = new Map(existingProducts.map((product) => [product.handle, product]))
-
   const existingShorts = existingByHandle.get("shorts")
+  const missingProducts = SEED_PRODUCTS.filter(
+    (product) => !existingByHandle.has(product.handle)
+  )
+
+  // Category names are mutable production data. Only look up and validate the
+  // names that are required for work this invocation will actually perform.
+  const requiredCategoryNames = Array.from(
+    new Set([
+      ...missingProducts.map((product) => product.category),
+      ...(existingShorts ? ["Merch", "Bottoms"] : []),
+    ])
+  )
+  const categories = requiredCategoryNames.length
+    ? await productService.listProductCategories(
+        { name: requiredCategoryNames },
+        { select: ["id", "name"] }
+      )
+    : []
+  const categoryByName = new Map(categories.map((category) => [category.name, category.id]))
+  const missingCategories = missingProducts
+    .map((product) => product.category)
+    .filter((name) => !categoryByName.has(name))
+  if (missingCategories.length) {
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      `Cannot create missing initial products; missing categories: ${missingCategories.join(", ")}`
+    )
+  }
+
   const legacyMerchCategoryId = categoryByName.get("Merch")
-  const bottomsCategoryId = categoryByName.get("Bottoms")!
   const existingShortsCategoryIds = existingShorts?.categories?.map((category) => category.id) ?? []
   const needsLegacyShortsRepair = Boolean(
     existingShorts &&
       legacyMerchCategoryId &&
       existingShortsCategoryIds.includes(legacyMerchCategoryId)
   )
+  const bottomsCategoryId = categoryByName.get("Bottoms")
+  if (needsLegacyShortsRepair && !bottomsCategoryId) {
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      "Cannot repair the legacy Shorts category; the Bottoms category is missing"
+    )
+  }
   const repairedShortsCategoryIds = needsLegacyShortsRepair
     ? Array.from(
         new Set([
           ...existingShortsCategoryIds.filter((id) => id !== legacyMerchCategoryId),
-          bottomsCategoryId,
+          bottomsCategoryId!,
         ])
       )
     : []
@@ -193,11 +188,33 @@ export async function repairInitialProducts(container: MedusaContainer) {
     })
   }
 
-  const missingProducts = SEED_PRODUCTS.filter(
-    (product) => !existingByHandle.has(product.handle)
-  )
   if (missingProducts.length) {
-    await createProductsWorkflow(container).run({
+    const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
+    const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
+    const [salesChannel] = await salesChannelService.listSalesChannels({
+      name: "Default Sales Channel",
+    })
+    const { data: shippingProfiles } = await query.graph({
+      entity: "shipping_profile",
+      fields: ["id"],
+    })
+    const [preferredStockLocation] = await stockLocationService.listStockLocations({
+      name: "European Warehouse",
+    })
+    const stockLocations = preferredStockLocation
+      ? [preferredStockLocation]
+      : await stockLocationService.listStockLocations({})
+    const shippingProfile = shippingProfiles[0]
+    const stockLocation = stockLocations[0]
+
+    if (!salesChannel || !shippingProfile || !stockLocation) {
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        "Cannot create missing initial products; the default sales channel, shipping profile, or stock location is missing"
+      )
+    }
+
+    const { result: createdProducts } = await createProductsWorkflow(container).run({
       input: {
         products: missingProducts.map((product) => ({
           title: product.title,
@@ -219,47 +236,44 @@ export async function repairInitialProducts(container: MedusaContainer) {
         })),
       },
     })
-  }
+    const createdProductIds = createdProducts.map((product) => product.id)
 
-  const repairedProducts = await productService.listProducts(
-    { handle: SEED_PRODUCTS.map((product) => product.handle) },
-    { select: ["id", "handle"] }
-  )
-  const { data: variants } = await query.graph({
-    entity: "product_variant",
-    fields: [
-      "id",
-      "inventory_items.inventory.id",
-      "inventory_items.inventory.location_levels.location_id",
-    ],
-    filters: { product_id: repairedProducts.map((product) => product.id) },
-  })
-
-  const missingInventoryLevels = (variants as Record<string, unknown>[]).flatMap((variant) => {
-    const inventoryItems = (variant.inventory_items ?? []) as Array<{
-      inventory?: { id?: string; location_levels?: Array<{ location_id?: string }> }
-    }>
-    return inventoryItems.flatMap((item) => {
-      const inventoryId = item.inventory?.id
-      const alreadyStocked = item.inventory?.location_levels?.some(
-        (level) => level.location_id === stockLocation.id
-      )
-      return inventoryId && !alreadyStocked
-        ? [
-            {
-              location_id: stockLocation.id,
-              stocked_quantity: 1_000_000,
-              inventory_item_id: inventoryId,
-            },
-          ]
-        : []
+    const { data: variants } = await query.graph({
+      entity: "product_variant",
+      fields: [
+        "id",
+        "inventory_items.inventory.id",
+        "inventory_items.inventory.location_levels.location_id",
+      ],
+      filters: { product_id: createdProductIds },
     })
-  })
 
-  if (missingInventoryLevels.length) {
-    await createInventoryLevelsWorkflow(container).run({
-      input: { inventory_levels: missingInventoryLevels },
+    const missingInventoryLevels = (variants as Record<string, unknown>[]).flatMap((variant) => {
+      const inventoryItems = (variant.inventory_items ?? []) as Array<{
+        inventory?: { id?: string; location_levels?: Array<{ location_id?: string }> }
+      }>
+      return inventoryItems.flatMap((item) => {
+        const inventoryId = item.inventory?.id
+        const alreadyStocked = item.inventory?.location_levels?.some(
+          (level) => level.location_id === stockLocation.id
+        )
+        return inventoryId && !alreadyStocked
+          ? [
+              {
+                location_id: stockLocation.id,
+                stocked_quantity: 1_000_000,
+                inventory_item_id: inventoryId,
+              },
+            ]
+          : []
+      })
     })
+
+    if (missingInventoryLevels.length) {
+      await createInventoryLevelsWorkflow(container).run({
+        input: { inventory_levels: missingInventoryLevels },
+      })
+    }
   }
 
   logger.info(
