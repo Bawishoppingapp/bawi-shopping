@@ -104,6 +104,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Add swap for real-server integration tests
+        run: |
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
       - name: Increase integration database connection capacity
         run: |
           postgres_container="$(docker ps --filter ancestor=postgres:16 --format '{{.ID}}' | head -n 1)"
