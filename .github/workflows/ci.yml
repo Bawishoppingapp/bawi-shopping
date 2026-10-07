@@ -89,6 +89,10 @@ jobs:
       COURIER_PORTAL_URL: http://localhost:3002/courier
       # Network-free fake Stripe client only - see docs/DECISIONS.md.
       ENABLE_TEST_SUPPORT_ROUTES: "true"
+      # HTTP tests exercise only the backend API. Skipping the Admin UI keeps
+      # the integration-only build and server below the hosted runner's memory
+      # limit; the normal production-build job still builds the Admin UI.
+      DISABLE_MEDUSA_ADMIN_UI: "true"
     steps:
       - uses: actions/checkout@v4
 
