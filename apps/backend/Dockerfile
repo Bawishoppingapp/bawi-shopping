@@ -65,8 +65,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # Migrations are NOT run automatically on container start (see
 # docs/DEPLOYMENT.md/docs/DATABASE.md §6: migrations run as their own
 # explicit step, staging before production, never implicitly on boot).
-# The product repair is deliberately different: it is idempotent data
-# reconciliation, so normal deployments run it from apps/backend before
-# entering the compiled server directory. This also repairs databases that
-# completed the one-time bootstrap before the repair existed.
-CMD ["sh", "-c", "npx medusa exec ./src/scripts/repair-initial-products.ts && cd .medusa/server && exec npm run start"]
+# Catalog seeding and repair are explicit one-time deployment operations. The
+# normal production process must never recreate products that an operator has
+# intentionally removed or renamed.
+CMD ["sh", "-c", "cd .medusa/server && exec npm run start"]

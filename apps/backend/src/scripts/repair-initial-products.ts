@@ -8,6 +8,7 @@ import {
 import {
   createInventoryLevelsWorkflow,
   createProductsWorkflow,
+  deleteProductsWorkflow,
   updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
@@ -109,8 +110,9 @@ function variantsFor(product: SeedProduct) {
  * - a partially seeded database where the missing Merch lookup aborted the
  *   single create-products workflow before any of the four products existed.
  *
- * Every lookup uses a stable natural key and every create is restricted to a
- * missing handle, so this is safe to run after every staging migration.
+ * This is an explicit one-time bootstrap/recovery operation, not a recurring
+ * production startup task. That distinction prevents intentional catalog
+ * edits from being mistaken for missing seed data on a later deployment.
  */
 export async function repairInitialProducts(container: MedusaContainer) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -238,41 +240,51 @@ export async function repairInitialProducts(container: MedusaContainer) {
     })
     const createdProductIds = createdProducts.map((product) => product.id)
 
-    const { data: variants } = await query.graph({
-      entity: "product_variant",
-      fields: [
-        "id",
-        "inventory_items.inventory.id",
-        "inventory_items.inventory.location_levels.location_id",
-      ],
-      filters: { product_id: createdProductIds },
-    })
-
-    const missingInventoryLevels = (variants as Record<string, unknown>[]).flatMap((variant) => {
-      const inventoryItems = (variant.inventory_items ?? []) as Array<{
-        inventory?: { id?: string; location_levels?: Array<{ location_id?: string }> }
-      }>
-      return inventoryItems.flatMap((item) => {
-        const inventoryId = item.inventory?.id
-        const alreadyStocked = item.inventory?.location_levels?.some(
-          (level) => level.location_id === stockLocation.id
-        )
-        return inventoryId && !alreadyStocked
-          ? [
-              {
-                location_id: stockLocation.id,
-                stocked_quantity: 1_000_000,
-                inventory_item_id: inventoryId,
-              },
-            ]
-          : []
+    try {
+      const { data: variants } = await query.graph({
+        entity: "product_variant",
+        fields: [
+          "id",
+          "inventory_items.inventory.id",
+          "inventory_items.inventory.location_levels.location_id",
+        ],
+        filters: { product_id: createdProductIds },
       })
-    })
 
-    if (missingInventoryLevels.length) {
-      await createInventoryLevelsWorkflow(container).run({
-        input: { inventory_levels: missingInventoryLevels },
+      const missingInventoryLevels = (variants as Record<string, unknown>[]).flatMap((variant) => {
+        const inventoryItems = (variant.inventory_items ?? []) as Array<{
+          inventory?: { id?: string; location_levels?: Array<{ location_id?: string }> }
+        }>
+        return inventoryItems.flatMap((item) => {
+          const inventoryId = item.inventory?.id
+          const alreadyStocked = item.inventory?.location_levels?.some(
+            (level) => level.location_id === stockLocation.id
+          )
+          return inventoryId && !alreadyStocked
+            ? [
+                {
+                  location_id: stockLocation.id,
+                  stocked_quantity: 1_000_000,
+                  inventory_item_id: inventoryId,
+                },
+              ]
+            : []
+        })
       })
+
+      if (missingInventoryLevels.length) {
+        await createInventoryLevelsWorkflow(container).run({
+          input: { inventory_levels: missingInventoryLevels },
+        })
+      }
+    } catch (error) {
+      // Product creation and inventory-level creation are separate workflows.
+      // Compensate if stocking fails so a retry can recreate and stock the
+      // products instead of skipping permanently published, unstocked rows.
+      await deleteProductsWorkflow(container).run({
+        input: { ids: createdProductIds },
+      })
+      throw error
     }
   }
 

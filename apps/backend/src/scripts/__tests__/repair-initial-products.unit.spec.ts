@@ -2,6 +2,7 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import {
   createInventoryLevelsWorkflow,
   createProductsWorkflow,
+  deleteProductsWorkflow,
   updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { repairInitialProducts } from "../repair-initial-products"
@@ -9,6 +10,7 @@ import { repairInitialProducts } from "../repair-initial-products"
 jest.mock("@medusajs/medusa/core-flows", () => ({
   createInventoryLevelsWorkflow: jest.fn(),
   createProductsWorkflow: jest.fn(),
+  deleteProductsWorkflow: jest.fn(),
   updateProductsWorkflow: jest.fn(),
 }))
 
@@ -38,11 +40,13 @@ function setup(
   )
   const updateProductsRun = jest.fn().mockResolvedValue({ result: [] })
   const createInventoryLevelsRun = jest.fn().mockResolvedValue({ result: [] })
+  const deleteProductsRun = jest.fn().mockResolvedValue({ result: [] })
   ;(createProductsWorkflow as unknown as jest.Mock).mockReturnValue({ run: createProductsRun })
   ;(updateProductsWorkflow as unknown as jest.Mock).mockReturnValue({ run: updateProductsRun })
   ;(createInventoryLevelsWorkflow as unknown as jest.Mock).mockReturnValue({
     run: createInventoryLevelsRun,
   })
+  ;(deleteProductsWorkflow as unknown as jest.Mock).mockReturnValue({ run: deleteProductsRun })
 
   const productService = {
     listProductCategories: jest.fn().mockResolvedValue(availableCategories),
@@ -87,6 +91,7 @@ function setup(
     createProductsRun,
     updateProductsRun,
     createInventoryLevelsRun,
+    deleteProductsRun,
     queryGraph,
     listSalesChannels,
     listStockLocations,
@@ -295,5 +300,32 @@ describe("repairInitialProducts", () => {
       })
     )
     expect(createInventoryLevelsRun).toHaveBeenCalledTimes(1)
+  })
+
+  it("removes newly created products when inventory setup fails so recovery can retry", async () => {
+    const { container, createProductsRun, deleteProductsRun, queryGraph } = setup([])
+    queryGraph.mockImplementation(({ entity }) => {
+      if (entity === "shipping_profile") {
+        return Promise.resolve({ data: [{ id: "ship-default" }] })
+      }
+      if (entity === "product_variant") {
+        return Promise.reject(new Error("inventory query failed"))
+      }
+      throw new Error(`Unexpected graph entity: ${entity}`)
+    })
+
+    await expect(repairInitialProducts(container)).rejects.toThrow("inventory query failed")
+
+    expect(createProductsRun).toHaveBeenCalledTimes(1)
+    expect(deleteProductsRun).toHaveBeenCalledWith({
+      input: {
+        ids: [
+          "created-t-shirt",
+          "created-sweatshirt",
+          "created-sweatpants",
+          "created-shorts",
+        ],
+      },
+    })
   })
 })

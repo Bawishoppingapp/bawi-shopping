@@ -1,6 +1,11 @@
 const { spawnSync } = require("node:child_process")
+const { loadEnv } = require("@medusajs/utils")
 const { Client } = require("pg")
 const { TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD } = require("./test-server")
+
+// Match Jest's environment loading so this pre-test helper connects to the
+// same database configured in .env.test.
+loadEnv("test", process.cwd())
 
 const DATABASE_URL =
   process.env.DATABASE_URL ??
