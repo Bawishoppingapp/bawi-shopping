@@ -23,12 +23,12 @@ describe("Search department category matching", () => {
     expect(findBrowseCategory(categories, audience("men"), choice("shoes", "men"))?.id).toBe("men-shoes");
   });
 
-  it("does not send baby and kids departments to unrelated adult categories", () => {
+  it("keeps girls, boys, and baby browsing separate from adult categories", () => {
     const categories = [category("adult-dresses", "dresses"), category("kids", "kids")];
+    expect(BROWSE_AUDIENCES.map((entry) => entry.key)).toEqual(["women", "men", "girls", "boys", "baby"]);
     expect(findBrowseCategory(categories, audience("girls"), choice("dresses", "girls"))).toBeUndefined();
+    expect(findBrowseCategory(categories, audience("boys"), choice("shoes", "boys"))).toBeUndefined();
     expect(findBrowseCategory(categories, audience("baby"), choice("shoes", "baby"))).toBeUndefined();
-    expect(findBrowseCategory(categories, audience("kids"), choice("dresses", "kids"))).toBeUndefined();
-    expect(findBrowseCategory(categories, audience("kids"), choice("all", "kids"))?.id).toBe("kids");
   });
 
   it("maps a curated Habesha kemis choice to the existing flat Habesha Wear category", () => {

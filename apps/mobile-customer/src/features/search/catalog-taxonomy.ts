@@ -69,22 +69,6 @@ export const BROWSE_AUDIENCES: BrowseAudience[] = [
     ],
   },
   {
-    key: "kids",
-    labelKey: "search.audience.kids",
-    aliases: ["kids", "children", "childrenswear"],
-    choices: [
-      choice("all", ["kids", "children", "childrenswear"], "kids"),
-      choice("dresses", ["dresses"]),
-      tops,
-      choice("bottoms", ["bottoms", "pants", "jeans"], "pants"),
-      sets,
-      choice("jackets", ["jackets-sweaters", "jackets"], "jacket"),
-      shoes,
-      bags,
-      accessories,
-    ],
-  },
-  {
     key: "girls",
     labelKey: "search.audience.girls",
     aliases: ["girls", "girlswear"],
@@ -142,7 +126,7 @@ function flatten(nodes: CategoryNode[]): CategoryNode[] {
   return nodes.flatMap((node) => [node, ...flatten(node.children)]);
 }
 
-/** Use a real audience subtree when present; avoid mapping kids to adult flat categories. */
+/** Use a real audience subtree when present; avoid mapping children's wear to adult flat categories. */
 export function findBrowseCategory(
   categories: CategoryNode[],
   audience: BrowseAudience,
@@ -154,6 +138,6 @@ export function findBrowseCategory(
   if (audienceRoot?.children.length) {
     return flatten(audienceRoot.children).find((node) => item.aliases.includes(normalize(node.handle)));
   }
-  if (["kids", "girls", "boys", "baby"].includes(audience.key)) return undefined;
+  if (["girls", "boys", "baby"].includes(audience.key)) return undefined;
   return all.find((node) => item.aliases.includes(normalize(node.handle)));
 }
