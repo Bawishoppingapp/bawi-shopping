@@ -1,4 +1,3 @@
-import { ThemedIcon } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
@@ -22,19 +21,13 @@ export function HeroBanner({ imageUri, eyebrow, headline, body, ctaLabel, ctaHre
       className="mx-4 overflow-hidden bg-surface active:opacity-90"
     >
       <View className="aspect-[4/5] w-full overflow-hidden bg-ink-100">
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={{ width: "100%", height: "100%" }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={120}
-          />
-        ) : (
-          <View className="h-full items-center justify-center">
-            <ThemedIcon name="shirt-outline" size={34} tone="ink400" />
-          </View>
-        )}
+        <Image
+          source={imageUri ? { uri: imageUri } : require("../../../../assets/images/bawi-editorial-campaign.jpg")}
+          style={{ width: "100%", height: "100%" }}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={120}
+        />
       </View>
       <View className="items-center px-5 py-5" style={{ gap: 7 }}>
         <Text className="text-overline uppercase tracking-[2px] text-ink-500">{eyebrow}</Text>

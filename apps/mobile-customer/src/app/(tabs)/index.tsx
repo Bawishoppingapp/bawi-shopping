@@ -17,7 +17,7 @@ import { useHomeCatalog } from "@/features/home/hooks/use-home-catalog";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 
 type HomeSection =
-  | { key: "hero"; kind: "hero"; product: ProductHit }
+  | { key: "hero"; kind: "hero"; imageUri?: string | null; hasProducts: boolean }
   | { key: "categories"; kind: "categories"; categories: CategoryNode[]; products: ProductHit[] }
   | { key: "new"; kind: "new"; products: ProductHit[] }
   | { key: "editorial"; kind: "editorial"; products: [ProductHit, ProductHit, ProductHit] }
@@ -57,7 +57,7 @@ export default function HomeScreen() {
   const sections = useMemo<HomeSection[]>(() => {
     const products = catalog?.products ?? [];
     if (products.length === 0) {
-      const waiting: HomeSection[] = [];
+      const waiting: HomeSection[] = [{ key: "hero", kind: "hero", hasProducts: false }];
       if (categories?.length) waiting.push({ key: "categories", kind: "categories", categories, products: [] });
       waiting.push(catalog ? { key: "empty", kind: "empty" } : error ? { key: "error", kind: "error" } : { key: "loading", kind: "loading" });
       return waiting;
@@ -65,7 +65,7 @@ export default function HomeScreen() {
 
     const hero = products.find((product) => product.thumbnail);
     const ordered = hero ? [hero, ...products.filter((product) => product.productCode !== hero.productCode)] : products;
-    const next: HomeSection[] = hero ? [{ key: "hero", kind: "hero", product: hero }] : [];
+    const next: HomeSection[] = [{ key: "hero", kind: "hero", imageUri: hero?.thumbnail, hasProducts: true }];
 
     if (categories?.length) next.push({ key: "categories", kind: "categories", categories, products: ordered });
 
@@ -93,11 +93,11 @@ export default function HomeScreen() {
       case "hero":
         return (
           <HeroBanner
-            imageUri={item.product.thumbnail}
-            eyebrow={t("home.justIn")}
+            imageUri={item.imageUri}
+            eyebrow={t(item.hasProducts ? "home.justIn" : "home.trendingNow")}
             headline={t("home.hero.title")}
             body={t("home.hero.subtitle")}
-            ctaLabel={t("home.hero.cta")}
+            ctaLabel={t(item.hasProducts ? "home.hero.cta" : "home.shopByCategory")}
             ctaHref="/(tabs)/search"
           />
         );
