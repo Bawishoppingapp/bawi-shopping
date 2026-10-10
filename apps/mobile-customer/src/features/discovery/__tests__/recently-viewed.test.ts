@@ -54,9 +54,11 @@ test("repeated tab visits reuse translated history; recording a view invalidates
   jest.clearAllMocks();
   await clearRecentlyViewed();
   await recordProductView(product);
+  jest.mocked(SecureStore.getItemAsync).mockClear();
   jest.mocked(getPublicProduct).mockResolvedValue({ title: "Vestido", thumbnail: null } as Awaited<ReturnType<typeof getPublicProduct>>);
   await Promise.all([getRecentlyViewed("es"), getRecentlyViewed("es")]);
   await getRecentlyViewed("es");
+  expect(SecureStore.getItemAsync).toHaveBeenCalledTimes(1);
   expect(getPublicProduct).toHaveBeenCalledTimes(1);
   await getRecentlyViewed("am");
   expect(getPublicProduct).toHaveBeenCalledTimes(2);

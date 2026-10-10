@@ -1,7 +1,7 @@
-import { Gradient } from "@bawi/mobile-ui";
+import { ThemedIcon } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 interface HeroBannerProps {
   imageUri?: string | null;
@@ -12,42 +12,38 @@ interface HeroBannerProps {
   ctaHref: Parameters<typeof router.push>[0];
 }
 
-/**
- * Full-width Bawi cover with cached real catalog photography when available.
- * The lightweight dark overlay keeps long translated text readable on Android
- * without live blur, animation loops, or fixed text heights.
- */
+/** An image-first campaign story with a quiet caption beneath it. */
 export function HeroBanner({ imageUri, eyebrow, headline, body, ctaLabel, ctaHref }: HeroBannerProps) {
   return (
-    <Gradient
-      colors={["#2A2320", "#151210"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ borderRadius: 20 }}
-      className="mx-4 gap-4 overflow-hidden px-6 py-8"
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${headline}. ${ctaLabel}`}
+      onPress={() => router.push(ctaHref)}
+      className="mx-4 overflow-hidden bg-surface active:opacity-90"
     >
-      {imageUri ? <>
-        <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" accessible={false} />
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(21,18,16,0.72)" }]} />
-      </> : null}
-      <Text className="text-overline text-gold-500">{eyebrow}</Text>
-      <Text className="font-serif text-hero text-white">{headline}</Text>
-      {/* text-white/70, not a theme-reactive ink token: this gradient is
-          fixed-dark regardless of app theme, so a token that inverts in
-          dark mode (ink-200 -> near-black) would go invisible here. */}
-      <Text className="text-body text-white/70">{body}</Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push(ctaHref)}
-        className="mt-2 flex-row items-center self-start rounded-full bg-white px-5 py-3 active:opacity-80"
-      >
-        {/* text-ink-solid (fixed dark), not text-ink-950: the button fill
-            is always white, so a theme-reactive text color would go
-            invisible in dark mode the same way ink-solid exists for the
-            reverse case (fixed-dark fills) - see Button.tsx's primary
-            variant. */}
-        <Text className="text-body-sm font-medium text-ink-solid">{ctaLabel}</Text>
-      </Pressable>
-    </Gradient>
+      <View className="aspect-[4/5] w-full overflow-hidden bg-ink-100">
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={120}
+          />
+        ) : (
+          <View className="h-full items-center justify-center">
+            <ThemedIcon name="shirt-outline" size={34} tone="ink400" />
+          </View>
+        )}
+      </View>
+      <View className="items-center px-5 py-5" style={{ gap: 7 }}>
+        <Text className="text-overline uppercase tracking-[2px] text-ink-500">{eyebrow}</Text>
+        <Text className="text-center font-serif text-h1 text-ink-950">{headline}</Text>
+        <Text className="text-center text-body-sm leading-5 text-ink-500">{body}</Text>
+        <View className="mt-1 border-b border-ink-950 pb-0.5">
+          <Text className="text-body-sm font-semibold uppercase tracking-wide text-ink-950">{ctaLabel}</Text>
+        </View>
+      </View>
+    </Pressable>
   );
 }

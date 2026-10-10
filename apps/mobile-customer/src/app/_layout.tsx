@@ -1,8 +1,9 @@
 import { useThemeColors } from "@bawi/mobile-ui";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
+import { Pressable, Text } from "react-native";
 
 import "@/global.css";
 import { AppearanceProvider, useAppearance } from "@/features/appearance/hooks/use-appearance";
@@ -79,8 +80,16 @@ function AppShell() {
               <Stack.Screen name="sell" options={{ headerShown: false }} />
               {/* Avoid the sheet-specific interaction issue observed on iOS 26,
                   where auth fields can receive focus without opening the keyboard. */}
-              <Stack.Screen name="login" options={{ presentation: "fullScreenModal", title: t("login.submit") }} />
-              <Stack.Screen name="register" options={{ presentation: "fullScreenModal", title: t("register.submit") }} />
+              <Stack.Screen name="login" options={{
+                presentation: "fullScreenModal",
+                title: t("login.submit"),
+                headerLeft: () => <Pressable onPress={() => router.back()} hitSlop={8}><Text style={{ color: themeColors.ink950 }}>{t("common.close")}</Text></Pressable>,
+              }} />
+              <Stack.Screen name="register" options={{
+                presentation: "fullScreenModal",
+                title: t("register.submit"),
+                headerLeft: () => <Pressable onPress={() => router.back()} hitSlop={8}><Text style={{ color: themeColors.ink950 }}>{t("common.close")}</Text></Pressable>,
+              }} />
               <Stack.Screen name="forgot-password" options={{ title: t("auth.resetPassword") }} />
               <Stack.Screen name="reset-password" options={{ title: t("auth.resetPassword") }} />
             </Stack>

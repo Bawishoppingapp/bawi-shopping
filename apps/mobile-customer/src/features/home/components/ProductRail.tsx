@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { FlatList, View } from "react-native";
+import { FlatList, Platform, View } from "react-native";
 
 import { ProductCard } from "@bawi/mobile-ui";
 import type { ProductHit } from "@/features/discovery/services/discovery-client";
@@ -30,6 +30,10 @@ export function ProductRail({ title, subtitle, products, seeAllHref }: ProductRa
         showsHorizontalScrollIndicator={false}
         data={products}
         keyExtractor={(item) => item.productCode}
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={3}
+        removeClippedSubviews={Platform.OS === "android"}
         contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}
         renderItem={({ item }) => (
           <View style={{ width: 150 }}>

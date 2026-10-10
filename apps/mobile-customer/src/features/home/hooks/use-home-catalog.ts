@@ -1,5 +1,4 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { categoryCache, listCategories, searchProducts, type CategoryNode, type ProductSearchResponse } from "@/features/discovery/services/discovery-client";
 import { createRequestCache } from "@/lib/request-cache";
 
@@ -27,11 +26,12 @@ export function useHomeCatalog(locale: string) {
         .then((catalog) => update({ catalog })).catch(() => update({ error: true })),
     ]);
   }, [locale]);
-  useFocusEffect(useCallback(() => {
+  useEffect(() => {
+    const requestVersion = version;
     setRefreshing(false);
     void load();
-    return () => { version.current++; };
-  }, [load]));
+    return () => { requestVersion.current++; };
+  }, [load]);
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try { await load(true); } finally { setRefreshing(false); }

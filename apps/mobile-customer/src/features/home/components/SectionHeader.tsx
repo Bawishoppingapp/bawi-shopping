@@ -16,12 +16,12 @@ export function SectionHeader({ title, subtitle, seeAllHref }: SectionHeaderProp
   return (
     <View className="flex-row items-end justify-between px-4">
       <View className="min-w-0 flex-1 gap-0.5 pr-3">
-        <Text className="font-serif text-h1 text-ink-950">{title}</Text>
+        <Text className="text-h1 font-semibold text-ink-950">{title}</Text>
         {subtitle ? <Text className="text-body-sm text-ink-500">{subtitle}</Text> : null}
       </View>
       {seeAllHref ? (
         <Pressable className="shrink-0" accessibilityRole="button" onPress={() => router.push(seeAllHref)} hitSlop={8}>
-          <Text className="text-body-sm font-medium text-gold-600">{t("home.viewAll")}</Text>
+          <Text className="text-body-sm font-semibold uppercase tracking-wide text-ink-950">{t("home.viewAll")}</Text>
         </Pressable>
       ) : null}
     </View>
