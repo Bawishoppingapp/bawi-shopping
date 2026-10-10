@@ -19,47 +19,10 @@ import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from "@/features/search/services/search-history";
 import { EditorialEmptyState } from "@/components/EditorialEmptyState";
+import { BROWSE_AUDIENCES, findBrowseCategory, type BrowseChoice } from "@/features/search/catalog-taxonomy";
 
 const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 400;
-const AUDIENCE_CATEGORY_ORDER = ["Women", "Young Women", "Kids", "Sports", "Men"];
-const SHOP_CATEGORY_ORDER = [
-  "New In",
-  "Clothing",
-  "Formal Shop",
-  "Habesha Wear",
-  "Dresses",
-  "Jumpsuits",
-  "Tops",
-  "Graphics",
-  "Jackets & Sweaters",
-  "Jeans",
-  "Pants",
-  "Bottoms",
-  "Matching Sets",
-  "Shoes",
-  "Bags",
-  "Accessories",
-  "Lingerie & Sleep",
-  "Beauty",
-  "Women",
-  "Young Women",
-  "Men",
-  "Kids",
-  "Sports",
-  "Shirts",
-  "Sweatshirts",
-];
-
-function orderCategories(categories: CategoryNode[], preferredOrder: string[]) {
-  const order = new Map(preferredOrder.map((name, index) => [name.toLowerCase(), index]));
-  return [...categories].sort((a, b) => {
-    const aIndex = order.get(a.name.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
-    const bIndex = order.get(b.name.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
-    return aIndex - bIndex || a.name.localeCompare(b.name);
-  });
-}
-
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -92,6 +55,8 @@ export default function SearchScreen() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [audienceKey, setAudienceKey] = useState(BROWSE_AUDIENCES[0].key);
+  const activeAudience = BROWSE_AUDIENCES.find((audience) => audience.key === audienceKey) ?? BROWSE_AUDIENCES[0];
 
   // Discovery-state (shown before the user has typed/selected anything)
   const [categorySnapshot, setCategorySnapshot] = useState<{ locale: string; items: CategoryNode[] }>({ locale, items: [] });
@@ -101,7 +66,7 @@ export default function SearchScreen() {
   const [categoryTitle, setCategoryTitle] = useState("");
   useEffect(() => {
     let active = true;
-    setCategoryTitle("");
+    setCategoryTitle(params.categoryName ?? "");
     if (params.category) listCategories(locale).then((nodes) => {
       const find = (items: CategoryNode[]): string | undefined => {
         for (const item of items) { if (item.id === params.category) return item.name; const nested = find(item.children); if (nested) return nested; }
@@ -109,7 +74,7 @@ export default function SearchScreen() {
       if (active) setCategoryTitle(find(nodes) ?? "");
     }).catch(() => {});
     return () => { active = false; };
-  }, [params.category, locale]);
+  }, [params.category, params.categoryName, locale]);
   const showDiscovery = debouncedQuery.trim().length === 0 && !params.category;
 
   // Debounce typed input into a live search - not on every keystroke.
@@ -197,10 +162,20 @@ export default function SearchScreen() {
     router.push({ pathname: "/product/[code]", params: { code } });
   }
 
-  const topCategories = AUDIENCE_CATEGORY_ORDER
-    .map((name) => categories.find((category) => category.name.toLowerCase() === name.toLowerCase()))
-    .filter((category): category is CategoryNode => Boolean(category));
-  const browseCategories = orderCategories(categories, SHOP_CATEGORY_ORDER);
+  function browse(item: BrowseChoice) {
+    const category = findBrowseCategory(categories, activeAudience, item);
+    if (category) {
+      router.setParams({ category: category.id, categoryName: category.name });
+      return;
+    }
+    // Some curated departments do not exist in older catalogs yet. A title
+    // search still opens real approved products instead of a dead category.
+    router.setParams({ category: "", categoryName: "" });
+    const searchTerm = item.key === "all" ? item.query : `${activeAudience.key} ${item.query}`;
+    lastRecordedQuery.current = searchTerm;
+    setQuery(searchTerm);
+    setDebouncedQuery(searchTerm);
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
@@ -209,28 +184,32 @@ export default function SearchScreen() {
           <Text className="font-serif text-display text-ink-950">{t("search.shop")}</Text>
         </View>
 
-        {showDiscovery && topCategories.length > 0 ? (
+        {showDiscovery ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 28 }}
           >
-            {topCategories.map((category) => (
+            {BROWSE_AUDIENCES.map((audience) => (
               <Pressable
-                key={category.id}
-                accessibilityRole="button"
-                onPress={() => router.setParams({ category: category.id, categoryName: category.name })}
-                className="border-b border-ink-200 pb-4 pt-1"
+                key={audience.key}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: audience.key === activeAudience.key }}
+                onPress={() => setAudienceKey(audience.key)}
+                className={`border-b-2 pb-4 pt-1 ${audience.key === activeAudience.key ? "border-ink-950" : "border-transparent"}`}
               >
-                <Text className="text-caption font-medium uppercase tracking-widest text-ink-950">
-                  {category.name}
+                <Text className={`text-caption font-semibold uppercase tracking-widest ${audience.key === activeAudience.key ? "text-ink-950" : "text-ink-500"}`}>
+                  {t(audience.labelKey)}
                 </Text>
               </Pressable>
             ))}
           </ScrollView>
         ) : categoryTitle ? (
-          <View className="px-4 pb-3">
-            <Text className="text-h2 text-ink-950">{categoryTitle}</Text>
+          <View className="flex-row items-center gap-3 px-4 pb-4">
+            <Pressable accessibilityRole="button" accessibilityLabel={t("search.browseCategories")} onPress={() => router.setParams({ category: "", categoryName: "" })}>
+              <ThemedIcon name="arrow-back" size={22} tone="ink950" />
+            </Pressable>
+            <Text className="font-serif text-h2 text-ink-950">{categoryTitle}</Text>
           </View>
         ) : null}
       </View>
@@ -277,8 +256,30 @@ export default function SearchScreen() {
 
       {showDiscovery ? (
         <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} keyboardShouldPersistTaps="handled">
+          <View>
+              <View className="px-4 pb-3 pt-8">
+                <Text className="text-caption font-semibold uppercase tracking-widest text-ink-500">
+                  {t("search.browseCategories")}
+                </Text>
+                <Text className="mt-2 font-serif text-h1 text-ink-950">{t(activeAudience.labelKey)}</Text>
+              </View>
+              {activeAudience.choices.map((item, index) => (
+                <Pressable
+                  key={item.key}
+                  accessibilityRole="button"
+                  onPress={() => browse(item)}
+                  className="mx-4 min-h-20 flex-row items-center border-b border-ink-200 py-4 active:bg-ink-100"
+                >
+                  <Text className="mr-5 text-caption tracking-widest text-ink-400">{String(index + 1).padStart(2, "0")}</Text>
+                  <Text className="flex-1 font-serif text-h2 text-ink-950">
+                    {t(item.labelKey)}
+                  </Text>
+                  <ThemedIcon name="arrow-forward" size={18} tone="ink700" />
+                </Pressable>
+              ))}
+          </View>
           {recentSearches.length > 0 ? (
-            <View className="gap-3 border-b border-ink-100 px-4 py-6">
+            <View className="gap-3 px-4 pb-4 pt-10">
               <View className="flex-row items-center justify-between">
                 <Text className="font-serif text-h2 text-ink-950">{t("search.recentSearches")}</Text>
                 <Pressable accessibilityRole="button" onPress={onClearRecentSearches}>
@@ -290,30 +291,6 @@ export default function SearchScreen() {
                   <Chip key={q} label={q} selected={false} onPress={() => setQuery(q)} />
                 ))}
               </View>
-            </View>
-          ) : null}
-
-          {categories.length > 0 ? (
-            <View>
-              <View className="px-4 pb-3 pt-8">
-                <Text className="text-caption font-semibold uppercase tracking-widest text-ink-500">
-                  {t("search.browseCategories")}
-                </Text>
-              </View>
-              {browseCategories.map((category, index) => (
-                <Pressable
-                  key={category.id}
-                  accessibilityRole="button"
-                  onPress={() => router.setParams({ category: category.id, categoryName: category.name })}
-                  className="mx-4 min-h-20 flex-row items-center border-b border-ink-200 py-4 active:bg-ink-100"
-                >
-                  <Text className="mr-5 text-caption tracking-widest text-ink-400">{String(index + 1).padStart(2, "0")}</Text>
-                  <Text className="flex-1 font-serif text-h2 text-ink-950">
-                    {category.name}
-                  </Text>
-                  <ThemedIcon name="arrow-forward" size={18} tone="ink700" />
-                </Pressable>
-              ))}
             </View>
           ) : null}
         </ScrollView>
