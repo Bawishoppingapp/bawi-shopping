@@ -1,3 +1,5 @@
+import { createRequestCache } from "@/lib/request-cache";
+
 import type { ProductHit } from "@/features/discovery/services/discovery-client";
 
 // Mirrors apps/backend/src/api/store/wishlist/* exactly - the response's
@@ -15,13 +17,26 @@ function authHeaders(sessionToken: string | null): Record<string, string> | null
   };
 }
 
-export async function listWishlist(sessionToken: string | null, locale?: string): Promise<ProductHit[]> {
+export const wishlistCache = createRequestCache<ProductHit[]>(30_000, 12);
+export function readWishlist(sessionToken: string | null, locale: string, force = false) {
+  if (!sessionToken) return Promise.resolve([]);
+  return wishlistCache.get(JSON.stringify([sessionToken, locale]), () => fetchWishlist(sessionToken, locale, true), force);
+}
+
+export function listWishlist(sessionToken: string | null, locale?: string): Promise<ProductHit[]> {
+  return fetchWishlist(sessionToken, locale, false);
+}
+
+async function fetchWishlist(sessionToken: string | null, locale: string | undefined, strict: boolean): Promise<ProductHit[]> {
   const headers = authHeaders(sessionToken);
   if (!headers) return [];
 
   const query = locale ? `?locale=${encodeURIComponent(locale)}` : "";
   const response = await fetch(`${MEDUSA_BACKEND_URL}/store/wishlist${query}`, { headers });
-  if (!response.ok) return [];
+  if (!response.ok) {
+    if (strict) throw new Error(`Failed to load wishlist (${response.status})`);
+    return [];
+  }
 
   const data = await response.json();
   return data.products as ProductHit[];
@@ -36,6 +51,7 @@ export async function addToWishlist(productCode: string, sessionToken: string | 
     headers: { ...headers, "Content-Type": "application/json" },
     body: JSON.stringify({ product_code: productCode }),
   });
+  if (response.ok) wishlistCache.clear();
   return response.ok;
 }
 
@@ -47,5 +63,6 @@ export async function removeFromWishlist(productCode: string, sessionToken: stri
     method: "DELETE",
     headers,
   });
+  if (response.ok) wishlistCache.clear();
   return response.ok;
 }

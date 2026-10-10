@@ -1,3 +1,4 @@
+import { wishlistCache } from "@/features/wishlist/services/wishlist-client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await clearSessionToken();
+    wishlistCache.clear();
     setCustomer(null);
   }, []);
 
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) throw new MedusaAuthError("No active customer session");
     await deleteCustomerAccount(token);
     await clearSessionToken();
+    wishlistCache.clear();
     setCustomer(null);
   }, []);
 

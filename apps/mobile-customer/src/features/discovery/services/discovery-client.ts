@@ -1,3 +1,5 @@
+import { createRequestCache } from "@/lib/request-cache";
+
 // Mirrors apps/storefront/src/features/discovery/services/
 // discovery-client.ts exactly - same endpoints, same query params, same
 // response shapes. Only real difference: no Next.js `cache: "no-store"`
@@ -39,14 +41,18 @@ export interface ProductSearchResponse {
   facets: ProductSearchFacets;
 }
 
+export const categoryCache = createRequestCache<CategoryNode[]>(5 * 60_000);
+
 /** Public, unauthenticated - only active categories, translated for `locale`. */
-export async function listCategories(locale: string): Promise<CategoryNode[]> {
+export async function listCategories(locale: string, force = false): Promise<CategoryNode[]> {
+  return categoryCache.get(locale, async () => {
   const response = await fetch(`${MEDUSA_BACKEND_URL}/categories?locale=${encodeURIComponent(locale)}`);
   if (!response.ok) {
     throw new Error(`Failed to load categories (${response.status})`);
   }
   const data = await response.json();
   return data.categories as CategoryNode[];
+  }, force);
 }
 
 export interface BrandOption {

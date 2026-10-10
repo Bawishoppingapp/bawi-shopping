@@ -1,7 +1,8 @@
-import { listBrands, listCategories, searchProducts } from "../services/discovery-client";
+import { categoryCache, listBrands, listCategories, searchProducts } from "../services/discovery-client";
 
 describe("discovery-client", () => {
   beforeEach(() => {
+    categoryCache.clear();
     globalThis.fetch = jest.fn();
   });
 
@@ -59,3 +60,14 @@ describe("discovery-client", () => {
     });
   });
 });
+
+ test("Home and Search share categories by locale, with explicit refresh", async () => {
+   categoryCache.clear();
+   globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ categories: [] }) });
+   await Promise.all([listCategories("en-US"), listCategories("en-US")]);
+   await listCategories("en-US");
+   expect(fetch).toHaveBeenCalledTimes(1);
+   await listCategories("am");
+   await listCategories("en-US", true);
+   expect(fetch).toHaveBeenCalledTimes(3);
+ });

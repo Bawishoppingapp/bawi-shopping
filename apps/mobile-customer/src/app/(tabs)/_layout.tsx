@@ -19,6 +19,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        animation: "none",
         tabBarActiveTintColor: themeColors.ink950,
         tabBarInactiveTintColor: themeColors.ink400,
         // Floating/translucent tab bar - the bar sits above scrolling

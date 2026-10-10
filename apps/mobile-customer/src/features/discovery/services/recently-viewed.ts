@@ -1,3 +1,5 @@
+import { createRequestCache } from "@/lib/request-cache";
+
 import * as SecureStore from "expo-secure-store";
 
 import { getPublicProduct } from "@/features/products/services/products-client";
@@ -9,6 +11,7 @@ import type { ProductHit } from "./discovery-client";
 // mapping - not just a list of codes needing a re-fetch.
 const RECENTLY_VIEWED_KEY = "bawi_recently_viewed";
 const MAX_RECENTLY_VIEWED = 12;
+const localizedHistory = createRequestCache<ProductHit[]>(60_000, 12);
 
 export async function getRecentlyViewed(locale?: string): Promise<ProductHit[]> {
   const raw = await SecureStore.getItemAsync(RECENTLY_VIEWED_KEY);
@@ -20,11 +23,13 @@ export async function getRecentlyViewed(locale?: string): Promise<ProductHit[]> 
     if (!locale) return items;
     // Saved titles belong to the language used when viewing the product.
     // Resolve fresh approved translations instead of displaying stale English.
+    return await localizedHistory.get(JSON.stringify([locale, items]), async () => {
     const products = await Promise.all(items.map(async (item) => {
       const product = await getPublicProduct(item.productCode, locale);
       return product ? { ...item, title: product.title, thumbnail: product.thumbnail } : null;
     }));
     return products.filter((item): item is ProductHit => item !== null);
+    });
   } catch {
     return [];
   }
@@ -37,6 +42,7 @@ export async function recordProductView(product: ProductHit): Promise<void> {
     MAX_RECENTLY_VIEWED
   );
   await SecureStore.setItemAsync(RECENTLY_VIEWED_KEY, JSON.stringify(next));
+  localizedHistory.clear();
 }
 
 /** Removes a product that the public catalog no longer exposes. This keeps
@@ -46,8 +52,10 @@ export async function removeRecentlyViewedProduct(productCode: string): Promise<
   const existing = await getRecentlyViewed();
   const next = existing.filter((product) => product.productCode !== productCode);
   await SecureStore.setItemAsync(RECENTLY_VIEWED_KEY, JSON.stringify(next));
+  localizedHistory.clear();
 }
 
 export async function clearRecentlyViewed(): Promise<void> {
+  localizedHistory.clear();
   await SecureStore.deleteItemAsync(RECENTLY_VIEWED_KEY);
 }

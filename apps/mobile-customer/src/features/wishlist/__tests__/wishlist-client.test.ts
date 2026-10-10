@@ -1,7 +1,8 @@
-import { addToWishlist, listWishlist, removeFromWishlist } from "../services/wishlist-client";
+import { readWishlist, wishlistCache, addToWishlist, listWishlist, removeFromWishlist } from "../services/wishlist-client";
 
 describe("wishlist-client", () => {
   beforeEach(() => {
+    wishlistCache.clear();
     globalThis.fetch = jest.fn();
   });
 
@@ -61,3 +62,29 @@ describe("wishlist-client", () => {
     });
   });
 });
+
+ test("cached wishlist isolates accounts and languages and invalidates on mutations", async () => {
+   wishlistCache.clear();
+   globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ products: [{ productCode: "abc" }] }) });
+   await Promise.all([readWishlist("one", "en"), readWishlist("one", "en")]);
+   await readWishlist("one", "en");
+   expect(fetch).toHaveBeenCalledTimes(1);
+   await readWishlist("two", "en");
+   await readWishlist("one", "am");
+   expect(fetch).toHaveBeenCalledTimes(3);
+   await addToWishlist("abc", "one");
+   await readWishlist("one", "en");
+   expect(fetch).toHaveBeenCalledTimes(5);
+   await removeFromWishlist("abc", "one");
+   await readWishlist("one", "en");
+   expect(fetch).toHaveBeenCalledTimes(7);
+ });
+
+ test("failed wishlist refresh does not cache an empty list", async () => {
+   wishlistCache.clear();
+   globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ products: [{ productCode: "abc" }] }) });
+   await readWishlist("one", "en");
+   jest.mocked(fetch).mockResolvedValue({ ok: false, status: 503 } as Response);
+   await expect(readWishlist("one", "en", true)).rejects.toThrow("503");
+   expect(wishlistCache.peek(JSON.stringify(["one", "en"]))).toEqual([{ productCode: "abc" }]);
+ });

@@ -93,7 +93,8 @@ export default function SearchScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Discovery-state (shown before the user has typed/selected anything)
-  const [categories, setCategories] = useState<CategoryNode[]>([]);
+  const [categorySnapshot, setCategorySnapshot] = useState<{ locale: string; items: CategoryNode[] }>({ locale, items: [] });
+  const categories = categorySnapshot.locale === locale ? categorySnapshot.items : [];
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   const [categoryTitle, setCategoryTitle] = useState("");
@@ -165,25 +166,20 @@ export default function SearchScreen() {
     addRecentSearch(trimmed);
   }, [debouncedQuery]);
 
-  const loadDiscoveryData = useCallback(async () => {
-    const [categoriesResult, recentResult] = await Promise.allSettled([
-      listCategories(locale),
-      getRecentSearches(),
-    ]);
-    if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
-    if (recentResult.status === "fulfilled") setRecentSearches(recentResult.value);
-  }, [locale]);
-
   useFocusEffect(
     useCallback(() => {
-      if (showDiscovery) loadDiscoveryData();
-      // Only refresh discovery content when it's actually visible -
-      // re-running on every focus keeps "recent searches"/"recently
-      // viewed" fresh without an extra fetch while browsing results.
-      // locale is a real dep here (not just showDiscovery) so a language
-      // change re-fetches translated categories/new-arrivals immediately
-      // rather than waiting for the next focus with a stale closure.
-    }, [showDiscovery, loadDiscoveryData])
+      if (!showDiscovery) return;
+      let active = true;
+      // Categories are shared with Home and cached by language. Local search
+      // history still refreshes on focus; neither read waits for the other.
+      void listCategories(locale).then((items) => {
+        if (active) setCategorySnapshot({ locale, items });
+      }).catch(() => {});
+      void getRecentSearches().then((items) => {
+        if (active) setRecentSearches(items);
+      }).catch(() => {});
+      return () => { active = false; };
+    }, [showDiscovery, locale])
   );
 
   function onLoadMore() {
