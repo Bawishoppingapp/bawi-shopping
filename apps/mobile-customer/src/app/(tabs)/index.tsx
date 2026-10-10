@@ -1,221 +1,104 @@
-import { ProductCardSkeleton, ThemedIcon } from "@bawi/mobile-ui";
+import { ProductCard, ProductCardSkeleton, ThemedIcon } from "@bawi/mobile-ui";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useCallback, useEffect, useState } from "react";
+import { FlatList, Pressable, RefreshControl, Text, View, useWindowDimensions } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { type CategoryNode, type ProductHit, listCategories, searchProducts } from "@/features/discovery/services/discovery-client";
+import { type ProductHit } from "@/features/discovery/services/discovery-client";
 import { clearRecentlyViewed, getRecentlyViewed } from "@/features/discovery/services/recently-viewed";
+import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
-import { HeroBanner } from "@/features/home/components/HeroBanner";
 import { CategoryStrip } from "@/features/home/components/CategoryStrip";
-import { EditorialSpotlight } from "@/features/home/components/EditorialSpotlight";
-import { MasonryGrid } from "@/features/home/components/MasonryGrid";
 import { ProductCatalogPlaceholder } from "@/features/home/components/ProductCatalogPlaceholder";
 import { ProductRail } from "@/features/home/components/ProductRail";
-import { PromoBanner } from "@/features/home/components/PromoBanner";
+import { SectionHeader } from "@/features/home/components/SectionHeader";
+import { useHomeCatalog } from "@/features/home/hooks/use-home-catalog";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
-import { getShippingPolicy } from "@/features/shipping-policy/services/shipping-policy-client";
-
-const NEW_ARRIVALS_LIMIT = 15;
-const SPOTLIGHT_COUNT = 3;
-// The app is ETB-only for now (see CLAUDE.md's "Currency and market") -
-// this becomes a real per-customer/per-seller value again once USD comes
-// back into the mobile app.
-const CURRENCY_CODE = "etb";
 
 export default function HomeScreen() {
   const { customer } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const cardWidth = (width - insets.left - insets.right - 32 - 12) / 2;
   const locale = useLocale();
   const t = useTranslations();
   const { formatPrice } = useCurrency();
-  const [categories, setCategories] = useState<CategoryNode[]>([]);
-  const [newArrivals, setNewArrivals] = useState<ProductHit[]>([]);
-  const [recentlyViewed, setRecentlyViewed] = useState<ProductHit[]>([]);
-  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [catalogResolved, setCatalogResolved] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(false);
+  const { categories, catalog, error, refreshing, refresh } = useHomeCatalog(locale);
+  const [recent, setRecent] = useState<{ locale: string; items: ProductHit[] }>({ locale, items: [] });
+  const emptyCatalog = catalog?.products.length === 0;
 
-  // Recently-viewed is local-device state (not tied to the discovery
-  // fetch below), so it refreshes on every focus rather than only on
-  // mount/refresh - visiting a product and coming back should show it
-  // immediately without a manual pull-to-refresh.
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      getRecentlyViewed(locale).then((items) => { if (active) setRecentlyViewed(items); }).catch(() => {});
-      return () => { active = false; };
-    }, [locale])
-  );
-
-  const loadVersion = useRef(0);
-  const load = useCallback(async () => {
-    const version = ++loadVersion.current;
-    setError(false);
-    const [categoriesResult, arrivalsResult, shippingResult] = await Promise.allSettled([
-      listCategories(locale),
-      searchProducts({ sort: "newest", limit: NEW_ARRIVALS_LIMIT, locale }),
-      getShippingPolicy(CURRENCY_CODE),
-    ]);
-    if (version !== loadVersion.current) return;
-    if (categoriesResult.status === "fulfilled") setCategories(categoriesResult.value);
-    if (arrivalsResult.status === "fulfilled") {
-      setCatalogResolved(true);
-      setNewArrivals(arrivalsResult.value.products);
-      // An empty first page means the public catalog has no approved
-      // products. Remove device-local cards from an older catalog state so
-      // they cannot navigate to detail routes that now correctly return 404.
-      if (arrivalsResult.value.products.length === 0) {
-        await clearRecentlyViewed();
-        setRecentlyViewed([]);
-      }
-    } else {
-      setCatalogResolved(false);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (!emptyCatalog) {
+      void getRecentlyViewed(locale).then((items) => {
+        if (active) setRecent({ locale, items });
+      }).catch(() => {});
     }
-    if (shippingResult.status === "fulfilled" && shippingResult.value) {
-      setFreeShippingThreshold(shippingResult.value.freeShippingThresholdCents);
-    }
-    if (categoriesResult.status === "rejected" && arrivalsResult.status === "rejected") {
-      setError(true);
-    }
-  }, [locale]);
+    return () => { active = false; };
+  }, [locale, emptyCatalog]));
 
   useEffect(() => {
-    load().finally(() => setLoading(false));
-  }, [load]);
-
-  async function onRefresh() {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }
-
-  const spotlightProducts = newArrivals.slice(0, SPOTLIGHT_COUNT);
-  const gridProducts = newArrivals.length >= SPOTLIGHT_COUNT ? newArrivals.slice(SPOTLIGHT_COUNT) : newArrivals;
-
-  // A plain array, not a switch/registry - reordering or dropping a
-  // section on Home is just reordering or deleting an entry here. Each
-  // section is its own component so this list stays readable as a table
-  // of contents for the page rather than a wall of JSX.
-  const sections = useMemo(
-    () => [
-      {
-        key: "cover",
-        node: <HeroBanner imageUri={newArrivals[0]?.thumbnail} eyebrow="Bawi" headline={t("home.hero.title")} body={t("home.hero.subtitle")} ctaLabel={t("home.hero.cta")} ctaHref="/(tabs)/search" />,
-      },
-      {
-        key: "categories",
-        node: categories.length > 0 ? <CategoryStrip categories={categories} /> : null,
-      },
-      {
-        key: "recently-viewed",
-        node:
-          recentlyViewed.length > 0 ? (
-            <ProductRail title={t("home.recentlyViewed")} products={recentlyViewed} />
-          ) : null,
-      },
-      {
-        key: "spotlight",
-        node:
-          spotlightProducts.length === SPOTLIGHT_COUNT ? (
-            <EditorialSpotlight
-              title={t("home.justIn")}
-              subtitle={t("home.justInSubtitle")}
-              products={spotlightProducts as [ProductHit, ProductHit, ProductHit]}
-            />
-          ) : null,
-      },
-      {
-        key: "promo",
-        node:
-          freeShippingThreshold !== null ? (
-            <PromoBanner
-              title={t("home.promoTitle", {
-                amount: formatPrice(freeShippingThreshold, CURRENCY_CODE),
-              })}
-              body={t("home.promoBody")}
-            />
-          ) : null,
-      },
-      {
-        key: "catalog-placeholder",
-        node: catalogResolved && newArrivals.length === 0 ? <ProductCatalogPlaceholder /> : null,
-      },
-      {
-        key: "grid",
-        node:
-          gridProducts.length > 0 ? (
-            <MasonryGrid
-              title={t("home.newArrivals")}
-              subtitle={t("home.gridSubtitle")}
-              products={gridProducts}
-              seeAllHref="/(tabs)/search"
-            />
-          ) : null,
-      },
-    ],
-    [categories, recentlyViewed, spotlightProducts, gridProducts, catalogResolved, newArrivals, freeShippingThreshold, t, formatPrice]
-  );
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-paper">
-        <View className="flex-row flex-wrap px-2 pt-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <View key={i} style={{ width: "50%" }} className="px-2 pb-4">
-              <ProductCardSkeleton />
-            </View>
-          ))}
-        </View>
-      </SafeAreaView>
-    );
-  }
+    if (emptyCatalog) void clearRecentlyViewed().catch(() => {});
+  }, [emptyCatalog]);
 
   return (
-    <SafeAreaView className="flex-1 bg-paper">
-      <ScrollView
+    <SafeAreaView className="flex-1 bg-paper" edges={["top", "left", "right"]}>
+      <FlatList
+        data={catalog?.products ?? []}
+        numColumns={2}
+        keyExtractor={(item) => item.productCode}
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        columnWrapperStyle={{ paddingHorizontal: 16, gap: 12 }}
         contentContainerStyle={{ paddingBottom: tabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <View className="gap-5 border-b border-ink-100 px-4 pb-5 pt-3">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 gap-1 pr-3">
-              <Text className="font-serif text-display text-ink-950">
-                {customer?.first_name ? t("home.welcome", { name: customer.first_name }) : "Bawi"}
-              </Text>
-              <Text className="text-body text-ink-500">{t("home.tagline")}</Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t("home.sell")}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        ListHeaderComponent={
+          <View style={{ gap: 24, paddingBottom: 20 }}>
+            <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
+              <View className="flex-1 gap-1 pr-3">
+                <Text className="font-serif text-h1 text-ink-950">
+                  {customer?.first_name ? t("home.welcome", { name: customer.first_name }) : "Bawi"}
+                </Text>
+                <Text className="text-body-sm text-ink-500">{t("home.tagline")}</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("home.sell")}
                 onPress={() => router.push("/sell")}
-                className="h-10 w-10 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200"
-              >
+                className="h-11 w-11 items-center justify-center rounded-full bg-ink-100 active:bg-ink-200">
                 <ThemedIcon name="storefront-outline" size={20} />
               </Pressable>
             </View>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("nav.search")}
+              onPress={() => router.push("/(tabs)/search")}
+              className="mx-4 flex-row items-center gap-3 rounded-xl border border-ink-200 bg-surface px-4 py-3">
+              <ThemedIcon name="search-outline" size={20} tone="ink500" />
+              <Text className="text-body text-ink-500">{t("nav.search")}</Text>
+            </Pressable>
+            {categories && categories.length > 0 ? <CategoryStrip categories={categories} /> : null}
+            {error ? <Text className="px-4 text-body-sm text-ink-500">{t("home.loadError")}</Text> : null}
+            {!emptyCatalog ? <SectionHeader title={t("home.newArrivals")} seeAllHref="/(tabs)/search" /> : null}
           </View>
-        </View>
-
-        {error ? (
-          <View className="px-4 pt-4">
-            <Text className="text-body-sm text-ink-500">
-              {t("home.loadError")}
-            </Text>
+        }
+        ListEmptyComponent={emptyCatalog ? <ProductCatalogPlaceholder /> : !catalog && !error ? (
+          <View className="flex-row px-4" style={{ gap: 12 }}>
+            <View className="flex-1"><ProductCardSkeleton /></View>
+            <View className="flex-1"><ProductCardSkeleton /></View>
           </View>
         ) : null}
-
-        <View className="gap-8 pt-6">
-          {sections.map(({ key, node }) => (node ? <View key={key}>{node}</View> : null))}
-        </View>
-      </ScrollView>
+        renderItem={({ item }) => (
+          <View style={{ width: cardWidth, paddingBottom: 20 }}>
+            <ProductCard product={toProductCardData(item, t, formatPrice)} imageAspectRatio={0.8}
+              onPress={() => router.push({ pathname: "/product/[code]", params: { code: item.productCode } })} />
+          </View>
+        )}
+        ListFooterComponent={!emptyCatalog && recent.locale === locale && recent.items.length > 0 ? (
+          <View className="pt-4"><ProductRail title={t("home.recentlyViewed")} products={recent.items} /></View>
+        ) : null}
+      />
     </SafeAreaView>
   );
 }
