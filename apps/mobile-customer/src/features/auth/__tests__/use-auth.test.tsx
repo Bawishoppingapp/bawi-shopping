@@ -73,6 +73,47 @@ describe("useAuth", () => {
     expect(result.current.customer?.id).toBe("cus_1");
   });
 
+  test("registration clears an unusable session and reports incomplete sign-in", async () => {
+    mockedClient.registerCustomerAuthIdentity.mockResolvedValue("reg-token");
+    mockedClient.createCustomer.mockResolvedValue({ id: "cus_1" });
+    mockedClient.loginCustomer.mockResolvedValue("session-token");
+    mockedClient.getCurrentCustomer.mockResolvedValue(null);
+
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let failure: unknown;
+    await act(async () => {
+      try {
+        await result.current.register({ firstName: "A", lastName: "B", email: "a@b.com", password: "pw" });
+      } catch (error) {
+        failure = error;
+      }
+    });
+    expect(failure).toBeDefined();
+    expect(result.current.customer).toBeNull();
+    expect(await SecureStore.getItemAsync("bawi_customer_session")).toBeNull();
+  });
+
+  test("login clears a token that does not resolve to a customer", async () => {
+    mockedClient.loginCustomer.mockResolvedValue("session-token");
+    mockedClient.getCurrentCustomer.mockResolvedValue(null);
+
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let failure: unknown;
+    await act(async () => {
+      try {
+        await result.current.login("a@b.com", "pw");
+      } catch (error) {
+        failure = error;
+      }
+    });
+    expect(failure).toBeDefined();
+    expect(await SecureStore.getItemAsync("bawi_customer_session")).toBeNull();
+  });
+
   test("finishes a registration left with an actorless auth identity", async () => {
     const existingIdentity = new medusaAuthClient.MedusaAuthError("Identity with email already exists");
     existingIdentity.message = "Identity with email already exists";

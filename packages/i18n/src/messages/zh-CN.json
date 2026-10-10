@@ -196,6 +196,7 @@
   "auth.genericError": "出了点问题，请重试。",
   "auth.networkError": "无法连接服务器。请检查网络后重试。",
   "auth.accountExists": "此邮箱已注册账户。",
+  "auth.registrationIncomplete": "你的账户已创建，但我们无法为你登录。请尝试登录。",
   "auth.registerSubtitle": "在 Bawi 选购独立时尚品牌。",
   "auth.welcomeBack": "欢迎回来",
   "auth.loginSubtitle": "登录你的 Bawi 账户。",

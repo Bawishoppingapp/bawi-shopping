@@ -1,7 +1,7 @@
 import { Button, Input } from "@bawi/mobile-ui";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Platform, ScrollView, Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { loginSchema } from "@/features/auth/schemas/login-schema";
@@ -44,11 +44,14 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-paper"
-    >
-      <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
+    <View className="flex-1 bg-paper">
+      <ScrollView
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 24, gap: 16 }}
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        keyboardShouldPersistTaps="always"
+      >
         <View className="mb-4 gap-1">
           <Text className="text-h1 text-ink-950">{t("auth.welcomeBack")}</Text>
           <Text className="text-body text-ink-500">{t("auth.loginSubtitle")}</Text>
@@ -67,6 +70,7 @@ export default function LoginScreen() {
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
+          showSoftInputOnFocus
         />
         <Input
           label={t("login.password")}
@@ -78,6 +82,7 @@ export default function LoginScreen() {
           hidePasswordLabel={t("auth.hidePassword")}
           autoComplete="password"
           textContentType="password"
+          showSoftInputOnFocus
         />
         <Button onPress={onSubmit} loading={submitting}>
           {t("login.submit")}
@@ -91,6 +96,6 @@ export default function LoginScreen() {
           </Text>
         </Link>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

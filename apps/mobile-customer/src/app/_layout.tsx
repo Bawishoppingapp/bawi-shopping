@@ -77,8 +77,10 @@ function AppShell() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="sell" options={{ headerShown: false }} />
-              <Stack.Screen name="login" options={{ presentation: "modal", title: t("login.submit") }} />
-              <Stack.Screen name="register" options={{ presentation: "modal", title: t("register.submit") }} />
+              {/* Avoid the sheet-specific interaction issue observed on iOS 26,
+                  where auth fields can receive focus without opening the keyboard. */}
+              <Stack.Screen name="login" options={{ presentation: "fullScreenModal", title: t("login.submit") }} />
+              <Stack.Screen name="register" options={{ presentation: "fullScreenModal", title: t("register.submit") }} />
               <Stack.Screen name="forgot-password" options={{ title: t("auth.resetPassword") }} />
               <Stack.Screen name="reset-password" options={{ title: t("auth.resetPassword") }} />
             </Stack>

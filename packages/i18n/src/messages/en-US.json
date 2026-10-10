@@ -196,6 +196,7 @@
   "auth.genericError": "Something went wrong. Please try again.",
   "auth.networkError": "Couldn't reach the server. Check your connection and try again.",
   "auth.accountExists": "An account with this email already exists.",
+  "auth.registrationIncomplete": "Your account was created, but we couldn't sign you in. Please try logging in.",
   "auth.registerSubtitle": "Shop independent fashion brands on Bawi.",
   "auth.welcomeBack": "Welcome back",
   "auth.loginSubtitle": "Log in to your Bawi account.",

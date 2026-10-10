@@ -53,6 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = await loginCustomer(email, password);
     await setSessionToken(token);
     const current = await getCurrentCustomer(token);
+    if (!current) {
+      await clearSessionToken();
+      throw new MedusaAuthError("Sign-in could not be completed");
+    }
     setCustomer(current);
   }, []);
 
@@ -82,6 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sessionToken = await loginCustomer(input.email, input.password);
       await setSessionToken(sessionToken);
       const current = await getCurrentCustomer(sessionToken);
+      if (!current) {
+        await clearSessionToken();
+        throw new MedusaAuthError("Account was created, but sign-in could not be completed");
+      }
       setCustomer(current);
     },
     []

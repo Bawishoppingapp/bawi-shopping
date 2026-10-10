@@ -1,7 +1,7 @@
 import { Button, Input } from "@bawi/mobile-ui";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Platform, ScrollView, Text, View } from "react-native";
 
 import { MedusaAuthError, useAuth } from "@/features/auth/hooks/use-auth";
 import { PasswordRequirements } from "@/features/auth/components/password-requirements";
@@ -44,6 +44,8 @@ export default function RegisterScreen() {
         setFormError(
           /already exists/i.test(error.message)
             ? t("auth.accountExists")
+            : /sign-in could not be completed/i.test(error.message)
+              ? t("auth.registrationIncomplete")
             : t("common.error")
         );
       } else {
@@ -59,11 +61,14 @@ export default function RegisterScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-paper"
-    >
-      <ScrollView contentContainerClassName="flex-1 justify-center px-6 gap-4" keyboardShouldPersistTaps="handled">
+    <View className="flex-1 bg-paper">
+      <ScrollView
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 48, gap: 16 }}
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        keyboardShouldPersistTaps="always"
+      >
         <View className="mb-4 gap-1">
           <Text className="text-h1 text-ink-950">{t("register.title")}</Text>
           <Text className="text-body text-ink-500">{t("auth.registerSubtitle")}</Text>
@@ -82,6 +87,7 @@ export default function RegisterScreen() {
               error={fieldErrors.firstName}
               autoComplete="given-name"
               textContentType="givenName"
+              showSoftInputOnFocus
             />
           </View>
           <View className="flex-1">
@@ -92,6 +98,7 @@ export default function RegisterScreen() {
               error={fieldErrors.lastName}
               autoComplete="family-name"
               textContentType="familyName"
+              showSoftInputOnFocus
             />
           </View>
         </View>
@@ -104,6 +111,7 @@ export default function RegisterScreen() {
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
+          showSoftInputOnFocus
         />
         <Input
           label={t("register.password")}
@@ -116,6 +124,7 @@ export default function RegisterScreen() {
           hidePasswordLabel={t("auth.hidePassword")}
           autoComplete="password-new"
           textContentType="newPassword"
+          showSoftInputOnFocus
         />
         {passwordFocused || password.length > 0 ? <PasswordRequirements password={password} /> : null}
         <Input
@@ -128,6 +137,7 @@ export default function RegisterScreen() {
           hidePasswordLabel={t("auth.hidePassword")}
           autoComplete="password-new"
           textContentType="newPassword"
+          showSoftInputOnFocus
           onSubmitEditing={onSubmit}
           returnKeyType="done"
         />
@@ -140,6 +150,6 @@ export default function RegisterScreen() {
           </Text>
         </Link>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

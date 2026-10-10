@@ -196,6 +196,7 @@
   "auth.genericError": "Algo salió mal. Inténtalo de nuevo.",
   "auth.networkError": "No pudimos conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
   "auth.accountExists": "Ya existe una cuenta con este correo.",
+  "auth.registrationIncomplete": "Tu cuenta fue creada, pero no pudimos iniciar sesión. Intenta iniciar sesión.",
   "auth.registerSubtitle": "Compra moda de marcas independientes en Bawi.",
   "auth.welcomeBack": "Te damos la bienvenida",
   "auth.loginSubtitle": "Inicia sesión en tu cuenta de Bawi.",
