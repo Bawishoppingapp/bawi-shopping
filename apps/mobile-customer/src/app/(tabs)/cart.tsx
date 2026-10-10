@@ -16,6 +16,7 @@ import { useCart } from "@/features/cart/hooks/use-cart";
 import type { CartItem } from "@/features/cart/services/cart-client";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addToWishlist } from "@/features/wishlist/services/wishlist-client";
+import { EditorialEmptyState } from "@/components/EditorialEmptyState";
 
 const RECOMMENDATIONS_LIMIT = 8;
 
@@ -39,15 +40,15 @@ function CartLineItem({
   formatPrice: (minorUnits: number, currencyCode: string | null) => string;
 }) {
   return (
-    <View className="flex-row gap-3 border-b border-ink-100 py-4">
-      <View className="h-24 w-20 overflow-hidden rounded-md bg-ink-100">
+    <View className="flex-row gap-4 border-b border-ink-200 py-5">
+      <View className="h-32 w-24 overflow-hidden bg-ink-100">
         {item.thumbnail ? (
           <Image source={{ uri: item.thumbnail }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
         ) : null}
       </View>
       <View className="flex-1 gap-1">
         {item.brand ? <Text className="text-caption uppercase tracking-wide text-ink-500">{item.brand}</Text> : null}
-        <Text numberOfLines={2} className="text-body-sm text-ink-950">
+        <Text numberOfLines={2} className="font-serif text-h3 text-ink-950">
           {item.title}
         </Text>
         {item.color || item.size ? (
@@ -61,7 +62,7 @@ function CartLineItem({
           <Text className="text-caption text-warning">{t("cart.onlyLeft", { count: item.available_quantity })}</Text>
         ) : null}
         <View className="mt-1 flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3 rounded-full border border-ink-200 px-2 py-1">
+          <View className="flex-row items-center gap-3 border border-ink-200 px-2 py-1">
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("cart.decrease")}
@@ -86,7 +87,7 @@ function CartLineItem({
               <Text className="text-h3 text-ink-950">+</Text>
             </Pressable>
           </View>
-          <Text className="text-body-sm font-medium text-ink-950">{formatPrice(item.line_total, currencyCode)}</Text>
+          <Text className="text-body-sm font-semibold text-ink-950">{formatPrice(item.line_total, currencyCode)}</Text>
         </View>
         <View className="flex-row gap-4">
           <Pressable accessibilityRole="button" onPress={onRemove}>
@@ -160,19 +161,25 @@ export default function CartScreen() {
   if (!cart || cart.items.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-paper">
-        <View className="flex-1 items-center justify-center gap-4 px-6">
-          <Text className="text-h2 text-ink-950">{t("cart.empty")}</Text>
-          <Text className="text-body text-ink-500">{t("cart.emptyHint")}</Text>
-          <Button onPress={() => router.push("/(tabs)")}>{t("cart.continueShopping")}</Button>
+        <View className="border-b border-ink-100 px-4 pb-5 pt-3">
+          <Text className="font-serif text-display text-ink-950">{t("nav.cart")}</Text>
         </View>
+        <EditorialEmptyState
+          icon="bag-outline"
+          title={t("cart.empty")}
+          description={t("cart.emptyHint")}
+          actions={<Button onPress={() => router.push("/(tabs)")}>{t("cart.continueShopping")}</Button>}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
-        <Text className="mb-2 text-h1 text-ink-950">{t("cart.title")}</Text>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 28 }}>
+        <View className="mb-6 border-b border-ink-200 pb-5">
+          <Text className="font-serif text-display text-ink-950">{t("cart.title")}</Text>
+        </View>
 
         {cart.warnings.length > 0 ? (
           <View className="mb-2 gap-1 rounded-md bg-warning/10 p-3">

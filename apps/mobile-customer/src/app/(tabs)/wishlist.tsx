@@ -12,6 +12,7 @@ import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { readWishlist, removeFromWishlist } from "@/features/wishlist/services/wishlist-client";
+import { EditorialEmptyState } from "@/components/EditorialEmptyState";
 
 export default function WishlistScreen() {
   const { customer, isLoading: authLoading } = useAuth();
@@ -68,16 +69,18 @@ export default function WishlistScreen() {
   if (!authLoading && !customer) {
     return (
       <SafeAreaView className="flex-1 bg-paper">
-        <View className="flex-1 justify-center gap-4 px-6">
-          <View className="gap-1">
-            <Text className="text-h1 text-ink-950">{t("nav.wishlist")}</Text>
-            <Text className="text-body text-ink-500">{t("wishlist.loginHint")}</Text>
-          </View>
-          <Button onPress={() => router.push("/login")}>{t("login.submit")}</Button>
-          <Button variant="secondary" onPress={() => router.push("/register")}>
-            {t("register.submit")}
-          </Button>
+        <View className="border-b border-ink-100 px-4 pb-5 pt-3">
+          <Text className="font-serif text-display text-ink-950">{t("nav.wishlist")}</Text>
         </View>
+        <EditorialEmptyState
+          icon="heart-outline"
+          title={t("wishlist.empty")}
+          description={t("wishlist.loginHint")}
+          actions={<>
+            <Button onPress={() => router.push("/login")}>{t("login.submit")}</Button>
+            <Button variant="secondary" onPress={() => router.push("/register")}>{t("register.submit")}</Button>
+          </>}
+        />
       </SafeAreaView>
     );
   }
@@ -99,14 +102,11 @@ export default function WishlistScreen() {
         keyExtractor={(item) => item.productCode}
         numColumns={2}
         columnWrapperStyle={{ gap: 16, paddingHorizontal: 16 }}
-        contentContainerStyle={{ gap: 16, paddingTop: 8, paddingBottom: tabBarHeight + 32 }}
-        ListHeaderComponent={<View className="gap-2 px-4"><Text className="text-display text-ink-950">{t("nav.wishlist")}</Text>{error ? <Text className="text-body-sm text-ink-500">{t("home.loadError")}</Text> : null}</View>}
+        contentContainerStyle={{ gap: 16, paddingTop: 20, paddingBottom: tabBarHeight + 32 }}
+        ListHeaderComponent={<View className="mx-4 border-b border-ink-200 pb-5"><Text className="font-serif text-display text-ink-950">{t("nav.wishlist")}</Text>{error ? <Text className="mt-2 text-body-sm text-ink-500">{t("home.loadError")}</Text> : null}</View>}
         ListEmptyComponent={error ? null :
-          <View className="flex-1 items-center justify-center gap-2 px-6 py-16">
-            <Text className="text-h2 text-ink-950">{t("wishlist.empty")}</Text>
-            <Text className="text-center text-body-sm text-ink-500">
-              {t("wishlist.emptyHint")}
-            </Text>
+          <View style={{ minHeight: 470 }}>
+            <EditorialEmptyState icon="heart-outline" title={t("wishlist.empty")} description={t("wishlist.emptyHint")} />
           </View>
         }
         renderItem={({ item }) => (

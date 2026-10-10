@@ -18,6 +18,7 @@ import { toProductCardData } from "@/features/discovery/utils/to-product-card";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { useLocale, useTranslations } from "@/features/i18n/hooks/use-locale";
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from "@/features/search/services/search-history";
+import { EditorialEmptyState } from "@/components/EditorialEmptyState";
 
 const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 400;
@@ -203,8 +204,8 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <View className="border-b border-ink-100 bg-paper">
-        <View className="px-4 pb-3 pt-2">
+      <View className="bg-paper">
+        <View className="px-4 pb-5 pt-3">
           <Text className="font-serif text-display text-ink-950">{t("search.shop")}</Text>
         </View>
 
@@ -212,16 +213,16 @@ export default function SearchScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 28 }}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}
           >
             {topCategories.map((category) => (
               <Pressable
                 key={category.id}
                 accessibilityRole="button"
                 onPress={() => router.setParams({ category: category.id, categoryName: category.name })}
-                className="border-b-2 border-transparent pb-3 pt-1"
+                className="border-b border-ink-200 pb-4 pt-1"
               >
-                <Text className="text-body-sm font-semibold uppercase tracking-wide text-ink-950">
+                <Text className="text-caption font-medium uppercase tracking-widest text-ink-950">
                   {category.name}
                 </Text>
               </Pressable>
@@ -234,8 +235,8 @@ export default function SearchScreen() {
         ) : null}
       </View>
 
-      <View className="gap-3 border-b border-ink-100 px-4 py-4">
-        <View className="h-14 flex-row items-center rounded-full border-2 border-ink-200 bg-surface px-4">
+      <View className="gap-3 border-b border-ink-100 px-4 pb-5 pt-3">
+        <View className="h-14 flex-row items-center border border-ink-200 bg-surface px-4">
           <ThemedIcon name="search" size={18} tone="ink400" />
           <TextInput
             value={query}
@@ -277,9 +278,9 @@ export default function SearchScreen() {
       {showDiscovery ? (
         <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} keyboardShouldPersistTaps="handled">
           {recentSearches.length > 0 ? (
-            <View className="gap-2 border-b border-ink-100 px-4 py-4">
+            <View className="gap-3 border-b border-ink-100 px-4 py-6">
               <View className="flex-row items-center justify-between">
-                <Text className="text-h3 text-ink-950">{t("search.recentSearches")}</Text>
+                <Text className="font-serif text-h2 text-ink-950">{t("search.recentSearches")}</Text>
                 <Pressable accessibilityRole="button" onPress={onClearRecentSearches}>
                   <Text className="text-caption text-ink-500">{t("common.clear")}</Text>
                 </Pressable>
@@ -294,22 +295,23 @@ export default function SearchScreen() {
 
           {categories.length > 0 ? (
             <View>
-              <View className="border-b border-ink-100 px-4 py-4">
+              <View className="px-4 pb-3 pt-8">
                 <Text className="text-caption font-semibold uppercase tracking-widest text-ink-500">
                   {t("search.browseCategories")}
                 </Text>
               </View>
-              {browseCategories.map((category) => (
+              {browseCategories.map((category, index) => (
                 <Pressable
                   key={category.id}
                   accessibilityRole="button"
                   onPress={() => router.setParams({ category: category.id, categoryName: category.name })}
-                  className="mx-4 min-h-16 flex-row items-center border-b border-ink-100 py-4 active:bg-ink-100"
+                  className="mx-4 min-h-20 flex-row items-center border-b border-ink-200 py-4 active:bg-ink-100"
                 >
-                  <Text className="flex-1 text-body font-semibold uppercase tracking-wide text-ink-950">
+                  <Text className="mr-5 text-caption tracking-widest text-ink-400">{String(index + 1).padStart(2, "0")}</Text>
+                  <Text className="flex-1 font-serif text-h2 text-ink-950">
                     {category.name}
                   </Text>
-                  <ThemedIcon name="chevron-forward" size={22} tone="ink700" />
+                  <ThemedIcon name="arrow-forward" size={18} tone="ink700" />
                 </Pressable>
               ))}
             </View>
@@ -331,13 +333,7 @@ export default function SearchScreen() {
           contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 8, paddingBottom: tabBarHeight + 32 }}
           onEndReachedThreshold={0.4}
           onEndReached={onLoadMore}
-          ListEmptyComponent={
-            <View className="items-center gap-2 px-6 pt-16">
-              <ThemedIcon name="search-outline" size={32} tone="ink400" />
-              <Text className="text-h3 text-ink-950">{t("search.noResults")}</Text>
-              <Text className="text-center text-body-sm text-ink-500">{t("search.noResultsHint")}</Text>
-            </View>
-          }
+          ListEmptyComponent={<EditorialEmptyState icon="search-outline" title={t("search.noResults")} description={t("search.noResultsHint")} />}
           ListFooterComponent={loadingMore ? <ThemedActivityIndicator className="py-4" /> : null}
           renderItem={({ item }) => (
             <View className="flex-1 px-2 pb-4">

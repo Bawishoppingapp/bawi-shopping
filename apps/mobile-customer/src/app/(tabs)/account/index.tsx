@@ -1,4 +1,4 @@
-import { Button, Card, ThemedActivityIndicator, ThemedIcon } from "@bawi/mobile-ui";
+import { Button, ThemedActivityIndicator, ThemedIcon } from "@bawi/mobile-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router } from "expo-router";
@@ -36,9 +36,11 @@ function AccountRow({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      className="flex-row items-center gap-3 border-b border-ink-100 px-4 py-3.5 active:bg-ink-100"
+      className="min-h-16 flex-row items-center gap-4 border-b border-ink-100 px-4 py-3 active:bg-ink-100"
     >
-      <ThemedIcon name={icon} size={20} tone="ink700" />
+      <View className="h-10 w-10 items-center justify-center rounded-full border border-ink-200">
+        <ThemedIcon name={icon} size={19} tone="ink700" />
+      </View>
       <Text className="flex-1 text-body text-ink-950">{label}</Text>
       {value ? <Text className="text-body-sm text-ink-500">{value}</Text> : null}
       <ThemedIcon name="chevron-forward" size={18} tone="ink400" />
@@ -48,11 +50,11 @@ function AccountRow({
 
 function AccountSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View className="gap-2">
-      <Text className="px-1 text-caption font-medium uppercase tracking-wide text-ink-500">{title}</Text>
-      <Card padded={false} className="overflow-hidden">
+    <View className="gap-3">
+      <Text className="px-1 text-caption font-semibold uppercase tracking-widest text-ink-500">{title}</Text>
+      <View className="overflow-hidden border-t border-ink-200 bg-surface">
         {children}
-      </Card>
+      </View>
     </View>
   );
 }
@@ -63,8 +65,10 @@ function AppearanceRow() {
   const t = useTranslations();
 
   return (
-    <View className="flex-row items-center gap-3 border-b border-ink-100 px-4 py-3.5">
-      <ThemedIcon name={isDark ? "moon-outline" : "sunny-outline"} size={20} tone="ink700" />
+    <View className="min-h-16 flex-row items-center gap-4 border-b border-ink-100 px-4 py-3">
+      <View className="h-10 w-10 items-center justify-center rounded-full border border-ink-200">
+        <ThemedIcon name={isDark ? "moon-outline" : "sunny-outline"} size={19} tone="ink700" />
+      </View>
       <View className="flex-1">
         <Text className="text-body text-ink-950">{t("account.darkMode")}</Text>
         <Text className="text-body-sm text-ink-500">{isDark ? t("common.on") : t("common.off")}</Text>
@@ -128,15 +132,18 @@ export default function AccountScreen() {
   if (!customer) {
     return (
       <SafeAreaView className="flex-1 bg-paper">
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, gap: 20, flexGrow: 1, justifyContent: "center" }}>
-          <View className="gap-1">
-            <Text className="text-h1 text-ink-950">{t("account.yourAccount")}</Text>
-            <Text className="text-body text-ink-500">{t("account.loginHint")}</Text>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 32, gap: 32 }}>
+          <View className="border-b border-ink-200 pb-6">
+            <Text className="font-serif text-display text-ink-950">{t("account.yourAccount")}</Text>
           </View>
-          <Button onPress={() => router.push("/login")}>{t("login.submit")}</Button>
-          <Button variant="secondary" onPress={() => router.push("/register")}>
-            {t("register.submit")}
-          </Button>
+          <View className="gap-4 py-8">
+            <View className="h-16 w-16 items-center justify-center rounded-full border border-ink-200 bg-surface">
+              <ThemedIcon name="person-outline" size={28} tone="ink700" />
+            </View>
+            <Text className="text-body leading-6 text-ink-500">{t("account.loginHint")}</Text>
+            <Button onPress={() => router.push("/login")}>{t("login.submit")}</Button>
+            <Button variant="secondary" onPress={() => router.push("/register")}>{t("register.submit")}</Button>
+          </View>
           <AccountSection title={t("account.preferences")}>
             <AccountRow
               icon="language-outline"
@@ -160,9 +167,9 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper">
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: tabBarHeight + 32 }}>
-        <View className="gap-1 px-1 pt-2">
-          <Text className="text-h1 text-ink-950">
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 32, paddingBottom: tabBarHeight + 32 }}>
+        <View className="border-b border-ink-200 pb-6 pt-2">
+          <Text className="font-serif text-display text-ink-950">
             {customer.first_name ? t("account.hello", { name: customer.first_name }) : t("account.yourAccount")}
           </Text>
           <Text className="text-body text-ink-500">{customer.email}</Text>
