@@ -1,6 +1,7 @@
 {
   "configVersion": 0,
   "apple": {
+    "copyright": "2026 Bawi Shopping",
     "categories": ["SHOPPING", "LIFESTYLE"],
     "advisory": {
       "alcoholTobaccoOrDrugUseOrReferences": "NONE",
