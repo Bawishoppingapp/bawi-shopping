@@ -45,6 +45,12 @@
     "release": {
       "automaticRelease": false,
       "phasedRelease": false
+    },
+    "review": {
+      "firstName": "Bawi",
+      "lastName": "Shopping",
+      "email": "support@bawishopping.com",
+      "phone": "+1 469 761 4227"
     }
   }
 }
