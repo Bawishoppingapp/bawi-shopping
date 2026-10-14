@@ -1,7 +1,7 @@
 import { Button, Input } from "@bawi/mobile-ui";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { Platform, ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 
 import { MedusaAuthError, useAuth } from "@/features/auth/hooks/use-auth";
 import { PasswordRequirements } from "@/features/auth/components/password-requirements";
@@ -17,6 +17,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -24,12 +25,12 @@ export default function RegisterScreen() {
 
   async function onSubmit() {
     setFormError(null);
-    const parsed = registerSchema.safeParse({ firstName, lastName, email, password, confirmPassword });
+    const parsed = registerSchema.safeParse({ firstName, lastName, email, password, confirmPassword, ageConfirmed });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const field = String(issue.path[0]);
-        if (!errors[field]) errors[field] = localizeValidationMessage(issue.message, t);
+        if (!errors[field]) errors[field] = field === "ageConfirmed" ? t("auth.ageRequired") : localizeValidationMessage(issue.message, t);
       }
       setFieldErrors(errors);
       return;
@@ -141,6 +142,18 @@ export default function RegisterScreen() {
           onSubmitEditing={onSubmit}
           returnKeyType="done"
         />
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: ageConfirmed }}
+          onPress={() => setAgeConfirmed((value) => !value)}
+          className="flex-row items-center gap-3 py-2"
+        >
+          <View className={`h-5 w-5 items-center justify-center rounded-sm border ${ageConfirmed ? "border-ink-950 bg-ink-950" : "border-ink-400"}`}>
+            {ageConfirmed ? <Text className="text-caption text-paper">✓</Text> : null}
+          </View>
+          <Text className="flex-1 text-body-sm text-ink-800">{t("auth.ageConfirmation")}</Text>
+        </Pressable>
+        {fieldErrors.ageConfirmed ? <Text className="text-body-sm text-danger">{fieldErrors.ageConfirmed}</Text> : null}
         <Button onPress={onSubmit} loading={submitting}>
           {t("register.submit")}
         </Button>

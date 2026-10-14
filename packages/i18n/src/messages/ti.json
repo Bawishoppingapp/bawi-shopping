@@ -21,6 +21,8 @@
   "register.submit": "ሕሳብ ፍጠር",
   "register.submitting": "ሕሳብ ኣብ ምፍጣር...",
   "register.haveAccount": "ሕሳብ ኣለካ?",
+  "auth.ageConfirmation": "እድመይ ብውሕዱ 13 ዓመት ምዃኑ አረጋግጽ።",
+  "auth.ageRequired": "ሕሳብ ንምፍጣር ብውሕዱ 13 ዓመት ክትከውን ኣለካ።",
   "login.title": "ናብ ሕሳብካ እቶ",
   "login.subtitle": "ናብ ባዊ ሽርፒንግ እንኳዕ ብደሓን ተመለስካ።",
   "login.email": "ኢመይል",

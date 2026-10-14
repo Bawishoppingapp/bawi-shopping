@@ -30,6 +30,7 @@ export const registerSchema = z
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
     email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
+    ageConfirmed: z.boolean().refine(Boolean, "You must be at least 13 to create an account"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "Confirm your password"),
   })

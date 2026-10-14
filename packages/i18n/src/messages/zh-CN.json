@@ -21,6 +21,8 @@
   "register.submit": "创建账户",
   "register.submitting": "正在创建账户...",
   "register.haveAccount": "已经有账户？",
+  "auth.ageConfirmation": "我确认我已年满 13 周岁。",
+  "auth.ageRequired": "年满 13 周岁才能创建账户。",
   "login.title": "登录您的账户",
   "login.subtitle": "欢迎回到 Bawi Shopping。",
   "login.email": "电子邮箱",

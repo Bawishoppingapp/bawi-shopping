@@ -21,6 +21,8 @@
   "register.submit": "Akkaawuntii Uumi",
   "register.submitting": "Akkaawuntii uumaa jira...",
   "register.haveAccount": "Duraan akkaawuntii qabdaa?",
+  "auth.ageConfirmation": "Umuriin koo yoo xiqqaate waggaa 13 ta'uu nan mirkaneessa.",
+  "auth.ageRequired": "Akkaawuntii uumuuf yoo xiqqaate waggaa 13 ta'uu qabda.",
   "login.title": "Gara Akkaawuntii Keetiitti Seeni",
   "login.subtitle": "Gara Bawi Shopping baga nagaan deebite.",
   "login.email": "Imeelii",

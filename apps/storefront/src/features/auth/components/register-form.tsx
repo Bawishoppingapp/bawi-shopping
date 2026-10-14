@@ -30,6 +30,11 @@ export function RegisterForm() {
       <FormField label={t("register.password")} error={state.fieldErrors.password}>
         <Input name="password" type="password" autoComplete="new-password" />
       </FormField>
+      <label className="flex items-center gap-3 text-sm text-neutral-700">
+        <input name="ageConfirmed" type="checkbox" className="h-4 w-4" />
+        {t("auth.ageConfirmation")}
+      </label>
+      {state.fieldErrors.ageConfirmed && <p role="alert" className="text-sm text-red-600">{t("auth.ageRequired")}</p>}
 
       {state.formError && (
         <p role="alert" className="text-sm text-red-600">

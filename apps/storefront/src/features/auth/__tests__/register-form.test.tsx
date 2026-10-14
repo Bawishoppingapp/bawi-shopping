@@ -29,6 +29,7 @@ describe("RegisterForm", () => {
     expect(screen.getByLabelText("Last name")).toBeInTheDocument()
     expect(screen.getByLabelText("Email")).toBeInTheDocument()
     expect(screen.getByLabelText("Password")).toBeInTheDocument()
+    expect(screen.getByLabelText("I confirm that I am at least 13 years old.")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Create account" })).toBeInTheDocument()
   })
 

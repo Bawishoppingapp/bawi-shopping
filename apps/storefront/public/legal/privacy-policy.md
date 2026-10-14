@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: September 10, 2026**
+**Last updated: October 13, 2026**
 
 Bawi Shopping is an online marketplace operated under the trading name **Bawi Shopping** from Addis Ababa, Ethiopia. Contact us at **support@bawishopping.com**.
 
@@ -14,6 +14,6 @@ Customers transfer payment to the Telebirr recipient shown at checkout and uploa
 
 ## Your rights
 
-You may request access, correction, deletion, or a copy of your information, subject to lawful retention duties. Email **support@bawishopping.com** with the subject “Privacy Request.” The service is intended for people aged 18 or older.
+You may request access, correction, deletion, or a copy of your information, subject to lawful retention duties. Email **support@bawishopping.com** with the subject “Privacy Request.” Accounts are available to people aged 13 or older. People under 13 should not create an account or provide personal information. If we learn that an account belongs to someone under 13, we will close it and delete personal information unless retention is legally required.
 
 We may update this policy and will revise the date above. Contact: **support@bawishopping.com**, Bawi Shopping, Addis Ababa, Ethiopia.

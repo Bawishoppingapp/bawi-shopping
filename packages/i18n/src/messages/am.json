@@ -21,6 +21,8 @@
   "register.submit": "አካውንት ፍጠር",
   "register.submitting": "አካውንት በመፍጠር ላይ...",
   "register.haveAccount": "አካውንት አለዎት?",
+  "auth.ageConfirmation": "ቢያንስ 13 ዓመት እንደሆነኝ አረጋግጣለሁ።",
+  "auth.ageRequired": "አካውንት ለመፍጠር ቢያንስ 13 ዓመት መሆን አለብዎት።",
   "login.title": "ወደ አካውንትዎ ይግቡ",
   "login.subtitle": "ወደ ባዊ ሽርፒንግ እንኳን በደህና ተመለሱ።",
   "login.email": "ኢሜይል",

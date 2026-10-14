@@ -6,6 +6,7 @@ const validInput = {
   lastName: "Doe",
   email: "jane@example.com",
   password: "Correct1horse",
+  ageConfirmed: true,
 }
 
 describe("registerSchema", () => {
@@ -21,6 +22,11 @@ describe("registerSchema", () => {
 
   test("rejects a missing first name", () => {
     const result = registerSchema.safeParse({ ...validInput, firstName: "" })
+    expect(result.success).toBe(false)
+  })
+
+  test("rejects registration without confirming the minimum age", () => {
+    const result = registerSchema.safeParse({ ...validInput, ageConfirmed: false })
     expect(result.success).toBe(false)
   })
 

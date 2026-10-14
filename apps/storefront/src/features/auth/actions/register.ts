@@ -20,6 +20,7 @@ export async function registerCustomer(
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
     email: formData.get("email"),
+    ageConfirmed: formData.get("ageConfirmed") === "on",
     password: formData.get("password"),
   })
 

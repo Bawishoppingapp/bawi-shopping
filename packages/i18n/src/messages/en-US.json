@@ -21,6 +21,8 @@
   "register.submit": "Create account",
   "register.submitting": "Creating account...",
   "register.haveAccount": "Already have an account?",
+  "auth.ageConfirmation": "I confirm that I am at least 13 years old.",
+  "auth.ageRequired": "You must be at least 13 to create an account.",
   "login.title": "Log in to your account",
   "login.subtitle": "Welcome back to Bawi Shopping.",
   "login.email": "Email",
