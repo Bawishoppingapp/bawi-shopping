@@ -238,5 +238,12 @@
   ,"search.category.jackets": "ጃኬታት"
   ,"search.category.habeshaWear": "ክዳን ሓበሻ"
   ,"search.category.onePieces": "ሓደ ክፋል ክዳን"
-  ,"search.category.sleepwear": "ናይ ድቃስ ክዳን"
+  ,"search.category.sleepwear": "ናይ ድቃስ ክዳን",
+  "checkout.requestQuote": "ትእዛዝ ኣቕርቡን ዋጋ መላእኽቲ ሕተቱን",
+  "checkout.quoteNotice": "ባዊ ቅድሚ ክፍሊት ዋጋ መላእኽቲ ከረጋግጽ እዩ።",
+  "checkout.quotePending": "ትእዛዝ ተቐቢሉ። ቅድሚ ክፍሊት ዋጋ መላእኽቲ ክንልእከልኩም ኢና።",
+  "orders.quotePending": "ባዊ ዋጋ መላእኽቲ የረጋግጽ ኣሎ። ድሕሪ ምቕባል ዋጋ ክትከፍሉ ኢኹም።",
+  "orders.quoteReady": "ዋጋ መላእኽቲ ተዳልዩ ኣሎ። ምሉእ መጠን ብቴሌብር ክፈሉ።",
+  "orders.refresh": "ትእዛዝ ኣሕድስ",
+  "status.pendingQuote": "ዋጋ መላእኽቲ ይጽበ"
 }

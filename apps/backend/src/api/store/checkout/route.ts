@@ -45,18 +45,19 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     idempotency_key,
   })
   if (existingOrder) {
+    const quotePending = existingOrder.status === "pending_quote"
     res.json({
       order_id: existingOrder.id,
       display_id: existingOrder.display_id,
       status: existingOrder.status,
       payment_status: existingOrder.payment_status,
       payment_method: existingOrder.payment_method,
-      payment_recipient_name: existingOrder.payment_recipient_name,
-      payment_recipient_phone: existingOrder.payment_recipient_phone,
+      payment_recipient_name: quotePending ? null : existingOrder.payment_recipient_name,
+      payment_recipient_phone: quotePending ? null : existingOrder.payment_recipient_phone,
       subtotal: existingOrder.subtotal_amount,
-      shipping: existingOrder.shipping_amount,
+      shipping: quotePending ? null : existingOrder.shipping_amount,
       tax: existingOrder.tax_amount,
-      total: existingOrder.total_amount,
+      total: quotePending ? null : existingOrder.total_amount,
       currency_code: existingOrder.currency_code,
     })
     return
@@ -129,14 +130,16 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     Number(shippingConfig.neighboring_shipping_fee_cents_etb ?? 25000)
   )
   if (!shippingQuote) {
-    res.status(422).json({ message: "Delivery is currently available only in Addis Ababa and supported neighboring areas." })
+    res.status(422).json({ message: "Delivery is currently available only in Ethiopia." })
     return
   }
+  const quotePending = shippingQuote.zone === "nationwide_quote"
+  const shippingAmount = shippingQuote.amount ?? 0
   const markupRate = Number(commissionConfig.platform_default_rate_basis_points ?? 1000)
   for (const item of lineItemsSnapshot) {
     item.unitPriceCents = addCustomerMarkup(item.unitPriceCents, markupRate)
   }
-  const totalAmount = publicCart.subtotal + shippingQuote.amount + taxResult.tax_amount
+  const totalAmount = publicCart.subtotal + shippingAmount + taxResult.tax_amount
   const locationId = await getOrCreateDefaultStockLocationId(req.scope)
   const displayId = generateOrderDisplayId()
   const paymentConfig = await businessConfigModuleService.getCategoryValues("payment_methods")
@@ -159,10 +162,11 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
         lineItemsSnapshot,
         locationId,
         subtotalAmount: publicCart.subtotal,
-        shippingAmount: shippingQuote.amount,
+        shippingAmount,
         taxAmount: taxResult.tax_amount,
         taxRateBasisPoints,
         totalAmount,
+        quotePending,
         paymentRecipientName,
         paymentRecipientPhone,
       },
@@ -171,15 +175,15 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     res.json({
       order_id: result.orderId,
       display_id: result.displayId,
-      status: "pending_payment",
+      status: quotePending ? "pending_quote" : "pending_payment",
       payment_status: "pending",
       payment_method: "manual_telebirr",
-      payment_recipient_name: result.paymentRecipientName,
-      payment_recipient_phone: result.paymentRecipientPhone,
+      payment_recipient_name: quotePending ? null : result.paymentRecipientName,
+      payment_recipient_phone: quotePending ? null : result.paymentRecipientPhone,
       subtotal: publicCart.subtotal,
-      shipping: shippingQuote.amount,
+      shipping: quotePending ? null : shippingAmount,
       tax: taxResult.tax_amount,
-      total: totalAmount,
+      total: quotePending ? null : totalAmount,
       currency_code: publicCart.currency_code,
     })
   } catch {

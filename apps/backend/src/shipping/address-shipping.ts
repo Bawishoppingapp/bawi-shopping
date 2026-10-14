@@ -13,7 +13,7 @@ export function calculateAddressShipping(
   address: ShippingAddressInput,
   addisFee: number,
   neighboringFee: number
-): { amount: number; zone: "addis_ababa" | "neighboring" } | null {
+): { amount: number; zone: "addis_ababa" | "neighboring" } | { amount: null; zone: "nationwide_quote" } | null {
   if (address.country_code.toLowerCase() !== "et") return null
   const location = normalize(`${address.city} ${address.sub_city ?? ""}`)
   if ([...ADDIS_ALIASES].some((name) => location.includes(name))) {
@@ -22,5 +22,5 @@ export function calculateAddressShipping(
   if ([...NEIGHBORING_ALIASES].some((name) => location.includes(name))) {
     return { amount: neighboringFee, zone: "neighboring" }
   }
-  return null
+  return { amount: null, zone: "nationwide_quote" }
 }

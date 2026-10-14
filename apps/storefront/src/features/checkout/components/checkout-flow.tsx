@@ -69,7 +69,7 @@ export function CheckoutFlow({ idempotencyKey }: { idempotencyKey: string }) {
       )}
 
       <Button type="submit" loading={pending} className="mt-2">
-        {pending ? t("checkout.placingOrder") : t("checkout.continueToPayment")}
+        {pending ? t("checkout.placingOrder") : t("checkout.requestQuote")}
       </Button>
     </form>
   )

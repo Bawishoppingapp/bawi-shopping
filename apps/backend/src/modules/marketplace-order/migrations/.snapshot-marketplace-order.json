@@ -84,6 +84,7 @@
           "default": "'pending_payment'",
           "comment": null,
           "enumItems": [
+            "pending_quote",
             "pending_payment",
             "paid",
             "payment_failed",

@@ -240,5 +240,12 @@
   ,"search.category.jackets": "ጃኬቶች"
   ,"search.category.habeshaWear": "የሐበሻ ልብስ"
   ,"search.category.onePieces": "አንድ ክፍል ልብስ"
-  ,"search.category.sleepwear": "የመኝታ ልብስ"
+  ,"search.category.sleepwear": "የመኝታ ልብስ",
+  "checkout.requestQuote": "ትዕዛዝ አስገብተው የመላኪያ ዋጋ ይጠይቁ",
+  "checkout.quoteNotice": "ከመክፈልዎ በፊት ባዊ የመላኪያ ዋጋውን ያረጋግጣል።",
+  "checkout.quotePending": "ትዕዛዙ ገብቷል። ከክፍያ በፊት የመላኪያ ዋጋ እንልክልዎታለን።",
+  "orders.quotePending": "ባዊ የመላኪያ ዋጋውን እያረጋገጠ ነው። ዋጋው ከተላከ በኋላ ይከፍላሉ።",
+  "orders.quoteReady": "የመላኪያ ዋጋዎ ዝግጁ ነው። ሙሉ መጠኑን በቴሌብር ይክፈሉ።",
+  "orders.refresh": "ትዕዛዙን አድስ",
+  "status.pendingQuote": "የመላኪያ ዋጋ በመጠበቅ ላይ"
 }

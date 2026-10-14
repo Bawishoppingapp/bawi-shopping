@@ -326,5 +326,12 @@
   ,"search.category.jackets": "Jackets"
   ,"search.category.habeshaWear": "Habesha wear"
   ,"search.category.onePieces": "One-pieces"
-  ,"search.category.sleepwear": "Sleepwear"
+  ,"search.category.sleepwear": "Sleepwear",
+  "checkout.requestQuote": "Place order and request delivery quote",
+  "checkout.quoteNotice": "Bawi will confirm the delivery price before you pay.",
+  "checkout.quotePending": "Order placed. We will send your delivery quote before payment.",
+  "orders.quotePending": "Waiting for Bawi to confirm the delivery price. You will pay after the quote.",
+  "orders.quoteReady": "Your delivery quote is ready. Pay the full amount by Telebirr.",
+  "orders.refresh": "Refresh order",
+  "status.pendingQuote": "Awaiting delivery quote"
 }

@@ -83,6 +83,7 @@ type CreatePendingOrderInput = {
   taxAmount: number
   taxRateBasisPoints: number
   totalAmount: number
+  quotePending: boolean
   paymentRecipientName: string
   paymentRecipientPhone: string
 }
@@ -95,7 +96,7 @@ const createPendingOrderStep = createStep(
       display_id: input.displayId,
       customer_id: input.customerId,
       currency_code: input.currencyCode,
-      status: "pending_payment",
+      status: input.quotePending ? "pending_quote" : "pending_payment",
       idempotency_key: input.idempotencyKey,
       subtotal_amount: input.subtotalAmount,
       shipping_amount: input.shippingAmount,
@@ -137,6 +138,7 @@ export type StartCheckoutWorkflowInput = {
   taxAmount: number
   taxRateBasisPoints: number
   totalAmount: number
+  quotePending: boolean
   paymentRecipientName: string
   paymentRecipientPhone: string
 }
@@ -164,6 +166,7 @@ export const startCheckoutWorkflow = createWorkflow(
       taxAmount: input.taxAmount,
       taxRateBasisPoints: input.taxRateBasisPoints,
       totalAmount: input.totalAmount,
+      quotePending: input.quotePending,
       paymentRecipientName: input.paymentRecipientName,
       paymentRecipientPhone: input.paymentRecipientPhone,
     })

@@ -14,7 +14,11 @@ describe("address shipping", () => {
     expect(calculateAddressShipping({ ...address, city: "Bishoftu" }, 15000, 25000)).toEqual({ amount: 25000, zone: "neighboring" })
   })
 
-  test("rejects unsupported destinations", () => {
-    expect(calculateAddressShipping({ ...address, city: "Bahir Dar" }, 15000, 25000)).toBeNull()
+  test("requests a courier quote for other Ethiopian destinations", () => {
+    expect(calculateAddressShipping({ ...address, city: "Bahir Dar" }, 15000, 25000)).toEqual({ amount: null, zone: "nationwide_quote" })
+  })
+
+  test("does not offer delivery outside Ethiopia", () => {
+    expect(calculateAddressShipping({ ...address, city: "Nairobi", country_code: "ke" }, 15000, 25000)).toBeNull()
   })
 })

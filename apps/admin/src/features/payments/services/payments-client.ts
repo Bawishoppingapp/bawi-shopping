@@ -7,10 +7,12 @@ export interface ManualPayment {
   display_id: string
   customer_id: string
   currency_code: string
+  status: string
+  shipping_address: Record<string, unknown> | null
   subtotal: number
-  shipping: number
+  shipping: number | null
   tax: number
-  total: number
+  total: number | null
   payment_method: string
   payment_status: string
   transaction_reference: string | null
@@ -41,4 +43,12 @@ export async function approvePayment(token: string, id: string): Promise<void> {
 
 export async function rejectPayment(token: string, id: string, reason: string): Promise<void> {
   await parse(await fetch(`${BACKEND}/admin/payments/${id}/reject`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ reason }) }))
+}
+
+export async function setDeliveryQuote(token: string, id: string, shippingAmount: number): Promise<void> {
+  await parse(await fetch(`${BACKEND}/admin/payments/${id}/quote`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ shipping_amount: shippingAmount }),
+  }))
 }

@@ -64,6 +64,16 @@ export default async function OrderDetailPage({
         </p>
       </div>
 
+      {order.status === "pending_quote" && <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-900">
+        {t("orders.quotePending")} <Link href={`/orders/${order.id}`} className="font-medium underline">{t("orders.refresh")}</Link>
+      </div>}
+      {order.status === "pending_payment" && order.payment_status === "pending" && order.total !== null && order.payment_recipient_phone && <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-900">
+        <p className="font-medium">{t("orders.quoteReady")}</p>
+        <p>{t("checkout.sendExactAmount")}: {formatMoney(order.total, order.currency_code)}</p>
+        <p>{order.payment_recipient_name} · {order.payment_recipient_phone}</p>
+        <p>Transfer the exact total, then open this order in the Bawi Shopping app to upload the Telebirr confirmation receipt.</p>
+      </div>}
+
       {order.vendor_orders.map((vendorOrder) => (
         <section key={vendorOrder.id} className="rounded-md border border-neutral-200 p-4">
           <div className="mb-3 flex items-center justify-between">
@@ -115,7 +125,7 @@ export default async function OrderDetailPage({
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("checkout.shipping")}</span>
-          <span className="font-medium text-neutral-900">{formatMoney(order.shipping, order.currency_code)}</span>
+          <span className="font-medium text-neutral-900">{order.shipping === null ? t("status.pendingQuote") : formatMoney(order.shipping, order.currency_code)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">{t("checkout.tax")}</span>
@@ -123,7 +133,7 @@ export default async function OrderDetailPage({
         </div>
         <div className="flex justify-between border-t border-neutral-200 pt-2 text-sm font-semibold">
           <span className="text-neutral-900">{t("checkout.total")}</span>
-          <span className="text-neutral-900">{formatMoney(order.total, order.currency_code)}</span>
+          <span className="text-neutral-900">{order.total === null ? t("status.pendingQuote") : formatMoney(order.total, order.currency_code)}</span>
         </div>
       </aside>
 

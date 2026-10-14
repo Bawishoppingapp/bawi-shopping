@@ -326,5 +326,12 @@
   ,"search.category.jackets": "Chaquetas"
   ,"search.category.habeshaWear": "Moda habesha"
   ,"search.category.onePieces": "Monos de bebé"
-  ,"search.category.sleepwear": "Ropa de dormir"
+  ,"search.category.sleepwear": "Ropa de dormir",
+  "checkout.requestQuote": "Hacer pedido y solicitar cotización de entrega",
+  "checkout.quoteNotice": "Bawi confirmará el costo de entrega antes de que pagues.",
+  "checkout.quotePending": "Pedido realizado. Enviaremos la cotización de entrega antes del pago.",
+  "orders.quotePending": "Bawi está confirmando el costo de entrega. Pagarás después de recibir la cotización.",
+  "orders.quoteReady": "Tu cotización de entrega está lista. Paga el importe total con Telebirr.",
+  "orders.refresh": "Actualizar pedido",
+  "status.pendingQuote": "Esperando cotización de entrega"
 }

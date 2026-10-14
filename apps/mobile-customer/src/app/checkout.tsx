@@ -2,7 +2,7 @@ import { Button, Input, useThemeColors } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -31,6 +31,8 @@ export default function CheckoutScreen() {
   const [receipt, setReceipt] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Reuse the key if the request succeeds server-side but the response is lost.
+  const checkoutKey = useRef(`mobile-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => { if (!customer) router.replace("/login"); }, [customer]);
   useEffect(() => {
@@ -43,7 +45,13 @@ export default function CheckoutScreen() {
     setSubmitting(true); setError(null);
     try {
       const token = await getSessionToken();
-      if (token) setCheckout(await startManualCheckout(token, toShippingAddress(address), `mobile-${Date.now()}-${Math.random().toString(36).slice(2)}`));
+      if (!token) return;
+      const result = await startManualCheckout(token, toShippingAddress(address), checkoutKey.current);
+      if (result.status === "pending_quote" || result.total === null || result.shipping === null || !result.payment_recipient_phone) {
+        router.replace(`/order/${result.order_id}`);
+      } else {
+        setCheckout(result);
+      }
     } catch { setError(t("checkout.errorGeneric")); }
     finally { setSubmitting(false); }
   }
@@ -79,12 +87,12 @@ export default function CheckoutScreen() {
         <Text className="text-h2 text-ink-950">{t("checkout.shippingAddress")}</Text>
         {address ? <View className="rounded-md border border-ink-100 p-4"><Text className="font-medium text-ink-950">{address.first_name} {address.last_name}</Text><Text className="text-body-sm text-ink-600">{address.address_1}, {address.city}</Text></View> : <View className="gap-3 rounded-md border border-ink-100 p-4"><Text className="text-body-sm text-ink-700">{t("checkout.addressRequired")}</Text><Button variant="secondary" onPress={() => router.push("/(tabs)/account/addresses/new")}>{t("address.add")}</Button></View>}
         <Text className="text-h2 text-ink-950">{t("checkout.orderSummary")}</Text>
-        <View className="gap-2 rounded-md border border-ink-100 p-4"><View className="flex-row justify-between"><Text>{t("checkout.subtotal")}</Text><Text>{formatPrice(cart.subtotal, cart.currency_code)}</Text></View><View className="flex-row justify-between"><Text>{t("checkout.shipping")}</Text><Text>{cart.qualifies_for_free_shipping ? t("cart.free") : formatPrice(cart.shipping_estimate, cart.currency_code)}</Text></View><Text className="text-caption text-ink-500">{t("checkout.taxCalculated")}</Text></View>
-        <Button onPress={createOrder} loading={submitting} disabled={!address}>{t("checkout.continueToPayment")}</Button>
+        <View className="gap-2 rounded-md border border-ink-100 p-4"><View className="flex-row justify-between"><Text>{t("checkout.subtotal")}</Text><Text>{formatPrice(cart.subtotal, cart.currency_code)}</Text></View><Text className="text-caption text-ink-500">{t("checkout.quoteNotice")}</Text><Text className="text-caption text-ink-500">{t("checkout.taxCalculated")}</Text></View>
+        <Button onPress={createOrder} loading={submitting} disabled={!address}>{t("checkout.requestQuote")}</Button>
       </> : <>
         <Text className="text-h2 text-ink-950">{t("checkout.telebirrTitle")}</Text>
-        <View className="gap-3 rounded-md border border-ink-100 p-4"><Text className="text-body-sm text-ink-600">{t("checkout.sendExactAmount")}</Text><Text className="text-h1 text-ink-950">{formatPrice(checkout.total, checkout.currency_code)}</Text><Text className="text-body text-ink-800">{checkout.payment_recipient_name}</Text><Text selectable className="text-h2 text-ink-950">{checkout.payment_recipient_phone}</Text><Text selectable className="text-body-sm text-ink-600">{t("checkout.orderReference")}: {checkout.display_id}</Text></View>
-        <View className="gap-1 rounded-md border border-ink-100 p-4"><View className="flex-row justify-between"><Text>{t("checkout.subtotal")}</Text><Text>{formatPrice(checkout.subtotal, checkout.currency_code)}</Text></View><View className="flex-row justify-between"><Text>{t("checkout.shipping")}</Text><Text>{formatPrice(checkout.shipping, checkout.currency_code)}</Text></View><View className="flex-row justify-between"><Text>{t("checkout.tax")}</Text><Text>{formatPrice(checkout.tax, checkout.currency_code)}</Text></View><View className="mt-2 flex-row justify-between border-t border-ink-100 pt-2"><Text className="font-semibold">{t("checkout.total")}</Text><Text className="font-semibold">{formatPrice(checkout.total, checkout.currency_code)}</Text></View></View>
+        <View className="gap-3 rounded-md border border-ink-100 p-4"><Text className="text-body-sm text-ink-600">{t("checkout.sendExactAmount")}</Text><Text className="text-h1 text-ink-950">{checkout.total === null ? t("status.pendingQuote") : formatPrice(checkout.total, checkout.currency_code)}</Text><Text className="text-body text-ink-800">{checkout.payment_recipient_name}</Text><Text selectable className="text-h2 text-ink-950">{checkout.payment_recipient_phone}</Text><Text selectable className="text-body-sm text-ink-600">{t("checkout.orderReference")}: {checkout.display_id}</Text></View>
+        <View className="gap-1 rounded-md border border-ink-100 p-4"><View className="flex-row justify-between"><Text>{t("checkout.subtotal")}</Text><Text>{formatPrice(checkout.subtotal, checkout.currency_code)}</Text></View><View className="flex-row justify-between"><Text>{t("checkout.shipping")}</Text><Text>{checkout.shipping === null ? t("status.pendingQuote") : formatPrice(checkout.shipping, checkout.currency_code)}</Text></View><View className="flex-row justify-between"><Text>{t("checkout.tax")}</Text><Text>{formatPrice(checkout.tax, checkout.currency_code)}</Text></View><View className="mt-2 flex-row justify-between border-t border-ink-100 pt-2"><Text className="font-semibold">{t("checkout.total")}</Text><Text className="font-semibold">{checkout.total === null ? t("status.pendingQuote") : formatPrice(checkout.total, checkout.currency_code)}</Text></View></View>
         <Input label={t("checkout.transactionReference")} value={reference} onChangeText={setReference} autoCapitalize="characters" />
         <Button variant="secondary" onPress={chooseReceipt}>{receipt ? t("checkout.changeReceipt") : t("checkout.uploadReceipt")}</Button>
         {receipt ? <Image source={{ uri: receipt.uri }} style={{ width: "100%", height: 220, borderRadius: 8 }} contentFit="contain"/> : null}

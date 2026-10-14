@@ -48,20 +48,7 @@ export default async function CartPage() {
           <span className="text-neutral-500">{t("cart.subtotal")}</span>
           <span className="font-medium text-neutral-900">{formatMoney(cart.subtotal, cart.currency_code)}</span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-neutral-500">{t("cart.shippingEstimate")}</span>
-          <span className="font-medium text-neutral-900">
-            {cart.shipping_estimate === 0 ? t("cart.free") : formatMoney(cart.shipping_estimate, cart.currency_code)}
-          </span>
-        </div>
-
-        {cart.qualifies_for_free_shipping ? (
-          <p className="text-sm text-green-700">{t("cart.qualifiesForFreeShipping")}</p>
-        ) : (
-          <p className="text-sm text-neutral-500">
-            {formatMoney(cart.amount_remaining_for_free_shipping, cart.currency_code)} {t("cart.freeShippingProgress")}
-          </p>
-        )}
+        <p className="text-sm text-neutral-500">{t("checkout.quoteNotice")}</p>
 
         {cart.checkout_blocked && (
           <p role="alert" className="text-sm text-red-600">

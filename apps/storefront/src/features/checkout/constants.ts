@@ -16,12 +16,12 @@ export interface CheckoutStartResult {
   status: string
   payment_status: string
   payment_method: "manual_telebirr"
-  payment_recipient_name: string
-  payment_recipient_phone: string
+  payment_recipient_name: string | null
+  payment_recipient_phone: string | null
   subtotal: number
-  shipping: number
+  shipping: number | null
   tax: number
-  total: number
+  total: number | null
   currency_code: string
 }
 

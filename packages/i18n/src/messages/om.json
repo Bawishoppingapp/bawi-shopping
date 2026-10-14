@@ -238,5 +238,12 @@
   ,"search.category.jackets": "Jaakkeettii"
   ,"search.category.habeshaWear": "Uffata Habashaa"
   ,"search.category.onePieces": "Uffata kutaa tokkoo"
-  ,"search.category.sleepwear": "Uffata hirribaa"
+  ,"search.category.sleepwear": "Uffata hirribaa",
+  "checkout.requestQuote": "Ajaja galchiitii gatii geejjibaa gaafadhu",
+  "checkout.quoteNotice": "Bawi kaffaltii dura gatii geejjibaa ni mirkaneessa.",
+  "checkout.quotePending": "Ajajni galmaaʼeera. Kaffaltii dura gatii geejjibaa siif ergina.",
+  "orders.quotePending": "Bawi gatii geejjibaa mirkaneessaa jira. Erga gatiin beeksifamee booda kaffalta.",
+  "orders.quoteReady": "Gatiin geejjibaa qophaaʼeera. Hanga guutuu Telebirriin kaffali.",
+  "orders.refresh": "Ajaja haaromsi",
+  "status.pendingQuote": "Gatii geejjibaa eegaa jira"
 }

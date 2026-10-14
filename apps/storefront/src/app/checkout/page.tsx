@@ -51,12 +51,7 @@ export default async function CheckoutPage() {
           <span className="text-neutral-500">{t("checkout.subtotal")}</span>
           <span className="font-medium text-neutral-900">{formatMoney(cart.subtotal, cart.currency_code)}</span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-neutral-500">{t("checkout.shipping")}</span>
-          <span className="font-medium text-neutral-900">
-            {cart.shipping_estimate === 0 ? t("cart.free") : formatMoney(cart.shipping_estimate, cart.currency_code)}
-          </span>
-        </div>
+        <p className="text-sm text-neutral-500">{t("checkout.quoteNotice")}</p>
       </aside>
     </main>
   )

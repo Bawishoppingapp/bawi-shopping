@@ -48,13 +48,15 @@ export interface PublicOrder {
   status: string
   payment_status: string
   payment_method: string
+  payment_recipient_name: string | null
+  payment_recipient_phone: string | null
   payment_reference: string | null
   payment_rejection_reason: string | null
   currency_code: string
   subtotal: number
-  shipping: number
+  shipping: number | null
   tax: number
-  total: number
+  total: number | null
   shipping_address: Record<string, unknown>
   vendor_orders: PublicVendorOrder[]
   created_at: string
@@ -104,13 +106,15 @@ export async function shapeOrderForCustomer(
     status: order.status,
     payment_status: order.payment_status,
     payment_method: order.payment_method,
+    payment_recipient_name: order.status === "pending_quote" ? null : order.payment_recipient_name,
+    payment_recipient_phone: order.status === "pending_quote" ? null : order.payment_recipient_phone,
     payment_reference: order.payment_reference,
     payment_rejection_reason: order.payment_rejection_reason,
     currency_code: order.currency_code,
     subtotal: order.subtotal_amount,
-    shipping: order.shipping_amount,
+    shipping: order.status === "pending_quote" ? null : order.shipping_amount,
     tax: order.tax_amount,
-    total: order.total_amount,
+    total: order.status === "pending_quote" ? null : order.total_amount,
     shipping_address: order.shipping_address as Record<string, unknown>,
     created_at: order.created_at as unknown as string,
     vendor_orders: order.vendor_orders.map((vendorOrder) => {

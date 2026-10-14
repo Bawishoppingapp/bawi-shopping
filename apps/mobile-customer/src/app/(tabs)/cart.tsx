@@ -236,23 +236,11 @@ export default function CartScreen() {
         style={{ paddingBottom: tabBarHeight }}
         className="gap-2 border-t border-ink-100 bg-paper px-4 pt-3"
       >
-        {!cart.qualifies_for_free_shipping ? (
-          <Text className="text-body-sm text-ink-500">
-            {t("cart.addForFreeShipping", { amount: formatPrice(cart.amount_remaining_for_free_shipping, cart.currency_code) })}
-          </Text>
-        ) : (
-          <Text className="text-body-sm text-success">{t("cart.qualifiesForFreeShipping")}</Text>
-        )}
         <View className="flex-row justify-between">
           <Text className="text-body text-ink-700">{t("cart.subtotal")}</Text>
           <Text className="text-body text-ink-950">{formatPrice(cart.subtotal, cart.currency_code)}</Text>
         </View>
-        <View className="flex-row justify-between">
-          <Text className="text-body text-ink-700">{t("cart.shippingEstimate")}</Text>
-          <Text className="text-body text-ink-950">
-            {cart.qualifies_for_free_shipping ? t("cart.free") : formatPrice(cart.shipping_estimate, cart.currency_code)}
-          </Text>
-        </View>
+        <Text className="text-body-sm text-ink-500">{t("checkout.quoteNotice")}</Text>
 
         {cart.checkout_blocked ? (
           <>

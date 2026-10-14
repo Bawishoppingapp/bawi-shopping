@@ -25,7 +25,7 @@ export const MarketplaceOrder = model.define("marketplace_order", {
   customer_id: model.text(),
   currency_code: model.text().default("etb"),
   status: model
-    .enum(["pending_payment", "paid", "payment_failed", "cancelled"])
+    .enum(["pending_quote", "pending_payment", "paid", "payment_failed", "cancelled"])
     .default("pending_payment"),
   // Client-generated, one per checkout attempt - a retried submission with
   // the same key returns the existing order/PaymentIntent instead of

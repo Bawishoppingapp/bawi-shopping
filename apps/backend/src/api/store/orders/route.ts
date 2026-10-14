@@ -21,7 +21,7 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse):
       display_id: order.display_id,
       status: order.status,
       payment_status: order.payment_status,
-      total: order.total_amount,
+      total: order.status === "pending_quote" ? null : order.total_amount,
       currency_code: order.currency_code,
       created_at: order.created_at,
     })),

@@ -16,6 +16,7 @@ const TONES: Record<string, Tone> = {
   cancelled: "danger",
   returned: "neutral",
   pending_payment: "neutral",
+  pending_quote: "info",
   paid: "success",
   payment_failed: "danger",
 };
@@ -30,13 +31,14 @@ const LABEL_KEYS = {
   cancelled: "status.cancelled",
   returned: "status.returned",
   pending_payment: "status.pendingPayment",
+  pending_quote: "status.pendingQuote",
   paid: "status.paid",
   payment_failed: "status.paymentFailed",
 } as const;
 const ENGLISH_LABELS: Record<string, string> = {
   awaiting_preparation: "Awaiting preparation", preparing: "Preparing", ready_for_pickup: "Ready for pickup",
   picked_up: "Picked up", out_for_delivery: "Out for delivery", delivered: "Delivered", cancelled: "Cancelled",
-  returned: "Returned", pending_payment: "Pending payment", paid: "Paid", payment_failed: "Payment failed",
+  returned: "Returned", pending_quote: "Awaiting delivery quote", pending_payment: "Pending payment", paid: "Paid", payment_failed: "Payment failed",
 };
 
 export function orderStatusBadge(

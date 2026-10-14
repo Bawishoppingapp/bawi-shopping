@@ -105,7 +105,7 @@ export default function OrdersScreen() {
                 <Text className="text-caption text-ink-500">
                   {new Date(item.created_at).toLocaleDateString(locale)}
                 </Text>
-                <Text className="text-body-sm text-ink-950">{formatPrice(item.total, item.currency_code)}</Text>
+                <Text className="text-body-sm text-ink-950">{item.total === null ? t("status.pendingQuote") : formatPrice(item.total, item.currency_code)}</Text>
               </View>
             </Pressable>
           );

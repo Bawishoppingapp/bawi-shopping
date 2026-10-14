@@ -157,7 +157,7 @@ export const DEFAULT_BUSINESS_CONFIG_ENTRIES: DefaultConfigEntry[] = [
   {
     category: "service_area",
     key: "initial_service_area",
-    value: "Addis Ababa; Burayu; Sebeta; Sululta; Legetafo/Legedadi; Bishoftu",
+    value: "Ethiopia nationwide; Addis Ababa and neighboring cities have fixed fees, other destinations require a courier quote before payment",
     value_type: "string",
     label: "Initial service area",
     is_placeholder: false,

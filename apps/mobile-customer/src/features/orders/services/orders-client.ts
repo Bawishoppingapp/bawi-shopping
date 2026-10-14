@@ -11,7 +11,7 @@ export interface OrderSummary {
   display_id: string;
   status: string;
   payment_status: string;
-  total: number;
+  total: number | null;
   currency_code: string;
   created_at: string;
 }
@@ -56,13 +56,15 @@ export interface OrderDetail {
   status: string;
   payment_status: string;
   payment_method: string;
+  payment_recipient_name: string | null;
+  payment_recipient_phone: string | null;
   payment_reference: string | null;
   payment_rejection_reason: string | null;
   currency_code: string;
   subtotal: number;
-  shipping: number;
+  shipping: number | null;
   tax: number;
-  total: number;
+  total: number | null;
   shipping_address: Record<string, unknown>;
   vendor_orders: OrderVendorOrder[];
   created_at: string;

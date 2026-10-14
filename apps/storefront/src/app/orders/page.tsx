@@ -43,7 +43,7 @@ export default async function OrdersPage() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <span className="font-medium text-neutral-900">{formatMoney(order.total, order.currency_code)}</span>
+                <span className="font-medium text-neutral-900">{order.total === null ? t("status.pendingQuote") : formatMoney(order.total, order.currency_code)}</span>
                 <Link
                   href={`/orders/${order.id}`}
                   className="text-sm font-medium text-neutral-700 hover:underline"

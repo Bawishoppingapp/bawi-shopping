@@ -15,6 +15,7 @@ import type BusinessConfigModuleService from "../modules/business-config/service
  */
 export type NotificationEventType =
   | "order_confirmation"
+  | "delivery_quote_ready"
   | "shipment_update"
   | "delivery_confirmation"
   | "return_status_changed"

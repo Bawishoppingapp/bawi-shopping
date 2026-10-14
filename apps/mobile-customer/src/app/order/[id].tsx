@@ -1,10 +1,12 @@
-import { StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
+import { Button, Input, StatusBadge, ThemedActivityIndicator } from "@bawi/mobile-ui";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
 import { getSessionToken } from "@/features/auth/services/token-storage";
+import { submitPaymentProof } from "@/features/checkout/services/manual-checkout-client";
 import { useCurrency } from "@/features/currency/hooks/use-currency";
 import { type OrderDetail, getOrder } from "@/features/orders/services/orders-client";
 import { orderStatusBadge } from "@/features/orders/utils/order-status";
@@ -16,6 +18,34 @@ export default function OrderDetailScreen() {
   const t = useTranslations();
   const { formatPrice } = useCurrency();
   const [order, setOrder] = useState<OrderDetail | null | undefined>(undefined);
+  const [reference, setReference] = useState("");
+  const [receipt, setReceipt] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refreshOrder() {
+    const token = await getSessionToken();
+    setOrder(await getOrder(id, token));
+  }
+
+  async function chooseReceipt() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { setError(t("checkout.photoPermission")); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+    if (!result.canceled) setReceipt(result.assets[0]);
+  }
+
+  async function sendReceipt() {
+    if (!order || !receipt || reference.trim().length < 6) { setError(t("checkout.proofRequired")); return; }
+    setSubmitting(true); setError(null);
+    try {
+      const token = await getSessionToken();
+      if (!token) return;
+      await submitPaymentProof(token, order.id, reference.trim(), { uri: receipt.uri, name: receipt.fileName ?? "telebirr-receipt.jpg", type: receipt.mimeType ?? "image/jpeg" });
+      await refreshOrder();
+    } catch { setError(t("checkout.errorGeneric")); }
+    finally { setSubmitting(false); }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -60,13 +90,37 @@ export default function OrderDetailScreen() {
           </Text>
         </View>
 
+        {order.status === "pending_quote" ? (
+          <View className="gap-3 rounded-md bg-info/10 p-4">
+            <Text className="font-medium text-info">{t("checkout.quotePending")}</Text>
+            <Text className="text-body-sm text-ink-700">{t("orders.quotePending")}</Text>
+            <Button variant="secondary" onPress={refreshOrder}>{t("orders.refresh")}</Button>
+          </View>
+        ) : null}
+
         {order.status === "pending_payment" ? (
           <View className={`gap-1 rounded-md p-4 ${order.payment_status === "rejected" ? "bg-danger/10" : "bg-info/10"}`}>
             <Text className={`font-medium ${order.payment_status === "rejected" ? "text-danger" : "text-info"}`}>
-              {order.payment_status === "rejected" ? t("orders.paymentRejected") : t("orders.paymentUnderReview")}
+              {order.payment_status === "rejected" ? t("orders.paymentRejected") : order.payment_status === "pending" ? t("orders.quoteReady") : t("orders.paymentUnderReview")}
             </Text>
             {order.payment_rejection_reason ? <Text className="text-body-sm text-danger">{order.payment_rejection_reason}</Text> : null}
             {order.payment_reference ? <Text className="text-caption text-ink-600">{t("checkout.transactionReference")}: {order.payment_reference}</Text> : null}
+          </View>
+        ) : null}
+
+        {order.status === "pending_payment" && ["pending", "rejected"].includes(order.payment_status) && order.total !== null && order.payment_recipient_phone ? (
+          <View className="gap-3 rounded-md border border-ink-100 p-4">
+            <Text className="text-h3 text-ink-950">{t("checkout.telebirrTitle")}</Text>
+            <Text className="text-body-sm text-ink-600">{t("checkout.sendExactAmount")}</Text>
+            <Text className="text-h1 text-ink-950">{formatPrice(order.total, order.currency_code)}</Text>
+            <Text className="text-body text-ink-800">{order.payment_recipient_name}</Text>
+            <Text selectable className="text-h2 text-ink-950">{order.payment_recipient_phone}</Text>
+            <Text selectable className="text-body-sm text-ink-600">{t("checkout.orderReference")}: {order.display_id}</Text>
+            {error ? <Text className="text-body-sm text-danger">{error}</Text> : null}
+            <Input label={t("checkout.transactionReference")} value={reference} onChangeText={setReference} autoCapitalize="characters" />
+            <Button variant="secondary" onPress={chooseReceipt}>{receipt ? t("checkout.changeReceipt") : t("checkout.uploadReceipt")}</Button>
+            {receipt ? <Image source={{ uri: receipt.uri }} style={{ width: "100%", height: 220, borderRadius: 8 }} contentFit="contain" /> : null}
+            <Button onPress={sendReceipt} loading={submitting}>{t("checkout.submitForVerification")}</Button>
           </View>
         ) : null}
 
@@ -126,7 +180,7 @@ export default function OrderDetailScreen() {
           </View>
           <View className="flex-row justify-between">
             <Text className="text-body text-ink-700">{t("checkout.shipping")}</Text>
-            <Text className="text-body text-ink-950">{formatPrice(order.shipping, order.currency_code)}</Text>
+            <Text className="text-body text-ink-950">{order.shipping === null ? t("status.pendingQuote") : formatPrice(order.shipping, order.currency_code)}</Text>
           </View>
           <View className="flex-row justify-between">
             <Text className="text-body text-ink-700">{t("checkout.tax")}</Text>
@@ -134,7 +188,7 @@ export default function OrderDetailScreen() {
           </View>
           <View className="flex-row justify-between border-t border-ink-100 pt-2">
             <Text className="text-body-sm font-medium text-ink-950">{t("checkout.total")}</Text>
-            <Text className="text-body-sm font-medium text-ink-950">{formatPrice(order.total, order.currency_code)}</Text>
+            <Text className="text-body-sm font-medium text-ink-950">{order.total === null ? t("status.pendingQuote") : formatPrice(order.total, order.currency_code)}</Text>
           </View>
         </View>
 

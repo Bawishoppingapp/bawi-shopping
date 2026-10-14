@@ -326,5 +326,12 @@
   ,"search.category.jackets": "夹克"
   ,"search.category.habeshaWear": "哈贝莎传统服饰"
   ,"search.category.onePieces": "连体衣"
-  ,"search.category.sleepwear": "睡衣"
+  ,"search.category.sleepwear": "睡衣",
+  "checkout.requestQuote": "下单并申请配送报价",
+  "checkout.quoteNotice": "Bawi 会在付款前确认配送费用。",
+  "checkout.quotePending": "订单已提交。我们会在付款前发送配送报价。",
+  "orders.quotePending": "Bawi 正在确认配送费用。收到报价后再付款。",
+  "orders.quoteReady": "配送报价已准备好。请通过 Telebirr 支付全额。",
+  "orders.refresh": "刷新订单",
+  "status.pendingQuote": "等待配送报价"
 }
