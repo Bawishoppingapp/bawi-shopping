@@ -1,5 +1,6 @@
 import {
   SellerAuthError,
+  SellerServiceUnavailableError,
   completeSellerActivation,
   getCurrentSeller,
   loginSellerUser,
@@ -27,6 +28,28 @@ describe("seller-medusa-auth-client", () => {
     test("throws SellerAuthError on invalid credentials", async () => {
       (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, text: () => Promise.resolve("{}") });
       await expect(loginSellerUser("owner@shop.com", "wrong")).rejects.toThrow(SellerAuthError);
+    });
+
+    test("reports a backend outage instead of calling it a wrong password", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 503,
+        text: () => Promise.resolve("{}"),
+      });
+      await expect(loginSellerUser("owner@shop.com", "pw")).rejects.toThrow(SellerServiceUnavailableError);
+    });
+
+    test("stops waiting if the backend never responds", async () => {
+      jest.useFakeTimers();
+      try {
+        (globalThis.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
+        const login = loginSellerUser("owner@shop.com", "pw");
+        const result = expect(login).rejects.toThrow(SellerServiceUnavailableError);
+        await jest.advanceTimersByTimeAsync(30_000);
+        await result;
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -72,10 +95,15 @@ describe("seller-medusa-auth-client", () => {
       expect(result).toEqual(sellerMe);
     });
 
-    test("returns null on a non-ok response instead of throwing", async () => {
-      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false });
+    test("returns null for an expired token", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 401 });
       const result = await getCurrentSeller("stale-token");
       expect(result).toBeNull();
+    });
+
+    test("does not treat a service outage as an expired token", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
+      await expect(getCurrentSeller("valid-token")).rejects.toThrow(SellerServiceUnavailableError);
     });
   });
 });

@@ -34,13 +34,18 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refresh().finally(() => setIsLoading(false));
+    // A temporary backend outage must not leave startup loading forever or
+    // discard a valid stored session.
+    refresh().catch(() => {}).finally(() => setIsLoading(false));
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
     const token = await loginSellerUser(email, password);
-    await setSellerSessionToken(token);
     const current = await getCurrentSeller(token);
+    if (!current) {
+      throw new SellerAuthError("Could not verify your seller account. Please try again or contact support.");
+    }
+    await setSellerSessionToken(token);
     setSeller(current);
   }, []);
 

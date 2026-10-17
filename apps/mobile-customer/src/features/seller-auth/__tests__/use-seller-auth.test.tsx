@@ -53,6 +53,17 @@ describe("useSellerAuth", () => {
     expect(await SecureStore.getItemAsync("bawi_seller_session")).toBe("seller-token");
   });
 
+  test("does not store a token when the seller account cannot be verified", async () => {
+    mockedClient.loginSellerUser.mockResolvedValue("unverified-token");
+    mockedClient.getCurrentSeller.mockResolvedValue(null);
+
+    const { result } = await renderHook(() => useSellerAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await expect(result.current.login("owner@shop.com", "pw")).rejects.toBeDefined();
+    expect(await SecureStore.getItemAsync("bawi_seller_session")).toBeNull();
+  });
+
   test("logout clears the session token and the seller", async () => {
     mockedClient.loginSellerUser.mockResolvedValue("seller-token");
     mockedClient.getCurrentSeller.mockResolvedValue(sellerMe);
@@ -71,7 +82,7 @@ describe("useSellerAuth", () => {
     expect(await SecureStore.getItemAsync("bawi_seller_session")).toBeNull();
   });
 
-  test("drops a stale token on mount when getCurrentSeller fails", async () => {
+  test("drops a stale token on mount when the seller endpoint rejects it", async () => {
     await SecureStore.setItemAsync("bawi_seller_session", "stale-token");
     mockedClient.getCurrentSeller.mockResolvedValue(null);
 
@@ -80,6 +91,16 @@ describe("useSellerAuth", () => {
 
     expect(result.current.seller).toBeNull();
     expect(await SecureStore.getItemAsync("bawi_seller_session")).toBeNull();
+  });
+
+  test("keeps the stored token during a temporary seller service outage", async () => {
+    await SecureStore.setItemAsync("bawi_seller_session", "seller-token");
+    mockedClient.getCurrentSeller.mockRejectedValue(new Error("service unavailable"));
+
+    const { result } = await renderHook(() => useSellerAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(await SecureStore.getItemAsync("bawi_seller_session")).toBe("seller-token");
   });
 
   test("refresh re-fetches the current seller", async () => {
