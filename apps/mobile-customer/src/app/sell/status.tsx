@@ -33,20 +33,25 @@ export default function SellStatusScreen() {
   const themeColors = useThemeColors();
   const [application, setApplication] = useState<SellerApplicationSummary | null | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
-    const id = await getPendingApplicationId();
-    if (!id) {
-      setApplication(null);
-      return;
+    setLoadError(false);
+    try {
+      const id = await getPendingApplicationId();
+      if (!id) {
+        setApplication(null);
+        return;
+      }
+      const result = await getSellerApplicationStatus(id);
+      if (!result) {
+        // Only a confirmed 404 drops the pending id; outages are retriable.
+        await clearPendingApplicationId();
+      }
+      setApplication(result);
+    } catch {
+      setLoadError(true);
     }
-    const result = await getSellerApplicationStatus(id);
-    if (!result) {
-      // Application no longer exists (e.g. withdrawn and cleared server-side) -
-      // drop the stale pending id rather than keep polling a dead reference.
-      await clearPendingApplicationId();
-    }
-    setApplication(result);
   }, []);
 
   useFocusEffect(
@@ -73,6 +78,14 @@ export default function SellStatusScreen() {
   }, [application]);
 
   if (application === undefined || application === null) {
+    if (loadError) {
+      return (
+        <SafeAreaView className="flex-1 items-center justify-center gap-4 bg-paper px-6">
+          <Text className="text-center text-body text-ink-500">Could not load your application status. Your application is still saved.</Text>
+          <Button onPress={load}>Try again</Button>
+        </SafeAreaView>
+      );
+    }
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-paper">
         <ThemedActivityIndicator />
@@ -91,6 +104,7 @@ export default function SellStatusScreen() {
         contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: "center", gap: 16 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.ink950} />}
       >
+        {loadError ? <Text className="text-center text-body-sm text-danger">Could not refresh your status. Please try again.</Text> : null}
         <View className="items-center gap-3">
           <StatusBadge label={badge.label} tone={badge.tone} />
           <Text className="text-center text-h1 text-ink-950">{application.store_name}</Text>

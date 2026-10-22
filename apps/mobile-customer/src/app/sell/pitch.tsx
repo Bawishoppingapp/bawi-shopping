@@ -10,7 +10,7 @@ export default function SellPitchScreen() {
 
   function onCreateStorefront() {
     if (!customer) {
-      router.push("/login");
+      router.push("/register");
       return;
     }
     router.push("/sell/apply");
@@ -34,15 +34,25 @@ export default function SellPitchScreen() {
             List clothing and accessories, reach shoppers across the marketplace, and get paid -
             Bawi handles checkout, tracking, and customer service.
           </Text>
+          <Text className="text-body-sm text-ink-500">
+            Create a Bawi account, apply to sell, then activate your storefront after approval.
+          </Text>
         </View>
-        <Button onPress={onCreateStorefront}>Create my storefront</Button>
+        <Button onPress={onCreateStorefront}>{customer ? "Apply to sell" : "Create account to sell"}</Button>
+        {!customer ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push("/login")} className="items-center py-2">
+            <Text className="text-body-sm text-ink-500">
+              Already have a Bawi shopping account? <Text className="font-medium text-ink-950">Log in</Text>
+            </Text>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push("/sell/login")}
           className="items-center py-2"
         >
           <Text className="text-body-sm text-ink-500">
-            Already have a seller account? <Text className="font-medium text-ink-950">Log in</Text>
+            Already approved and activated? <Text className="font-medium text-ink-950">Seller log in</Text>
           </Text>
         </Pressable>
       </ScrollView>

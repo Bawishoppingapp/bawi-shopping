@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Platform, ScrollView, Text, View } from "react-native";
 
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { CustomerServiceUnavailableError } from "@/features/auth/services/medusa-auth-client";
 import { loginSchema } from "@/features/auth/schemas/login-schema";
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
 import { localizeValidationMessage } from "@/features/i18n/utils/localize-validation";
@@ -34,10 +35,8 @@ export default function LoginScreen() {
     try {
       await login(parsed.data.email, parsed.data.password);
       router.back();
-    } catch {
-      setFormError(
-        t("auth.genericError")
-      );
+    } catch (error) {
+      setFormError(error instanceof CustomerServiceUnavailableError ? t("auth.networkError") : t("auth.genericError"));
     } finally {
       setSubmitting(false);
     }
@@ -87,6 +86,7 @@ export default function LoginScreen() {
         <Button onPress={onSubmit} loading={submitting}>
           {t("login.submit")}
         </Button>
+        {submitting ? <Text className="text-center text-body-sm text-ink-500">Connecting to Bawi. This may take a moment if the service is starting.</Text> : null}
         <Link href="/forgot-password" asChild>
           <Text className="text-center text-body-sm text-ink-500">{t("auth.forgotPassword")}</Text>
         </Link>

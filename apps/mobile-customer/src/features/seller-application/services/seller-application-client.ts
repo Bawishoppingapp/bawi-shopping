@@ -6,6 +6,7 @@ import type { ApplicationInput } from "../schemas/application-schema";
 // runs client-side in Expo) and reads EXPO_PUBLIC_MEDUSA_BACKEND_URL instead
 // of the web app's server-only MEDUSA_BACKEND_URL.
 const MEDUSA_BACKEND_URL = process.env.EXPO_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000";
+const APPLICATION_TIMEOUT_MS = 30_000;
 
 export class SellerApplicationError extends Error {
   fieldErrors?: Record<string, string[]>;
@@ -14,6 +15,33 @@ export class SellerApplicationError extends Error {
     super(message);
     this.name = "SellerApplicationError";
     this.fieldErrors = fieldErrors;
+  }
+}
+
+export class SellerApplicationUnavailableError extends SellerApplicationError {
+  constructor() {
+    super("The seller service is taking too long to respond. Please try again in a moment.");
+    this.name = "SellerApplicationUnavailableError";
+  }
+}
+
+async function requestSellerApplicationBackend(path: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fetch(`${MEDUSA_BACKEND_URL}${path}`, { ...init, signal: controller.signal }),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          reject(new SellerApplicationUnavailableError());
+        }, APPLICATION_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    throw new SellerApplicationUnavailableError();
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 
@@ -44,7 +72,7 @@ export async function submitSellerApplication(input: ApplicationInput): Promise<
     ...rest
   } = input;
 
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/seller-applications`, {
+  const response = await requestSellerApplicationBackend("/seller-applications", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -62,6 +90,7 @@ export async function submitSellerApplication(input: ApplicationInput): Promise<
 
   const data = await parseJson(response);
 
+  if (response.status >= 500) throw new SellerApplicationUnavailableError();
   if (!response.ok) {
     throw new SellerApplicationError(data.message || "Could not submit application", data.errors);
   }
@@ -70,11 +99,12 @@ export async function submitSellerApplication(input: ApplicationInput): Promise<
 }
 
 export async function getSellerApplicationStatus(id: string): Promise<SellerApplicationSummary | null> {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/seller-applications/${id}`);
+  const response = await requestSellerApplicationBackend(`/seller-applications/${encodeURIComponent(id)}`);
 
-  if (!response.ok) {
+  if (response.status === 404) {
     return null;
   }
+  if (!response.ok) throw new SellerApplicationUnavailableError();
 
   const data = await parseJson(response);
   return data.application as SellerApplicationSummary | null;

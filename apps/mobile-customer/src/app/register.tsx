@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 
 import { MedusaAuthError, useAuth } from "@/features/auth/hooks/use-auth";
+import { CustomerServiceUnavailableError } from "@/features/auth/services/medusa-auth-client";
 import { PasswordRequirements } from "@/features/auth/components/password-requirements";
 import { registerSchema } from "@/features/auth/schemas/register-schema";
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
@@ -41,7 +42,9 @@ export default function RegisterScreen() {
       await register(parsed.data);
       router.back();
     } catch (error) {
-      if (error instanceof MedusaAuthError) {
+      if (error instanceof CustomerServiceUnavailableError) {
+        setFormError(t("auth.networkError"));
+      } else if (error instanceof MedusaAuthError) {
         setFormError(
           /already exists/i.test(error.message)
             ? t("auth.accountExists")
@@ -157,6 +160,7 @@ export default function RegisterScreen() {
         <Button onPress={onSubmit} loading={submitting}>
           {t("register.submit")}
         </Button>
+        {submitting ? <Text className="text-center text-body-sm text-ink-500">Creating your account. This may take a moment if the service is starting.</Text> : null}
         <Link href="/login" replace asChild>
           <Text className="text-center text-body-sm text-ink-500">
             {t("register.haveAccount")} <Text className="font-medium text-ink-950">{t("login.submit")}</Text>

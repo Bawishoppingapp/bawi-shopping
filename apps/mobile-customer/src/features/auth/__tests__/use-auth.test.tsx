@@ -26,6 +26,17 @@ describe("useAuth", () => {
     expect(result.current.customer).toBeNull();
   });
 
+  test("finishes startup and preserves a stored session during a backend outage", async () => {
+    await SecureStore.setItemAsync("bawi_customer_session", "valid-token");
+    mockedClient.getCurrentCustomer.mockRejectedValue(new Error("service unavailable"));
+
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.customer).toBeNull();
+    expect(await SecureStore.getItemAsync("bawi_customer_session")).toBe("valid-token");
+  });
+
   test("login stores the session token and sets the customer", async () => {
     mockedClient.loginCustomer.mockResolvedValue("session-token");
     mockedClient.getCurrentCustomer.mockResolvedValue({

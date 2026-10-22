@@ -35,28 +35,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const token = await getSessionToken();
-      if (token) {
-        const current = await getCurrentCustomer(token);
-        if (current) {
-          setCustomer(current);
-        } else {
-          // Stale/expired token - drop it rather than keep retrying.
-          await clearSessionToken();
+      try {
+        const token = await getSessionToken();
+        if (token) {
+          const current = await getCurrentCustomer(token);
+          if (current) {
+            setCustomer(current);
+          } else {
+            // Only an invalid session is discarded; an outage is retriable.
+            await clearSessionToken();
+          }
         }
+      } catch {
+        // A temporary backend or SecureStore failure must not hold the app
+        // behind its startup loading state or erase a valid session.
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     })();
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const token = await loginCustomer(email, password);
-    await setSessionToken(token);
     const current = await getCurrentCustomer(token);
     if (!current) {
-      await clearSessionToken();
       throw new MedusaAuthError("Sign-in could not be completed");
     }
+    await setSessionToken(token);
     setCustomer(current);
   }, []);
 
@@ -84,12 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         last_name: input.lastName,
       });
       const sessionToken = await loginCustomer(input.email, input.password);
-      await setSessionToken(sessionToken);
       const current = await getCurrentCustomer(sessionToken);
       if (!current) {
-        await clearSessionToken();
         throw new MedusaAuthError("Account was created, but sign-in could not be completed");
       }
+      await setSessionToken(sessionToken);
       setCustomer(current);
     },
     []

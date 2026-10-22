@@ -49,7 +49,7 @@ export default function SellActivateScreen() {
         <View className="gap-1">
           <Text className="text-h1 text-ink-950">Activate your storefront</Text>
           <Text className="text-body text-ink-500">
-            Paste the activation code from your approval email and choose a password.
+            Paste the activation code provided by Bawi after approval and choose a password.
           </Text>
         </View>
         {formError ? (

@@ -1,7 +1,7 @@
 import { Button, Input } from "@bawi/mobile-ui";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 
 import { clearPendingApplicationId } from "@/features/seller-application/services/pending-application-storage";
 import { SellerAuthError, useSellerAuth } from "@/features/seller-auth/hooks/use-seller-auth";
@@ -91,6 +91,17 @@ export default function SellLoginScreen() {
         <Button onPress={onSubmit} loading={submitting}>
           Log in
         </Button>
+        {submitting ? (
+          <Text className="text-center text-body-sm text-ink-500">
+            Connecting to the seller service. This may take a moment if the service is starting.
+          </Text>
+        ) : null}
+        <Pressable accessibilityRole="button" onPress={() => router.push("/sell/pitch")} className="items-center py-2">
+          <Text className="text-body-sm text-ink-500">New seller? <Text className="font-medium text-ink-950">Start an application</Text></Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => router.push("/sell/activate")} className="items-center py-2">
+          <Text className="text-body-sm text-ink-500">Approved but not activated? <Text className="font-medium text-ink-950">Activate storefront</Text></Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );

@@ -1,4 +1,5 @@
 import {
+  CustomerServiceUnavailableError,
   MedusaAuthError,
   createCustomer,
   deleteCustomerAccount,
@@ -70,6 +71,19 @@ describe("medusa-auth-client", () => {
       (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, text: () => Promise.resolve("{}") });
       await expect(loginCustomer("a@b.com", "wrong")).rejects.toThrow("Invalid email or password");
     });
+
+    test("stops loading when the backend does not respond", async () => {
+      jest.useFakeTimers();
+      try {
+        (globalThis.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
+        const login = loginCustomer("a@b.com", "pw");
+        const result = expect(login).rejects.toThrow(CustomerServiceUnavailableError);
+        await jest.advanceTimersByTimeAsync(30_000);
+        await result;
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   describe("requestPasswordReset", () => {
@@ -124,6 +138,11 @@ describe("medusa-auth-client", () => {
       (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false });
       const customer = await getCurrentCustomer("stale-token");
       expect(customer).toBeNull();
+    });
+
+    test("treats a server outage as retriable rather than an expired session", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503, text: () => Promise.resolve("{}") });
+      await expect(getCurrentCustomer("valid-token")).rejects.toThrow(CustomerServiceUnavailableError);
     });
   });
 

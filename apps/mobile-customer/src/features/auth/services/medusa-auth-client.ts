@@ -1,10 +1,38 @@
 const MEDUSA_BACKEND_URL = process.env.EXPO_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000";
 const MEDUSA_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? "";
+const AUTH_TIMEOUT_MS = 30_000;
 
 export class MedusaAuthError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "MedusaAuthError";
+  }
+}
+
+export class CustomerServiceUnavailableError extends Error {
+  constructor() {
+    super("Bawi is taking too long to respond. Please try again in a moment.");
+    this.name = "CustomerServiceUnavailableError";
+  }
+}
+
+async function requestCustomerBackend(path: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fetch(`${MEDUSA_BACKEND_URL}${path}`, { ...init, signal: controller.signal }),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          reject(new CustomerServiceUnavailableError());
+        }, AUTH_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    throw new CustomerServiceUnavailableError();
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 
@@ -26,7 +54,7 @@ async function parseJson(response: Response) {
  * sees an Authorization: Bearer header either way.
  */
 export async function registerCustomerAuthIdentity(email: string, password: string): Promise<string> {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/register`, {
+  const response = await requestCustomerBackend("/auth/customer/emailpass/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -34,6 +62,7 @@ export async function registerCustomerAuthIdentity(email: string, password: stri
 
   const data = await parseJson(response);
 
+  if (response.status >= 500) throw new CustomerServiceUnavailableError();
   if (!response.ok) {
     throw new MedusaAuthError(data.message || "Could not create account");
   }
@@ -45,7 +74,7 @@ export async function createCustomer(
   registrationToken: string,
   input: { email: string; first_name: string; last_name: string }
 ) {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/store/customers`, {
+  const response = await requestCustomerBackend("/store/customers", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -57,6 +86,7 @@ export async function createCustomer(
 
   const data = await parseJson(response);
 
+  if (response.status >= 500) throw new CustomerServiceUnavailableError();
   if (!response.ok) {
     throw new MedusaAuthError(data.message || "Could not create customer");
   }
@@ -65,7 +95,7 @@ export async function createCustomer(
 }
 
 export async function loginCustomer(email: string, password: string): Promise<string> {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass`, {
+  const response = await requestCustomerBackend("/auth/customer/emailpass", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -73,6 +103,7 @@ export async function loginCustomer(email: string, password: string): Promise<st
 
   const data = await parseJson(response);
 
+  if (response.status >= 500) throw new CustomerServiceUnavailableError();
   if (!response.ok) {
     throw new MedusaAuthError(data.message || "Invalid email or password");
   }
@@ -87,7 +118,7 @@ export async function loginCustomer(email: string, password: string): Promise<st
 // false - same limitation as seller activation, hence the paste-in-code
 // UI on the reset-password screen instead of a deep link).
 export async function requestPasswordReset(email: string): Promise<void> {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/reset-password`, {
+  const response = await requestCustomerBackend("/auth/customer/emailpass/reset-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ identifier: email }),
@@ -99,7 +130,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 }
 
 export async function resetPassword(email: string, resetToken: string, password: string): Promise<void> {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/update`, {
+  const response = await requestCustomerBackend("/auth/customer/emailpass/update", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${resetToken}` },
     body: JSON.stringify({ email, password }),
@@ -112,13 +143,14 @@ export async function resetPassword(email: string, resetToken: string, password:
 }
 
 export async function getCurrentCustomer(sessionToken: string) {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
+  const response = await requestCustomerBackend("/store/customers/me", {
     headers: {
       Authorization: `Bearer ${sessionToken}`,
       "x-publishable-api-key": MEDUSA_PUBLISHABLE_KEY,
     },
   });
 
+  if (response.status >= 500) throw new CustomerServiceUnavailableError();
   if (!response.ok) {
     return null;
   }
@@ -128,7 +160,7 @@ export async function getCurrentCustomer(sessionToken: string) {
 }
 
 export async function deleteCustomerAccount(sessionToken: string): Promise<void> {
-  const response = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
+  const response = await requestCustomerBackend("/store/customers/me", {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${sessionToken}`,
