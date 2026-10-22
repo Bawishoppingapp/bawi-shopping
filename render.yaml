@@ -15,7 +15,7 @@ services:
   - type: web
     name: bawi-backend
     runtime: docker
-    plan: free
+    plan: 0.5c-512mb # paid backend compute keeps the API available between requests
     region: oregon
     dockerfilePath: ./apps/backend/Dockerfile
     dockerContext: .
