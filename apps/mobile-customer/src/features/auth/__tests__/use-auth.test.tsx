@@ -145,6 +145,29 @@ describe("useAuth", () => {
     expect(result.current.customer?.id).toBe("cus_1");
   });
 
+  test("reports an existing account when recovery sign-in rejects the supplied password", async () => {
+    const existingIdentity = new medusaAuthClient.MedusaAuthError("Identity with email already exists");
+    existingIdentity.message = "Identity with email already exists";
+    mockedClient.registerCustomerAuthIdentity.mockRejectedValueOnce(existingIdentity);
+    mockedClient.loginCustomer.mockRejectedValueOnce(
+      new medusaAuthClient.MedusaAuthError("Invalid email or password")
+    );
+    const { result } = await renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let failure: unknown;
+    await act(async () => {
+      try {
+        await result.current.register({ firstName: "A", lastName: "B", email: "a@b.com", password: "wrong" });
+      } catch (error) {
+        failure = error;
+      }
+    });
+    expect(failure).toBeInstanceOf(medusaAuthClient.MedusaAuthError);
+    expect(failure).toBeDefined();
+    expect(mockedClient.createCustomer).not.toHaveBeenCalled();
+  });
+
   test("logout clears the session token and the customer", async () => {
     mockedClient.loginCustomer.mockResolvedValue("session-token");
     mockedClient.getCurrentCustomer.mockResolvedValue({

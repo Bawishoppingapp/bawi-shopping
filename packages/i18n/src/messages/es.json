@@ -196,6 +196,7 @@
   "checkout.comingSoon": "El pago estará disponible pronto",
   "checkout.comingSoonBody": "Estamos integrando una opción de pago etíope para pedidos en birr. Tu bolsa está guardada; vuelve cuando esté disponible.",
   "auth.genericError": "Algo salió mal. Inténtalo de nuevo.",
+  "auth.invalidCredentials": "El correo o la contraseña son incorrectos.",
   "auth.networkError": "No pudimos conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
   "auth.accountExists": "Ya existe una cuenta con este correo.",
   "auth.registrationIncomplete": "Tu cuenta fue creada, pero no pudimos iniciar sesión. Intenta iniciar sesión.",

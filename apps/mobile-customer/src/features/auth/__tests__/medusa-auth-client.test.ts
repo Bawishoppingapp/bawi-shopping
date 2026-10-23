@@ -68,7 +68,7 @@ describe("medusa-auth-client", () => {
     });
 
     test("throws with an invalid-credentials message on failure", async () => {
-      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, text: () => Promise.resolve("{}") });
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 401, text: () => Promise.resolve("{}") });
       await expect(loginCustomer("a@b.com", "wrong")).rejects.toThrow("Invalid email or password");
     });
 

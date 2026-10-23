@@ -3,7 +3,7 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Platform, ScrollView, Text, View } from "react-native";
 
-import { useAuth } from "@/features/auth/hooks/use-auth";
+import { MedusaAuthError, useAuth } from "@/features/auth/hooks/use-auth";
 import { CustomerServiceUnavailableError } from "@/features/auth/services/medusa-auth-client";
 import { loginSchema } from "@/features/auth/schemas/login-schema";
 import { useTranslations } from "@/features/i18n/hooks/use-locale";
@@ -36,7 +36,13 @@ export default function LoginScreen() {
       await login(parsed.data.email, parsed.data.password);
       router.back();
     } catch (error) {
-      setFormError(error instanceof CustomerServiceUnavailableError ? t("auth.networkError") : t("auth.genericError"));
+      setFormError(
+        error instanceof CustomerServiceUnavailableError
+          ? t("auth.networkError")
+          : error instanceof MedusaAuthError && /invalid email or password/i.test(error.message)
+            ? t("auth.invalidCredentials")
+            : t("auth.genericError")
+      );
     } finally {
       setSubmitting(false);
     }

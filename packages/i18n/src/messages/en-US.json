@@ -196,6 +196,7 @@
   "checkout.comingSoon": "Checkout is coming soon",
   "checkout.comingSoonBody": "We're integrating an Ethiopian payment option for Birr orders. Your bag is saved—come back once payment is live.",
   "auth.genericError": "Something went wrong. Please try again.",
+  "auth.invalidCredentials": "Email or password is incorrect.",
   "auth.networkError": "Couldn't reach the server. Check your connection and try again.",
   "auth.accountExists": "An account with this email already exists.",
   "auth.registrationIncomplete": "Your account was created, but we couldn't sign you in. Please try logging in.",

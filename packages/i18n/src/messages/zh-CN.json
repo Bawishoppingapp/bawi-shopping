@@ -196,6 +196,7 @@
   "checkout.comingSoon": "结账功能即将上线",
   "checkout.comingSoonBody": "我们正在接入适用于比尔订单的埃塞俄比亚支付方式。购物袋已保存，支付上线后请再回来。",
   "auth.genericError": "出了点问题，请重试。",
+  "auth.invalidCredentials": "邮箱或密码不正确。",
   "auth.networkError": "无法连接服务器。请检查网络后重试。",
   "auth.accountExists": "此邮箱已注册账户。",
   "auth.registrationIncomplete": "你的账户已创建，但我们无法为你登录。请尝试登录。",

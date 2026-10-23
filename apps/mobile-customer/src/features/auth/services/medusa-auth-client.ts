@@ -104,6 +104,7 @@ export async function loginCustomer(email: string, password: string): Promise<st
   const data = await parseJson(response);
 
   if (response.status >= 500) throw new CustomerServiceUnavailableError();
+  if (response.status === 401) throw new MedusaAuthError("Invalid email or password");
   if (!response.ok) {
     throw new MedusaAuthError(data.message || "Invalid email or password");
   }

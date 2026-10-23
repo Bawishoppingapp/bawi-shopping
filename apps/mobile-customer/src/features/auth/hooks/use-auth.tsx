@@ -78,7 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!(error instanceof MedusaAuthError) || !/identity with email already exists/i.test(error.message)) {
           throw error;
         }
-        registrationToken = await loginCustomer(input.email, input.password);
+        try {
+          registrationToken = await loginCustomer(input.email, input.password);
+        } catch (loginError) {
+          // The identity belongs to someone who cannot authenticate with
+          // these details. Surface the existing-account path instead of the
+          // generic sign-in failure from the recovery attempt.
+          if (loginError instanceof MedusaAuthError) {
+            throw new MedusaAuthError("Account already exists");
+          }
+          throw loginError;
+        }
         if (await getCurrentCustomer(registrationToken)) {
           throw new MedusaAuthError("Account already exists");
         }
