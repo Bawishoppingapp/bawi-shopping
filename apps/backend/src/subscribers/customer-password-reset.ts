@@ -39,17 +39,20 @@ export default async function customerPasswordResetHandler({
     logger.info(`Password reset code for ${data.entity_id}: ${data.token}`)
   }
 
-  const resetUrlBase = process.env.PASSWORD_RESET_URL_BASE ?? "mobilecustomer://reset-password"
-  const separator = resetUrlBase.includes("?") ? "&" : "?"
-  const resetUrl = `${resetUrlBase}${separator}token=${encodeURIComponent(data.token)}&email=${encodeURIComponent(data.entity_id)}`
+  // Email clients do not reliably linkify custom app schemes. Keep the
+  // credential in the HTTPS URL fragment so it is not sent to the web server
+  // in a request URL or referrer; the reset page reads it in the browser.
+  const resetUrl = new URL(process.env.PASSWORD_RESET_URL_BASE ?? "https://bawi-backend.onrender.com/reset-password")
+  resetUrl.hash = new URLSearchParams({ token: data.token, email: data.entity_id }).toString()
+  const link = resetUrl.toString()
 
   await recordNotification(container, {
     idempotencyKey: `password_reset:${data.token}`,
     eventType: "password_reset",
     to: data.entity_id,
     subject: "Reset your Bawi Shopping password",
-    body: `Reset your password: ${resetUrl}\n\nYour reset code is: ${data.token}\n\nThis code expires in 15 minutes. If you didn't request this, you can ignore it.`,
-    html: `<p>Use the secure link below to reset your Bawi Shopping password:</p><p><a href="${resetUrl}">Reset password</a></p><p>If the link does not open, enter this reset code in the app:</p><p><strong>${data.token}</strong></p><p>This code expires in 15 minutes. If you didn't request this, you can ignore it.</p>`,
+    body: `Open this link to reset your Bawi Shopping password: ${link}\n\nThis link expires in 15 minutes. If you didn't request this, you can ignore it.`,
+    html: `<p>Use the link below to reset your Bawi Shopping password:</p><p><a href="${link.replaceAll("&", "&amp;")}">Reset password</a></p><p>This link expires in 15 minutes. If you didn't request this, you can ignore it.</p>`,
   })
 }
 
