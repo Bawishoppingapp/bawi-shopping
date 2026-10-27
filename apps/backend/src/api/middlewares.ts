@@ -39,7 +39,7 @@ export default defineMiddlewares({
       // the credential) - rate-limited against brute-forcing the
       // activation token.
       method: ["POST"],
-      matcher: "/seller-activation/complete",
+      matcher: "/seller-activation/*",
       middlewares: [
         rateLimit({
           windowMs: 60 * 60 * 1000,

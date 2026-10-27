@@ -6,7 +6,7 @@ import { Button, FormField, Input } from "@bawi/ui"
 import { activateSellerAccount } from "../actions/activate"
 import { initialActivationState } from "../constants"
 
-export function ActivationForm({ token }: { token: string }) {
+export function ActivationForm({ token, existingAccount }: { token: string; existingAccount: boolean }) {
   const [state, formAction, pending] = useActionState(
     activateSellerAccount,
     initialActivationState
@@ -16,7 +16,7 @@ export function ActivationForm({ token }: { token: string }) {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm text-neutral-700">
-          Your account is ready. You can now log in with the password you just set.
+          Your storefront is ready. Sign in with your Bawi account password.
         </p>
         <Link
           href="/login"
@@ -31,12 +31,15 @@ export function ActivationForm({ token }: { token: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="token" value={token} />
-      <FormField label="New password" error={state.fieldErrors.password}>
-        <Input name="password" type="password" autoComplete="new-password" />
+      <input type="hidden" name="existingAccount" value={String(existingAccount)} />
+      <FormField label={existingAccount ? "Existing Bawi password" : "Create password"} error={state.fieldErrors.password}>
+        <Input name="password" type="password" autoComplete={existingAccount ? "current-password" : "new-password"} />
       </FormField>
-      <FormField label="Confirm password" error={state.fieldErrors.confirmPassword}>
-        <Input name="confirmPassword" type="password" autoComplete="new-password" />
-      </FormField>
+      {!existingAccount && (
+        <FormField label="Confirm password" error={state.fieldErrors.confirmPassword}>
+          <Input name="confirmPassword" type="password" autoComplete="new-password" />
+        </FormField>
+      )}
 
       {state.formError && (
         <p role="alert" className="text-sm text-red-600">

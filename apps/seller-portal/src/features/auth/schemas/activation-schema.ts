@@ -3,17 +3,20 @@ import { z } from "zod"
 export const activationSchema = z
   .object({
     token: z.string().trim().min(1),
+    existingAccount: z.boolean(),
     password: z
       .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[a-z]/, "Password must include a lowercase letter")
-      .regex(/[A-Z]/, "Password must include an uppercase letter")
-      .regex(/[0-9]/, "Password must include a number"),
-    confirmPassword: z.string().min(1, "Confirm your password"),
+      .min(1, "Enter your password"),
+    confirmPassword: z.string().optional(),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+  .superRefine((data, ctx) => {
+    if (data.existingAccount) return
+    if (data.password.length < 8 || !/[a-z]/.test(data.password) || !/[A-Z]/.test(data.password) || !/[0-9]/.test(data.password)) {
+      ctx.addIssue({ code: "custom", path: ["password"], message: "Use at least 8 characters with uppercase, lowercase and a number" })
+    }
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "Passwords do not match" })
+    }
   })
 
 export type ActivationInput = z.infer<typeof activationSchema>

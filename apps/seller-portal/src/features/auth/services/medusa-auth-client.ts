@@ -60,6 +60,20 @@ export async function completeSellerActivation(
   }
 }
 
+export async function getSellerActivationStatus(token: string): Promise<{ existing_account: boolean }> {
+  const response = await fetch(`${MEDUSA_BACKEND_URL}/seller-activation/status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+    cache: "no-store",
+  })
+  const data = await parseJson(response)
+  if (!response.ok) {
+    throw new MedusaAuthError(data.message || "Could not check activation link")
+  }
+  return data as { existing_account: boolean }
+}
+
 export interface SellerMe {
   seller_user: { id: string; role: string }
   seller: {

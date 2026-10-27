@@ -12,6 +12,7 @@ export async function activateSellerAccount(
     token: formData.get("token"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
+    existingAccount: formData.get("existingAccount") === "true",
   })
 
   if (!parsed.success) {
