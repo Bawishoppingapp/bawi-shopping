@@ -11,7 +11,9 @@ export async function activateSellerAccount(
   const parsed = activationSchema.safeParse({
     token: formData.get("token"),
     password: formData.get("password"),
-    confirmPassword: formData.get("confirmPassword"),
+    // The existing-account form intentionally has no confirmation field.
+    // FormData.get returns null for missing fields, but Zod optional expects undefined.
+    confirmPassword: formData.get("confirmPassword") ?? undefined,
     existingAccount: formData.get("existingAccount") === "true",
   })
 
