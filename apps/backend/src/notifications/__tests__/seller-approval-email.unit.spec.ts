@@ -9,8 +9,23 @@ describe("seller approval email", () => {
     })
     expect(template.body).not.toContain("secret123")
     expect(template.emailBody).toContain(activationLink)
+    expect(template.emailBody).toContain("secret123")
     expect(template.html).toContain(`href="${activationLink}"`)
+    expect(template.html).toContain("Activation code for the Bawi app")
+    expect(template.html).toContain("Use its existing password")
     expect(template.html).toContain("7 days")
+  })
+
+  it("gives each resend a distinct subject and warns that older links stop working", () => {
+    const template = sellerApplicationApprovedTemplate({
+      storeName: "Bawi Fashion",
+      activationLink: "https://sell.example.com/activate?token=new123",
+      resend: true,
+      sentAt: new Date("2026-10-27T05:27:12Z"),
+    })
+    expect(template.subject).toContain("2026-10-27T05:27:12.000Z")
+    expect(template.emailBody).toContain("new123")
+    expect(template.html).toContain("replaces previous activation links")
   })
 
   it("escapes a seller-provided store name in HTML", () => {

@@ -52,6 +52,7 @@ const sendActivationEmailStep = createStep(
     const { subject, body, emailBody, html } = sellerApplicationApprovedTemplate({
       storeName: input.storeName,
       activationLink: buildSellerActivationLink(input.token),
+      resend: true,
     })
     await recordNotification(container, {
       idempotencyKey: `seller_activation_resend:${input.applicationId}:${randomUUID()}`,

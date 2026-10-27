@@ -67,13 +67,18 @@ function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;")
 }
 
-export function sellerApplicationApprovedTemplate(input: { storeName: string; activationLink: string }) {
+export function sellerApplicationApprovedTemplate(input: { storeName: string; activationLink: string; resend?: boolean; sentAt?: Date }) {
   const body = `Congratulations! Your application for "${input.storeName}" has been approved.`
+  const token = new URL(input.activationLink).searchParams.get("token") ?? ""
+  const subject = input.resend
+    ? `Your new Bawi seller activation link (${(input.sentAt ?? new Date()).toISOString()})`
+    : "Your Bawi Shopping seller application has been approved"
+  const instructions = "Already have a Bawi account? Use its existing password. Otherwise, create one."
   return {
-    subject: `Your Bawi Shopping seller application has been approved`,
+    subject,
     body,
-    emailBody: `${body}\n\nActivate your seller account and set your password:\n${input.activationLink}\n\nThis link expires in 7 days. If you did not apply, you can ignore this email.`,
-    html: `<p>${escapeHtml(body)}</p><p><a href="${escapeHtml(input.activationLink)}">Activate your seller account</a> to set your password and get started.</p><p>This link expires in 7 days. If you did not apply, you can ignore this email.</p>`,
+    emailBody: `${body}\n\nOpen this link to activate your seller account:\n${input.activationLink}\n\nActivation code for the Bawi app (copy the full code):\n${token}\n\n${instructions}\n\n${input.resend ? "This new link replaces previous activation links. " : ""}This link expires in 7 days. If you did not apply, you can ignore this email.`,
+    html: `<p>${escapeHtml(body)}</p><p><a href="${escapeHtml(input.activationLink)}" style="display:inline-block;padding:12px 18px;background:#312B26;color:#ffffff;text-decoration:none;border-radius:6px">Activate your seller account</a></p><p>If the button does not open, copy this link:<br><a href="${escapeHtml(input.activationLink)}">${escapeHtml(input.activationLink)}</a></p><p><strong>Activation code for the Bawi app:</strong><br><code style="overflow-wrap:anywhere">${escapeHtml(token)}</code></p><p>${instructions}</p><p>${input.resend ? "This new link replaces previous activation links. " : ""}This link expires in 7 days. If you did not apply, you can ignore this email.</p>`,
   }
 }
 
