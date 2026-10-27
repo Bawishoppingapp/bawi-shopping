@@ -62,4 +62,12 @@ describe("seller activation", () => {
     expect(auth.authenticate).not.toHaveBeenCalled()
     expect(res.json).toHaveBeenCalledWith({ success: true })
   })
+
+  it("still rejects a weak new-account password", async () => {
+    const { auth, req, res } = setup(false)
+    req.body.password = "weak"
+    await POST(req as never, res as never)
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(auth.register).not.toHaveBeenCalled()
+  })
 })

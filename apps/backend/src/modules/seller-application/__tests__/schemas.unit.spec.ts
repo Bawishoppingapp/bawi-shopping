@@ -150,10 +150,10 @@ describe("completeActivationSchema", () => {
     ).toBe(true)
   })
 
-  test("rejects a weak password", () => {
+  test("accepts an existing account's legacy password; new-password policy is checked after identity lookup", () => {
     expect(
       completeActivationSchema.safeParse({ token: "abc123", password: "weak" }).success
-    ).toBe(false)
+    ).toBe(true)
   })
 
   test("rejects a missing token", () => {
