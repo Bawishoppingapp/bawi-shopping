@@ -34,6 +34,8 @@ export interface RecordNotificationInput {
   to: string
   subject: string
   body: string
+  /** Email-only text. Keep one-time links out of the in-app inbox and push body. */
+  emailBody?: string
   html?: string
   /** Omit both when there's no in-app account to index this against yet
    * (e.g. a rejected seller application - no seller_user is ever created
@@ -59,7 +61,7 @@ export async function recordNotification(
   container: MedusaContainer,
   input: RecordNotificationInput
 ): Promise<void> {
-  const escapedBody = input.body
+  const escapedBody = (input.emailBody ?? input.body)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -77,7 +79,7 @@ export async function recordNotification(
     // Resend/Brevo/SendGrid consume `html`; the local provider and notification record
     // retain `text`. Supplying both keeps development logs useful and avoids
     // real emails being delivered with an empty body.
-    content: { subject: input.subject, text: input.body, html: input.html ?? escapedBody },
+    content: { subject: input.subject, text: input.emailBody ?? input.body, html: input.html ?? escapedBody },
     trigger_type: input.eventType,
     resource_id: input.resourceId,
     resource_type: input.resourceType,

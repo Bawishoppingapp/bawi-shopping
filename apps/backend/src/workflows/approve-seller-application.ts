@@ -11,6 +11,7 @@ import type SellerApplicationModuleService from "../modules/seller-application/s
 import type { SellerApplicationStatus } from "../modules/seller-application/state-machine"
 import {
   ACTIVATION_TOKEN_TTL_MS,
+  buildSellerActivationLink,
   generateActivationToken,
 } from "../modules/seller-application/utils"
 import { AUDIT_LOG_MODULE } from "../modules/audit-log"
@@ -150,19 +151,25 @@ type SendApprovalNotificationInput = {
   storeName: string
   sellerId: string
   sellerUserId: string
+  activationToken: string
   applicationId: string
 }
 
 const sendApplicationApprovedNotificationStep = createStep(
   "send-application-approved-notification",
   async (input: SendApprovalNotificationInput, { container }) => {
-    const { subject, body } = sellerApplicationApprovedTemplate({ storeName: input.storeName })
+    const { subject, body, emailBody, html } = sellerApplicationApprovedTemplate({
+      storeName: input.storeName,
+      activationLink: buildSellerActivationLink(input.activationToken),
+    })
     await recordNotification(container, {
       idempotencyKey: `seller_application_approved:${input.applicationId}`,
       eventType: "seller_application_approved",
       to: input.businessEmail,
       subject,
       body,
+      emailBody,
+      html,
       recipientType: "seller_user",
       recipientId: input.sellerUserId,
       vendorId: input.sellerId,
@@ -218,6 +225,8 @@ export const approveSellerApplicationWorkflow = createWorkflow(
       storeName: input.storeName,
       sellerId: seller.id,
       sellerUserId: sellerUser.id,
+      // The creation step always sets this token before the user is persisted.
+      activationToken: sellerUser.activation_token!,
       applicationId: input.applicationId,
     })
 

@@ -2,6 +2,7 @@ import {
   slugify,
   generateUniqueSlug,
   generateActivationToken,
+  buildSellerActivationLink,
 } from "../utils"
 
 describe("slugify", () => {
@@ -15,6 +16,21 @@ describe("slugify", () => {
 
   test("falls back to an empty string for input with no alphanumerics", () => {
     expect(slugify("!!!")).toBe("")
+  })
+})
+
+describe("buildSellerActivationLink", () => {
+  const originalUrl = process.env.SELLER_PORTAL_URL
+  afterEach(() => {
+    if (originalUrl === undefined) delete process.env.SELLER_PORTAL_URL
+    else process.env.SELLER_PORTAL_URL = originalUrl
+  })
+
+  test("creates an absolute seller portal link with the exact token", () => {
+    process.env.SELLER_PORTAL_URL = "https://bawi-shopping-seller-portal.vercel.app/"
+    expect(buildSellerActivationLink("abc123")).toBe(
+      "https://bawi-shopping-seller-portal.vercel.app/activate?token=abc123"
+    )
   })
 })
 

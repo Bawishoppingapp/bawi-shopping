@@ -62,10 +62,18 @@ export function payoutSentTemplate(input: { amount: number }) {
   }
 }
 
-export function sellerApplicationApprovedTemplate(input: { storeName: string }) {
+function escapeHtml(text: string): string {
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#39;")
+}
+
+export function sellerApplicationApprovedTemplate(input: { storeName: string; activationLink: string }) {
+  const body = `Congratulations! Your application for "${input.storeName}" has been approved.`
   return {
     subject: `Your Bawi Shopping seller application has been approved`,
-    body: `Congratulations! Your application for "${input.storeName}" has been approved. Check your activation link to set your password and get started.`,
+    body,
+    emailBody: `${body}\n\nActivate your seller account and set your password:\n${input.activationLink}\n\nThis link expires in 7 days. If you did not apply, you can ignore this email.`,
+    html: `<p>${escapeHtml(body)}</p><p><a href="${escapeHtml(input.activationLink)}">Activate your seller account</a> to set your password and get started.</p><p>This link expires in 7 days. If you did not apply, you can ignore this email.</p>`,
   }
 }
 

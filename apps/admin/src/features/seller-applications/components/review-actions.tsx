@@ -39,7 +39,7 @@ export function ReviewActions({ applicationId, initialStatus }: ReviewActionsPro
         <p className="text-sm font-medium text-green-800">Application approved.</p>
         {approveState.activationLink && (
           <p className="text-xs text-green-700">
-            Activation link (share with the seller until email delivery ships):
+            Activation link created. You can share this directly if the seller does not receive the email:
             <br />
             <span className="break-all font-mono">{approveState.activationLink}</span>
           </p>

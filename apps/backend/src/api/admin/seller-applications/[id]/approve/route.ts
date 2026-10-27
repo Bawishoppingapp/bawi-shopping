@@ -5,7 +5,7 @@ import type {
 import { SELLER_APPLICATION_MODULE } from "../../../../../modules/seller-application"
 import type SellerApplicationModuleService from "../../../../../modules/seller-application/service"
 import { isValidTransition } from "../../../../../modules/seller-application/state-machine"
-import { generateUniqueSlug } from "../../../../../modules/seller-application/utils"
+import { buildSellerActivationLink, generateUniqueSlug } from "../../../../../modules/seller-application/utils"
 import { SELLER_MODULE } from "../../../../../modules/seller"
 import type SellerModuleService from "../../../../../modules/seller/service"
 import { approveSellerApplicationWorkflow } from "../../../../../workflows/approve-seller-application"
@@ -79,12 +79,10 @@ export async function POST(
     },
   })
 
-  const sellerPortalUrl = process.env.SELLER_PORTAL_URL ?? "http://localhost:3001"
-
   res.json({
     application: result.application,
     seller: result.seller,
     seller_user: { id: result.sellerUser.id, email: result.sellerUser.email },
-    activation_link: `${sellerPortalUrl}/activate?token=${result.sellerUser.activation_token}`,
+    activation_link: buildSellerActivationLink(result.sellerUser.activation_token!),
   })
 }

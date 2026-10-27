@@ -117,6 +117,21 @@ export async function approveSellerApplication(
   return data
 }
 
+export async function resendSellerActivationEmail(
+  sessionToken: string,
+  id: string
+): Promise<{ sent: boolean; email: string }> {
+  const response = await fetch(
+    `${MEDUSA_BACKEND_URL}/admin/seller-applications/${id}/resend-activation`,
+    { method: "POST", headers: { Authorization: `Bearer ${sessionToken}` } }
+  )
+  const data = await parseJson(response)
+  if (!response.ok) {
+    throw new SellerApplicationsError(data.message || "Could not send activation email")
+  }
+  return data as { sent: boolean; email: string }
+}
+
 export async function rejectSellerApplication(
   sessionToken: string,
   id: string,

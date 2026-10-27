@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto"
+import { MedusaError } from "@medusajs/framework/utils"
 
 export function slugify(text: string): string {
   return text
@@ -29,3 +30,13 @@ export function generateActivationToken(): string {
 }
 
 export const ACTIVATION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+
+export function buildSellerActivationLink(token: string): string {
+  const portalUrl = process.env.SELLER_PORTAL_URL ?? "http://localhost:3001"
+  const link = new URL("/activate", portalUrl)
+  if (!["https:", "http:"].includes(link.protocol)) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "SELLER_PORTAL_URL must use HTTP or HTTPS")
+  }
+  link.searchParams.set("token", token)
+  return link.toString()
+}

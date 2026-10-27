@@ -6,6 +6,7 @@ import { ADMIN_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentAdmin } from "@/features/auth/services/medusa-auth-client"
 import { getSellerApplication } from "@/features/seller-applications/services/seller-applications-client"
 import { ReviewActions } from "@/features/seller-applications/components/review-actions"
+import { ResendActivationForm } from "@/features/seller-applications/components/resend-activation-form"
 
 // This page shows a private rejection_reason field - must never be cached
 // by the browser keyed only on the URL (found while investigating the same
@@ -98,6 +99,7 @@ export default async function ApplicationDetailPage({
         <p className="mb-5 text-sm text-neutral-500">Confirm the business details before approving access to the seller portal.</p>
         <ReviewActions applicationId={application.id} initialStatus={application.status} />
       </section>
+      {application.status === "approved" && <ResendActivationForm applicationId={application.id} />}
     </main>
   )
 }
