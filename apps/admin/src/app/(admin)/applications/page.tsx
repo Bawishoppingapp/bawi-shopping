@@ -31,59 +31,36 @@ export default async function ApplicationsPage({
   )
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-12">
-      <nav className="flex gap-4 text-sm">
-        <span className="font-medium text-neutral-900">Applications</span>
-        <Link href="/products" className="text-neutral-500 hover:underline">
-          Products
-        </Link>
-        <Link href="/categories" className="text-neutral-500 hover:underline">
-          Categories
-        </Link>
-        <Link href="/sellers" className="text-neutral-500 hover:underline">
-          Sellers
-        </Link>
-        <Link href="/fulfillment" className="text-neutral-500 hover:underline">
-          Fulfillment
-        </Link>
-        <Link href="/couriers" className="text-neutral-500 hover:underline">
-          Couriers
-        </Link>
-        <Link href="/finance" className="text-neutral-500 hover:underline">
-          Finance
-        </Link>
-        <Link href="/team" className="text-neutral-500 hover:underline">
-          Team
-        </Link>
-        <Link href="/translations" className="text-neutral-500 hover:underline">
-          Translations
-        </Link>
-        <Link href="/config" className="text-neutral-500 hover:underline">
-          Configuration
-        </Link>
-      </nav>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-neutral-900">
-          Seller applications
-        </h1>
-        <p className="text-sm text-neutral-500">{count} total</p>
-      </div>
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-12">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[.16em] text-[#B8863B]">Seller onboarding</p>
+          <h1 className="text-2xl font-semibold text-neutral-900">Seller applications</h1>
+          <p className="mt-2 text-sm text-neutral-500">Review each business before giving it access to the seller portal.</p>
+        </div>
+        <div className="rounded-xl border border-[#E3DCD1] bg-white px-5 py-3 text-right">
+          <span className="block text-2xl font-semibold text-[#312B26]">{count}</span>
+          <span className="text-xs text-neutral-500">applications in view</span>
+        </div>
+      </header>
 
       <StatusFilter activeStatus={status} />
 
       {applications.length === 0 ? (
-        <p className="rounded-md border border-neutral-200 bg-neutral-50 p-8 text-center text-sm text-neutral-500">
-          No applications match this filter.
-        </p>
+        <div className="rounded-xl border border-[#E3DCD1] bg-white px-6 py-16 text-center">
+          <p className="font-medium text-[#312B26]">No applications here yet</p>
+          <p className="mt-1 text-sm text-neutral-500">Try another status to see more applications.</p>
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-md border border-neutral-200">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
               <tr>
-                <th className="px-4 py-2 font-medium">Store</th>
+                <th className="px-4 py-2 font-medium">Store / business</th>
                 <th className="px-4 py-2 font-medium">Contact</th>
                 <th className="px-4 py-2 font-medium">Submitted</th>
                 <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium"><span className="sr-only">Open</span></th>
               </tr>
             </thead>
             <tbody>
@@ -92,10 +69,11 @@ export default async function ApplicationsPage({
                   <td className="px-4 py-3">
                     <Link
                       href={`/applications/${application.id}`}
-                      className="font-medium text-neutral-900 underline-offset-2 hover:underline"
+                      className="font-semibold text-[#312B26] underline-offset-2 hover:underline"
                     >
                       {application.store_name}
                     </Link>
+                    <p className="mt-1 text-xs text-neutral-500">{application.legal_business_name}</p>
                   </td>
                   <td className="px-4 py-3 text-neutral-600">
                     {application.contact_first_name} {application.contact_last_name}
@@ -106,6 +84,7 @@ export default async function ApplicationsPage({
                   <td className="px-4 py-3">
                     <StatusBadge status={application.status} />
                   </td>
+                  <td className="px-4 py-3 text-right"><Link href={`/applications/${application.id}`} aria-label={`Review ${application.store_name}`} className="text-sm font-semibold text-[#B8863B] hover:underline">Review →</Link></td>
                 </tr>
               ))}
             </tbody>

@@ -16,17 +16,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const payments = await listPayments(token, status)
 
   return <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-12">
-    <nav className="flex flex-wrap gap-4 text-sm">
-      <Link href="/applications" className="text-neutral-500 hover:underline">Applications</Link>
-      <Link href="/products" className="text-neutral-500 hover:underline">Products</Link>
-      <span className="font-medium text-neutral-900">Payments</span>
-      <Link href="/finance" className="text-neutral-500 hover:underline">Finance</Link>
-      <Link href="/config" className="text-neutral-500 hover:underline">Configuration</Link>
-    </nav>
     <header><h1 className="text-2xl font-semibold">Delivery quotes and payments</h1><p className="text-sm text-neutral-500">Set courier quotes before customers pay. Verify payments inside the official Telebirr merchant account; a screenshot alone is not proof.</p></header>
-    <div className="flex gap-2 text-sm">
-      {[['', 'All'], ['pending_quote', 'Needs delivery quote'], ['proof_submitted', 'Awaiting review'], ['succeeded', 'Approved'], ['rejected', 'Rejected']].map(([value,label]) => <Link key={label} href={value ? `/payments?status=${value}` : '/payments'} className="rounded-full border px-3 py-1 hover:bg-neutral-50">{label}</Link>)}
-    </div>
+    <nav aria-label="Filter payments by status" className="flex flex-wrap gap-2 text-sm">
+      {[['', 'All'], ['pending_quote', 'Needs delivery quote'], ['proof_submitted', 'Awaiting review'], ['succeeded', 'Approved'], ['rejected', 'Rejected']].map(([value,label]) => <Link key={label} href={value ? `/payments?status=${value}` : '/payments'} aria-current={(status ?? '') === value ? 'page' : undefined} className={`rounded-full border px-3 py-1.5 hover:bg-[#EFE9E0] ${(status ?? '') === value ? 'border-[#312B26] bg-[#312B26] text-white hover:bg-[#312B26]' : 'border-[#E3DCD1] bg-white text-[#4A423B]'}`}>{label}</Link>)}
+    </nav>
     {payments.length === 0 ? <p className="rounded-md border p-8 text-center text-neutral-500">No payments found.</p> :
       <div className="grid gap-4">{payments.map((payment) => <article key={payment.id} className="rounded-lg border border-neutral-200 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">Order {payment.display_id}</h2><p className="text-sm text-neutral-500">Transaction: {payment.transaction_reference ?? 'Not submitted'}</p></div><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium">{(payment.status === 'pending_quote' ? payment.status : payment.payment_status).replaceAll('_',' ')}</span></div>

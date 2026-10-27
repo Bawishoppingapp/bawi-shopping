@@ -28,48 +28,26 @@ export default async function ProductsPage({
   const { listings } = await listProductListings(sessionToken, status || undefined)
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-12">
-      <nav className="flex gap-4 text-sm">
-        <Link href="/applications" className="text-neutral-500 hover:underline">
-          Applications
-        </Link>
-        <span className="font-medium text-neutral-900">Products</span>
-        <Link href="/categories" className="text-neutral-500 hover:underline">
-          Categories
-        </Link>
-        <Link href="/sellers" className="text-neutral-500 hover:underline">
-          Sellers
-        </Link>
-        <Link href="/fulfillment" className="text-neutral-500 hover:underline">
-          Fulfillment
-        </Link>
-        <Link href="/couriers" className="text-neutral-500 hover:underline">
-          Couriers
-        </Link>
-        <Link href="/finance" className="text-neutral-500 hover:underline">
-          Finance
-        </Link>
-        <Link href="/team" className="text-neutral-500 hover:underline">
-          Team
-        </Link>
-        <Link href="/translations" className="text-neutral-500 hover:underline">
-          Translations
-        </Link>
-        <Link href="/config" className="text-neutral-500 hover:underline">
-          Configuration
-        </Link>
-      </nav>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-neutral-900">Products</h1>
-        <p className="text-sm text-neutral-500">{listings.length} total</p>
-      </div>
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-12">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[.16em] text-[#B8863B]">Catalog review</p>
+          <h1 className="text-2xl font-semibold text-neutral-900">Products</h1>
+          <p className="mt-2 text-sm text-neutral-500">Check listings, imagery, and details before they appear in the store.</p>
+        </div>
+        <div className="rounded-xl border border-[#E3DCD1] bg-white px-5 py-3 text-right">
+          <span className="block text-2xl font-semibold text-[#312B26]">{listings.length}</span>
+          <span className="text-xs text-neutral-500">products in view</span>
+        </div>
+      </header>
 
       <StatusFilter activeStatus={status} />
 
       {listings.length === 0 ? (
-        <p className="rounded-md border border-neutral-200 bg-neutral-50 p-8 text-center text-sm text-neutral-500">
-          No products match this filter.
-        </p>
+        <div className="rounded-xl border border-[#E3DCD1] bg-white px-6 py-16 text-center">
+          <p className="font-medium text-[#312B26]">No products here yet</p>
+          <p className="mt-1 text-sm text-neutral-500">Try another status to see more products.</p>
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-md border border-neutral-200">
           <table className="w-full text-left text-sm">
@@ -78,23 +56,26 @@ export default async function ProductsPage({
                 <th className="px-4 py-2 font-medium">Product</th>
                 <th className="px-4 py-2 font-medium">Code</th>
                 <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium"><span className="sr-only">Open</span></th>
               </tr>
             </thead>
             <tbody>
               {listings.map(({ listing, product }) => (
                 <tr key={listing.id} className="border-b border-neutral-100 last:border-0">
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/products/${listing.id}`}
-                      className="font-medium text-neutral-900 underline-offset-2 hover:underline"
-                    >
-                      {product?.title ?? "Untitled product"}
-                    </Link>
+                    <div className="flex min-w-48 items-center gap-3">
+                      {product?.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={product.thumbnail} alt="" className="h-12 w-10 rounded-md border border-neutral-100 object-cover" />
+                      ) : <span className="h-12 w-10 rounded-md bg-[#EFE9E0]" aria-hidden="true" />}
+                      <Link href={`/products/${listing.id}`} className="font-semibold text-[#312B26] underline-offset-2 hover:underline">{product?.title ?? "Untitled product"}</Link>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-neutral-600">{listing.product_code}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={listing.status} />
                   </td>
+                  <td className="px-4 py-3 text-right"><Link href={`/products/${listing.id}`} aria-label={`Review ${product?.title ?? "product"}`} className="text-sm font-semibold text-[#B8863B] hover:underline">Review →</Link></td>
                 </tr>
               ))}
             </tbody>

@@ -20,37 +20,7 @@ export default async function CategoriesPage() {
   const categories = await listCategories(sessionToken)
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-12">
-      <nav className="flex gap-4 text-sm">
-        <Link href="/applications" className="text-neutral-500 hover:underline">
-          Applications
-        </Link>
-        <Link href="/products" className="text-neutral-500 hover:underline">
-          Products
-        </Link>
-        <span className="font-medium text-neutral-900">Categories</span>
-        <Link href="/sellers" className="text-neutral-500 hover:underline">
-          Sellers
-        </Link>
-        <Link href="/fulfillment" className="text-neutral-500 hover:underline">
-          Fulfillment
-        </Link>
-        <Link href="/couriers" className="text-neutral-500 hover:underline">
-          Couriers
-        </Link>
-        <Link href="/finance" className="text-neutral-500 hover:underline">
-          Finance
-        </Link>
-        <Link href="/team" className="text-neutral-500 hover:underline">
-          Team
-        </Link>
-        <Link href="/translations" className="text-neutral-500 hover:underline">
-          Translations
-        </Link>
-        <Link href="/config" className="text-neutral-500 hover:underline">
-          Configuration
-        </Link>
-      </nav>
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-12">
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-900">Categories</h1>

@@ -39,14 +39,16 @@ export default async function ApplicationDetailPage({
 
       <div className="flex items-start justify-between gap-4">
         <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[.16em] text-[#B8863B]">Application review</p>
           <h1 className="text-2xl font-semibold text-neutral-900">
             {application.store_name}
           </h1>
-          <p className="text-sm text-neutral-500">{application.legal_business_name}</p>
+          <p className="mt-2 text-sm text-neutral-500">{application.legal_business_name}</p>
         </div>
         <StatusBadge status={application.status} />
       </div>
 
+      <h2 className="text-sm font-semibold uppercase tracking-[.12em] text-neutral-500">Business information</h2>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-md border border-neutral-200 p-4 text-sm">
         <dt className="text-neutral-500">Contact</dt>
         <dd className="text-neutral-900">
@@ -77,7 +79,7 @@ export default async function ApplicationDetailPage({
         </dd>
       </dl>
 
-      <div className="rounded-md border border-neutral-200 p-4 text-sm">
+      <div className="rounded-md border border-neutral-200 bg-white p-5 text-sm">
         <p className="mb-1 font-medium text-neutral-900">Business description</p>
         <p className="text-neutral-600">{application.business_description}</p>
       </div>
@@ -91,7 +93,11 @@ export default async function ApplicationDetailPage({
         </div>
       )}
 
-      <ReviewActions applicationId={application.id} initialStatus={application.status} />
+      <section className="rounded-xl border border-[#E3DCD1] bg-white p-6">
+        <h2 className="mb-1 text-lg font-semibold text-[#312B26]">Decision</h2>
+        <p className="mb-5 text-sm text-neutral-500">Confirm the business details before approving access to the seller portal.</p>
+        <ReviewActions applicationId={application.id} initialStatus={application.status} />
+      </section>
     </main>
   )
 }
