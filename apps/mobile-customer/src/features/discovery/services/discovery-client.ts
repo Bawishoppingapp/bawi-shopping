@@ -1,4 +1,5 @@
 import { createRequestCache } from "@/lib/request-cache";
+import { productImageUrl } from "@/lib/product-image-url";
 
 // Mirrors apps/storefront/src/features/discovery/services/
 // discovery-client.ts exactly - same endpoints, same query params, same
@@ -108,5 +109,12 @@ export async function searchProducts(params: ProductSearchParams): Promise<Produ
   if (!response.ok) {
     throw new Error(`Failed to load products (${response.status})`);
   }
-  return (await response.json()) as ProductSearchResponse;
+  const data = (await response.json()) as ProductSearchResponse;
+  return {
+    ...data,
+    products: data.products.map((product) => ({
+      ...product,
+      thumbnail: product.thumbnail ? productImageUrl(product.thumbnail) : null,
+    })),
+  };
 }

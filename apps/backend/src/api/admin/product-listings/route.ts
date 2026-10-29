@@ -3,6 +3,7 @@ import { Modules } from "@medusajs/framework/utils"
 import { PRODUCT_LISTING_MODULE } from "../../../modules/product-listing"
 import type ProductListingModuleService from "../../../modules/product-listing/service"
 import type { ProductListingStatus } from "../../../modules/product-listing/state-machine"
+import { resolveProductImageUrl } from "../../../product-images/legacy-url"
 
 const VALID_STATUS_FILTERS: ProductListingStatus[] = [
   "draft",
@@ -41,7 +42,10 @@ export async function GET(
     { id: listings.map((listing) => listing.product_id) },
     { select: ["id", "title", "thumbnail"] }
   )
-  const productsById = new Map(products.map((product) => [product.id, product]))
+  const productsById = new Map(products.map((product) => [
+    product.id,
+    { ...product, thumbnail: resolveProductImageUrl(product.thumbnail) },
+  ]))
 
   res.json({
     listings: listings.map((listing) => ({

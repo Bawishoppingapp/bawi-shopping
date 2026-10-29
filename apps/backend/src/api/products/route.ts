@@ -1,6 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import type { ProductSortOption } from "@bawi/search-contract"
 import { PostgresSearchService } from "../../search/postgres-search-service"
+import { resolveProductImageUrl } from "../../product-images/legacy-url"
 
 const VALID_SORTS: ProductSortOption[] = ["newest", "price_asc", "price_desc"]
 const DEFAULT_LIMIT = 24
@@ -56,7 +57,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse): Promise<void
   })
 
   res.json({
-    products: result.items,
+    products: result.items.map((product) => ({
+      ...product,
+      thumbnail: resolveProductImageUrl(product.thumbnail),
+    })),
     next_cursor: result.nextCursor,
     has_more: result.hasMore,
     facets: result.facets,

@@ -12,6 +12,7 @@ import {
 } from "@/features/product-listings/services/product-listings-client"
 import { ReviewActions } from "@/features/product-listings/components/review-actions"
 import { updateAiPreviewAction } from "@/features/product-listings/actions/ai-preview"
+import { productImageUrl } from "@/features/product-listings/services/product-image-url"
 
 // Session-scoped (admin-authenticated) content must never be cached by the
 // browser keyed only on the URL.
@@ -73,7 +74,7 @@ export default async function ProductDetailPage({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={image.id}
-              src={image.url}
+              src={productImageUrl(image.url)}
               alt={product.title}
               className="h-24 w-20 rounded object-cover"
             />
@@ -86,7 +87,7 @@ export default async function ProductDetailPage({
         <p className="text-sm">Status: <strong>{listing.ai_preview_status.replaceAll("_", " ")}</strong></p>
         {listing.ai_preview_url ? <div className="flex items-start gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={listing.ai_preview_url} alt="AI-generated model preview" className="h-56 w-40 rounded object-cover"/>
+          <img src={productImageUrl(listing.ai_preview_url)} alt="AI-generated model preview" className="h-56 w-40 rounded object-cover"/>
           <span className="rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">AI-generated preview</span>
         </div> : null}
         <form action={updateAiPreviewAction.bind(null, listing.id)} className="flex flex-col gap-2 sm:flex-row" encType="multipart/form-data"><input type="hidden" name="action" value="upload"/><input required type="file" name="file" accept="image/jpeg,image/png,image/webp" className="flex-1 rounded border p-2 text-sm"/><button className="rounded bg-neutral-950 px-4 py-2 text-sm text-white">Upload generated preview</button></form>
@@ -103,7 +104,7 @@ export default async function ProductDetailPage({
         </ul>
       </div>
 
-      <ImageWorkflow admin originals={product.images.map((image) => image.url)} read={readImageWorkflow.bind(null, id)} send={sendImageWorkflow.bind(null, id)} />
+      <ImageWorkflow admin originals={product.images.map((image) => productImageUrl(image.url))} read={readImageWorkflow.bind(null, id)} send={sendImageWorkflow.bind(null, id)} />
 
       {listing.status === "rejected" && listing.rejection_reason && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">

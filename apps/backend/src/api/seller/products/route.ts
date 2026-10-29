@@ -9,6 +9,7 @@ import { createProductDraftWorkflow } from "../../../workflows/create-product-dr
 import { getOrCreateDefaultStockLocationId } from "../../../workflows/shared/default-stock-location"
 import { SELLER_MODULE } from "../../../modules/seller"
 import type SellerModuleService from "../../../modules/seller/service"
+import { resolveProductImageUrl } from "../../../product-images/legacy-url"
 
 /**
  * A seller's own products, scoped to their vendor id (never a client-
@@ -100,7 +101,10 @@ export async function GET(
     { id: listings.map((listing) => listing.product_id) },
     { select: ["id", "title", "thumbnail", "status"] }
   )
-  const productsById = new Map(products.map((product) => [product.id, product]))
+  const productsById = new Map(products.map((product) => [
+    product.id,
+    { ...product, thumbnail: resolveProductImageUrl(product.thumbnail) },
+  ]))
 
   res.json({
     products: listings.map((listing) => ({

@@ -1,4 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { resolveProductImageUrl } from "../../../product-images/legacy-url"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { PRODUCT_LISTING_MODULE } from "../../../modules/product-listing"
 import type ProductListingModuleService from "../../../modules/product-listing/service"
@@ -105,9 +106,9 @@ export async function GET(
       description: translatedDescription || product.description,
       brand: resolvePublicBrand(seller),
       currency_code: seller.currency_code,
-      images: product.images?.map((image) => image.url) ?? [],
-      thumbnail: product.thumbnail,
-      ai_preview_url: listing.ai_preview_status === "approved" ? listing.ai_preview_url : null,
+      images: product.images?.map((image) => resolveProductImageUrl(image.url) ?? image.url) ?? [],
+      thumbnail: resolveProductImageUrl(product.thumbnail),
+      ai_preview_url: listing.ai_preview_status === "approved" ? resolveProductImageUrl(listing.ai_preview_url) : null,
       colors: Array.from(
         new Set(
           product.options

@@ -8,6 +8,7 @@ import { updateProductDraftWorkflow } from "../../../../workflows/update-product
 import { getOrCreateDefaultStockLocationId } from "../../../../workflows/shared/default-stock-location"
 import { SELLER_MODULE } from "../../../../modules/seller"
 import type SellerModuleService from "../../../../modules/seller/service"
+import { resolveProductImageUrl } from "../../../../product-images/legacy-url"
 
 /**
  * A seller can only ever fetch/edit their own product listing - a listing
@@ -82,6 +83,8 @@ export async function GET(
     listing,
     product: {
       ...product,
+      thumbnail: resolveProductImageUrl(product.thumbnail),
+      images: product.images?.map((image) => ({ ...image, url: resolveProductImageUrl(image.url) })),
       variants: product.variants?.map((variant) => ({
         ...variant,
         inventory_quantity: inventoryByVariantId.get(variant.id) ?? 0,

@@ -4,6 +4,7 @@ import { PRODUCT_LISTING_MODULE } from "../../../../modules/product-listing"
 import type ProductListingModuleService from "../../../../modules/product-listing/service"
 import { SELLER_MODULE } from "../../../../modules/seller"
 import type SellerModuleService from "../../../../modules/seller/service"
+import { resolveProductImageUrl } from "../../../../product-images/legacy-url"
 
 /** Admin-only (see middlewares.ts). */
 export async function GET(
@@ -30,5 +31,13 @@ export async function GET(
   const sellerModuleService: SellerModuleService = req.scope.resolve(SELLER_MODULE)
   const seller = await sellerModuleService.retrieveSeller(listing.vendor_id)
 
-  res.json({ listing, product, seller: { id: seller.id, name: seller.name } })
+  res.json({
+    listing,
+    product: {
+      ...product,
+      thumbnail: resolveProductImageUrl(product.thumbnail),
+      images: product.images?.map((image) => ({ ...image, url: resolveProductImageUrl(image.url) })),
+    },
+    seller: { id: seller.id, name: seller.name },
+  })
 }

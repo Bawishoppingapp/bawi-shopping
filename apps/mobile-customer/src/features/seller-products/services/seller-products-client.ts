@@ -3,6 +3,8 @@
 // shapes, same bearer-only auth (no publishable key). Named distinctly
 // from mobile-customer's own features/products (public browsing) since
 // both live in this one merged app now.
+import { productImageUrl } from "@/lib/product-image-url";
+
 const MEDUSA_BACKEND_URL = process.env.EXPO_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000";
 
 export class ProductsClientError extends Error {
@@ -101,7 +103,10 @@ async function request(path: string, sessionToken: string, init?: RequestInit) {
 
 export async function listMyProducts(sessionToken: string): Promise<SellerProductSummary[]> {
   const data = await request("/seller/products", sessionToken);
-  return data.products;
+  return (data.products as SellerProductSummary[]).map(({ listing, product }) => ({
+    listing,
+    product: product ? { ...product, thumbnail: product.thumbnail ? productImageUrl(product.thumbnail) : null } : null,
+  }));
 }
 
 export async function getMyProduct(sessionToken: string, listingId: string): Promise<SellerProductDetail> {
@@ -110,7 +115,8 @@ export async function getMyProduct(sessionToken: string, listingId: string): Pro
     ...data,
     product: {
       ...data.product,
-      images: (data.product.images ?? []).map((image: { url: string }) => image.url),
+      thumbnail: data.product.thumbnail ? productImageUrl(data.product.thumbnail) : null,
+      images: (data.product.images ?? []).map((image: { url: string }) => productImageUrl(image.url)),
       variants: (data.product.variants ?? []).map((variant: {
         options?: { value: string; option?: { title: string } }[];
       }) => ({

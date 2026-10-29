@@ -1,5 +1,7 @@
 // Mirrors apps/storefront/src/features/products/services/products-client.ts
 // exactly - same endpoint, same response shape.
+import { productImageUrl } from "@/lib/product-image-url";
+
 const MEDUSA_BACKEND_URL = process.env.EXPO_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000";
 
 export interface PublicProductVariant {
@@ -39,5 +41,11 @@ export async function getPublicProduct(code: string, locale?: string): Promise<P
   }
 
   const data = await response.json();
-  return data.product as PublicProduct;
+  const product = data.product as PublicProduct;
+  return {
+    ...product,
+    images: product.images.map(productImageUrl),
+    thumbnail: product.thumbnail ? productImageUrl(product.thumbnail) : null,
+    ai_preview_url: product.ai_preview_url ? productImageUrl(product.ai_preview_url) : null,
+  };
 }

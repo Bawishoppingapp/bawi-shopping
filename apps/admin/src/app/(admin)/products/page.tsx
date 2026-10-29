@@ -6,6 +6,7 @@ import { ADMIN_SESSION_COOKIE } from "@/features/auth/constants"
 import { getCurrentAdmin } from "@/features/auth/services/medusa-auth-client"
 import { listProductListings } from "@/features/product-listings/services/product-listings-client"
 import { StatusFilter } from "@/features/product-listings/components/status-filter"
+import { productImageUrl } from "@/features/product-listings/services/product-image-url"
 
 // Session-scoped (admin-authenticated) content must never be cached by the
 // browser keyed only on the URL.
@@ -66,7 +67,7 @@ export default async function ProductsPage({
                     <div className="flex min-w-48 items-center gap-3">
                       {product?.thumbnail ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={product.thumbnail} alt="" className="h-12 w-10 rounded-md border border-neutral-100 object-cover" />
+                        <img src={productImageUrl(product.thumbnail)} alt="" className="h-12 w-10 rounded-md border border-neutral-100 object-cover" />
                       ) : <span className="h-12 w-10 rounded-md bg-[#EFE9E0]" aria-hidden="true" />}
                       <Link href={`/products/${listing.id}`} className="font-semibold text-[#312B26] underline-offset-2 hover:underline">{product?.title ?? "Untitled product"}</Link>
                     </div>
