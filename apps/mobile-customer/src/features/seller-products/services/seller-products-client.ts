@@ -38,7 +38,7 @@ export interface ProductVariantInput {
 export interface ProductDraftInput {
   title: string;
   description: string;
-  category_id: string;
+  category_ids: string[];
   base_price: number;
   variants: ProductVariantInput[];
 }
@@ -58,7 +58,7 @@ export interface SellerProductDetail {
     id: string;
     title: string;
     description: string;
-    category_id: string;
+    categories: { id: string; name: string }[];
     thumbnail: string | null;
     images: string[];
     variants: SellerProductVariant[];
@@ -106,7 +106,20 @@ export async function listMyProducts(sessionToken: string): Promise<SellerProduc
 
 export async function getMyProduct(sessionToken: string, listingId: string): Promise<SellerProductDetail> {
   const data = await request(`/seller/products/${listingId}`, sessionToken);
-  return data;
+  return {
+    ...data,
+    product: {
+      ...data.product,
+      images: (data.product.images ?? []).map((image: { url: string }) => image.url),
+      variants: (data.product.variants ?? []).map((variant: {
+        options?: { value: string; option?: { title: string } }[];
+      }) => ({
+        ...variant,
+        color: variant.options?.find((option) => option.option?.title === "Color")?.value ?? null,
+        size: variant.options?.find((option) => option.option?.title === "Size")?.value ?? null,
+      })),
+    },
+  };
 }
 
 export async function listCategories(sessionToken: string): Promise<CategoryOption[]> {

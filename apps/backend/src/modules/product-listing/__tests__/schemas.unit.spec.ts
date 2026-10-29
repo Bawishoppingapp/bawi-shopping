@@ -31,7 +31,17 @@ describe("productDraftSchema", () => {
   })
 
   test("rejects a missing category", () => {
-    const result = productDraftSchema.safeParse(validDraft({ category_id: "" }))
+    const result = productDraftSchema.safeParse(validDraft({ category_id: undefined }))
+    expect(result.success).toBe(false)
+  })
+
+  test("accepts several categories", () => {
+    const result = productDraftSchema.safeParse(validDraft({ category_id: undefined, category_ids: ["pcat_123", "pcat_456"] }))
+    expect(result.success).toBe(true)
+  })
+
+  test("rejects duplicate categories", () => {
+    const result = productDraftSchema.safeParse(validDraft({ category_id: undefined, category_ids: ["pcat_123", "pcat_123"] }))
     expect(result.success).toBe(false)
   })
 

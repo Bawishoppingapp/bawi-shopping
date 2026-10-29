@@ -1,8 +1,26 @@
 import { defineMiddlewares, authenticate } from "@medusajs/framework/http"
 import multer from "multer"
+import type { NextFunction, Request, Response } from "express"
 import { rateLimit } from "../rate-limiting/rate-limiter"
 
 const upload = multer({ storage: multer.memoryStorage() })
+const productPhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 5 },
+})
+const parseProductPhotos = (req: Request, res: Response, next: NextFunction) => {
+  productPhotoUpload.array("files", 5)(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError) {
+      res.status(413).json({
+        message: error.code === "LIMIT_FILE_SIZE"
+          ? "Each image must be 20MB or smaller."
+          : "Upload up to five photos at a time.",
+      })
+      return
+    }
+    next(error)
+  })
+}
 
 export default defineMiddlewares({
   routes: [
@@ -65,7 +83,7 @@ export default defineMiddlewares({
     {
       method: ["POST"],
       matcher: "/seller/products/:id/images",
-      middlewares: [upload.array("files")],
+      middlewares: [parseProductPhotos],
     },
     {
       method: ["POST"],

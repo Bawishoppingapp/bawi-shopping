@@ -65,7 +65,7 @@ export type CreateProductDraftWorkflowInput = {
   vendorId: string
   title: string
   description: string
-  categoryId: string
+  categoryIds: string[]
   basePrice: number
   variants: CreateProductDraftVariantInput[]
   stockLocationId: string
@@ -109,7 +109,7 @@ export const createProductDraftWorkflow = createWorkflow(
       title: data.input.title,
       description: data.input.description,
       status: "draft" as const,
-      categories: [{ id: data.input.categoryId }],
+      categories: data.input.categoryIds.map((id) => ({ id })),
       options: [
         {
           title: "Color",

@@ -6,7 +6,7 @@ import { PRODUCT_LISTING_MODULE } from "../../../../../modules/product-listing"
 import type ProductListingModuleService from "../../../../../modules/product-listing/service"
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024 // 20MB per photo
 
 /**
  * Uploads one or more product images via Medusa's native file module (local
@@ -51,7 +51,7 @@ export async function POST(
       return
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      res.status(400).json({ message: "Each image must be 5MB or smaller." })
+      res.status(400).json({ message: "Each image must be 20MB or smaller." })
       return
     }
   }

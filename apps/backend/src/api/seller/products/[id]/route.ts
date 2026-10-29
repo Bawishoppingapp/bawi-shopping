@@ -165,7 +165,7 @@ export async function PUT(
       wasRejected: listing.status === "rejected",
       title: parsed.data.title,
       description: parsed.data.description,
-      categoryId: parsed.data.category_id,
+      categoryIds: parsed.data.category_ids ?? [parsed.data.category_id!],
       basePrice: parsed.data.base_price,
       variants: parsed.data.variants,
       stockLocationId,

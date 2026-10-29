@@ -24,7 +24,7 @@ export default function SellNewProductScreen() {
   const [categories, setCategories] = useState<CategoryOption[] | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [basePrice, setBasePrice] = useState("");
   const [variants, setVariants] = useState<ProductVariantInput[]>([{ color: "", size: "", inventory_quantity: 0 }]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -46,7 +46,7 @@ export default function SellNewProductScreen() {
     const parsed = productDraftSchema.safeParse({
       title,
       description,
-      category_id: categoryId ?? "",
+      category_ids: categoryIds,
       base_price: Number.isNaN(dollars) ? 0 : Math.round(dollars * 100),
       variants,
     });
@@ -101,9 +101,9 @@ export default function SellNewProductScreen() {
         ) : (
           <CategoryPicker
             categories={categories}
-            selectedId={categoryId}
-            onSelect={setCategoryId}
-            error={fieldErrors.category_id}
+            selectedIds={categoryIds}
+            onChange={setCategoryIds}
+            error={fieldErrors.category_ids}
           />
         )}
 

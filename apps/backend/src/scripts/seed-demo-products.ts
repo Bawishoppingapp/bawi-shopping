@@ -101,7 +101,7 @@ export default async function seedDemoProducts({ container, args }: ExecArgs) {
         vendorId: seller.id,
         title: p.title,
         description: p.description,
-        categoryId,
+        categoryIds: [categoryId],
         basePrice: p.basePrice,
         variants: p.variants,
         stockLocationId,

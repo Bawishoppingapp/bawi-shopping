@@ -40,7 +40,7 @@ export default function SellProductDetailScreen() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [basePrice, setBasePrice] = useState("");
   const [variants, setVariants] = useState<ProductVariantInput[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -60,7 +60,7 @@ export default function SellProductDetailScreen() {
     if (result) {
       setTitle(result.product.title);
       setDescription(result.product.description);
-      setCategoryId(result.product.category_id);
+      setCategoryIds(result.product.categories?.map((category) => category.id) ?? []);
       const firstPriced = result.product.variants.find((v) => v.price !== null);
       setBasePrice(firstPriced ? String((firstPriced.price as number) / 100) : "");
       setVariants(
@@ -84,7 +84,7 @@ export default function SellProductDetailScreen() {
     const parsed = productDraftSchema.safeParse({
       title,
       description,
-      category_id: categoryId ?? "",
+      category_ids: categoryIds,
       base_price: Number.isNaN(dollars) ? 0 : Math.round(dollars * 100),
       variants,
     });
@@ -216,15 +216,15 @@ export default function SellProductDetailScreen() {
         {editable ? (
           <CategoryPicker
             categories={categories}
-            selectedId={categoryId}
-            onSelect={setCategoryId}
-            error={fieldErrors.category_id}
+            selectedIds={categoryIds}
+            onChange={setCategoryIds}
+            error={fieldErrors.category_ids}
           />
         ) : (
           <View className="gap-1">
-            <Text className="text-body-sm font-medium text-ink-800">Category</Text>
+            <Text className="text-body-sm font-medium text-ink-800">Categories</Text>
             <Text className="text-body text-ink-700">
-              {categories.find((c) => c.id === categoryId)?.name ?? categoryId}
+              {categoryIds.map((id) => categories.find((c) => c.id === id)?.name ?? id).join(", ")}
             </Text>
           </View>
         )}

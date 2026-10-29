@@ -131,6 +131,35 @@ describe("Seller product creation, admin review, and public visibility", () => {
     expect(response.data.product.variants).toHaveLength(1)
   })
 
+  test("a seller can assign multiple categories and preserve them when editing", async () => {
+    const { rows } = await dbClient.query(
+      "SELECT id FROM product_category WHERE deleted_at IS NULL ORDER BY id LIMIT 2"
+    )
+    expect(rows).toHaveLength(2)
+    const categoryIds = rows.map((row) => row.id as string)
+    const payload = validProductPayload({ category_id: undefined, category_ids: categoryIds }, categoryId)
+    const created = await post("/seller/products", payload, sellerAToken)
+    expect(created.status).toBe(201)
+
+    const listingId = created.data.listing.id
+    const detail = await get(`/seller/products/${listingId}`, sellerAToken)
+    expect(detail.status).toBe(200)
+    expect(detail.data.product.categories.map((category: { id: string }) => category.id).sort()).toEqual(
+      [...categoryIds].sort()
+    )
+
+    const updated = await putRequest(
+      `/seller/products/${listingId}`,
+      { ...payload, category_ids: [categoryIds[1]] },
+      sellerAToken
+    )
+    expect(updated.status).toBe(200)
+    const revised = await get(`/seller/products/${listingId}`, sellerAToken)
+    expect(revised.data.product.categories.map((category: { id: string }) => category.id)).toEqual([
+      categoryIds[1],
+    ])
+  })
+
   test("an unauthenticated caller cannot create a product", async () => {
     const response = await post("/seller/products", validProductPayload({}, categoryId))
     expect(response.status).toBe(401)

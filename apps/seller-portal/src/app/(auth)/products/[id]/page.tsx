@@ -117,7 +117,7 @@ export default async function EditProductPage({
           initialValues={{
             title: product.title,
             description: product.description ?? "",
-            category_id: product.categories[0]?.id ?? "",
+            category_ids: product.categories.map((category) => category.id),
             base_price: variants[0]?.price ?? "",
             variants,
           }}

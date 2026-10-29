@@ -28,7 +28,7 @@ function hasDuplicateVariant(variants: { color: string; size: string }[]): boole
 export const productFormSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
   description: z.string().trim().min(1, "Description is required").max(5000),
-  category_id: z.string().trim().min(1, "Category is required"),
+  category_ids: z.array(z.string().trim().min(1)).min(1, "Select at least one category"),
   base_price: z.coerce.number().int().positive("Base price must be greater than zero"),
   variants: z
     .array(variantSchema)

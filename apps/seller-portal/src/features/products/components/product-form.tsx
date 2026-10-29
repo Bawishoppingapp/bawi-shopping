@@ -1,7 +1,7 @@
 "use client"
 
 import { useActionState } from "react"
-import { Button, FormField, Input, Select, Textarea } from "@bawi/ui"
+import { Button, Checkbox, FormField, Input, Textarea } from "@bawi/ui"
 import { VariantRowsEditor } from "./variant-rows-editor"
 import { initialProductFormState, type VariantRow } from "../constants"
 import type { CategoryOption } from "../services/products-client"
@@ -22,7 +22,7 @@ export function ProductForm({
   initialValues?: {
     title: string
     description: string
-    category_id: string
+    category_ids: string[]
     base_price: string
     variants: VariantRow[]
   }
@@ -43,18 +43,19 @@ export function ProductForm({
         For an accurate AI preview, include material, exact color, pattern, fit, length, sleeves, neckline, closures, pockets, lining, stretch, care, condition, logo placement, and every included piece.
       </p>
 
-      <FormField label="Category" error={state.fieldErrors.category_id}>
-        <Select name="category_id" defaultValue={initialValues?.category_id ?? ""}>
-          <option value="" disabled>
-            Select a category
-          </option>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-neutral-900">Categories</span>
+        <p className="text-xs text-neutral-500">Select every category that fits this item.</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {categories.map((category) => (
-            <option key={category.id} value={category.id}>
+            <label key={category.id} className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700">
+              <Checkbox name="category_ids" value={category.id} defaultChecked={initialValues?.category_ids.includes(category.id)} />
               {category.name}
-            </option>
+            </label>
           ))}
-        </Select>
-      </FormField>
+        </div>
+        {state.fieldErrors.category_ids && <p role="alert" className="text-sm text-red-600">{state.fieldErrors.category_ids}</p>}
+      </div>
 
       <FormField
         label={`Base price (${CURRENCY_LABEL[currencyCode] ?? CURRENCY_LABEL.usd})`}

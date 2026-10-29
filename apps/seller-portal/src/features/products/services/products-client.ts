@@ -58,7 +58,7 @@ export type ProductVariantInput = {
 export type ProductDraftInput = {
   title: string
   description: string
-  category_id: string
+  category_ids: string[]
   base_price: number
   variants: ProductVariantInput[]
 }

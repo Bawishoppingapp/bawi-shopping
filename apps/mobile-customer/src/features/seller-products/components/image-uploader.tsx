@@ -38,9 +38,14 @@ export function ImageUploader({ listingId, images, editable, onUploaded }: Image
       quality: 0.8,
     });
     if (result.canceled || result.assets.length === 0) return;
+    if (result.assets.some((asset) => (asset.fileSize ?? 0) > 20 * 1024 * 1024)) {
+      setError("Each photo must be 20 MB or smaller.");
+      return;
+    }
 
     setError(null);
     setUploading(true);
+    let uploadedCount = 0;
     try {
       const token = await getSellerSessionToken();
       if (!token) return;
@@ -49,11 +54,16 @@ export function ImageUploader({ listingId, images, editable, onUploaded }: Image
         name: asset.fileName ?? `photo-${index}.jpg`,
         type: asset.mimeType ?? "image/jpeg",
       }));
-      await uploadProductImages(token, listingId, files, images.length === 0);
-      onUploaded();
+      // Keep each multipart request small even when several large photos are
+      // selected. The first successful photo becomes the primary image.
+      for (const [index, file] of files.entries()) {
+        await uploadProductImages(token, listingId, [file], images.length === 0 && index === 0);
+        uploadedCount += 1;
+      }
     } catch (err) {
       setError(err instanceof ProductsClientError ? err.message : "Couldn't upload those photos.");
     } finally {
+      if (uploadedCount > 0) onUploaded();
       setUploading(false);
     }
   }
@@ -95,9 +105,12 @@ export function ImageUploader({ listingId, images, editable, onUploaded }: Image
       )}
       {error ? <Text className="text-body-sm text-danger">{error}</Text> : null}
       {editable ? (
-        <Button variant="secondary" onPress={pickAndUpload} loading={uploading}>
-          Add clear product photos
-        </Button>
+        <>
+          <Text className="text-caption text-ink-500">JPEG, PNG, or WebP. Up to 20 MB per photo.</Text>
+          <Button variant="secondary" onPress={pickAndUpload} loading={uploading}>
+            Add clear product photos
+          </Button>
+        </>
       ) : null}
     </View>
   );

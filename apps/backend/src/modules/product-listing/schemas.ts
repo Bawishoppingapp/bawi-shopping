@@ -25,7 +25,12 @@ function hasDuplicateVariant(variants: { color: string; size: string }[]): boole
 export const productDraftSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
   description: z.string().trim().min(1, "Description is required").max(5000),
-  category_id: z.string().trim().min(1, "Category is required"),
+  // Keep the single ID for older app builds while new sellers can assign
+  // several categories to the same native Medusa product.
+  category_id: z.string().trim().min(1).optional(),
+  category_ids: z.array(z.string().trim().min(1)).min(1, "Select at least one category")
+    .refine((ids) => new Set(ids).size === ids.length, "Choose each category only once")
+    .optional(),
   // Integer minor units (e.g. 4999 = $49.99), USD only for v1.
   base_price: z.number().int().positive("Base price must be greater than zero"),
   variants: z
@@ -34,6 +39,9 @@ export const productDraftSchema = z.object({
     .refine((variants) => !hasDuplicateVariant(variants), {
       message: "Duplicate color/size combination",
     }),
+}).refine((input) => Boolean(input.category_ids?.length || input.category_id), {
+  message: "Select at least one category",
+  path: ["category_ids"],
 })
 
 export type ProductDraftInput = z.infer<typeof productDraftSchema>

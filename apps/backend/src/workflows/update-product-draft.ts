@@ -75,7 +75,7 @@ export type UpdateProductDraftWorkflowInput = {
   wasRejected: boolean
   title: string
   description: string
-  categoryId: string
+  categoryIds: string[]
   basePrice: number
   variants: CreateProductDraftVariantInput[]
   stockLocationId: string
@@ -102,7 +102,7 @@ export const updateProductDraftWorkflow = createWorkflow(
           id: data.input.productId,
           title: data.input.title,
           description: data.input.description,
-          categories: [{ id: data.input.categoryId }],
+          categories: data.input.categoryIds.map((id) => ({ id })),
         },
       ],
     }))

@@ -29,7 +29,7 @@ export async function updateProductAction(
   const parsed = productFormSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description"),
-    category_id: formData.get("category_id"),
+    category_ids: formData.getAll("category_ids"),
     base_price: formData.get("base_price"),
     variants,
   })
