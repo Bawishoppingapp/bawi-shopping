@@ -49,6 +49,16 @@ export default defineMiddlewares({
       ],
     },
     {
+      method: ["POST"],
+      matcher: "/seller-activation/complete-code",
+      middlewares: [authenticate("customer", ["bearer"], { allowUnauthenticated: true })],
+    },
+    {
+      method: ["POST"],
+      matcher: "/seller-session/from-customer",
+      middlewares: [authenticate("customer", ["bearer"])],
+    },
+    {
       matcher: "/seller/*",
       middlewares: [authenticate("seller_user", ["bearer", "session"])],
     },

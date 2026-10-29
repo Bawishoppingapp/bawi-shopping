@@ -1,7 +1,8 @@
 import {
   SellerAuthError,
   SellerServiceUnavailableError,
-  completeSellerActivation,
+  activateSellerWithCode,
+  getSellerSessionFromCustomer,
   getCurrentSeller,
   loginSellerUser,
 } from "../services/seller-medusa-auth-client";
@@ -53,14 +54,16 @@ describe("seller-medusa-auth-client", () => {
     });
   });
 
-  describe("completeSellerActivation", () => {
-    test("posts the token and new password", async () => {
-      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: true, text: () => Promise.resolve("{}") });
-      await completeSellerActivation("activation-token", "NewPass123");
+  describe("activateSellerWithCode", () => {
+    test("posts only the code and returns a seller session", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: true, text: () => Promise.resolve(JSON.stringify({ token: "seller-session" })) });
+      const token = await activateSellerWithCode("ABCD-EFGH-JKLM", "customer-session");
+      expect(token).toBe("seller-session");
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/seller-activation/complete"),
+        expect.stringContaining("/seller-activation/complete-code"),
         expect.objectContaining({
-          body: JSON.stringify({ token: "activation-token", password: "NewPass123" }),
+          body: JSON.stringify({ code: "ABCD-EFGH-JKLM" }),
+          headers: expect.objectContaining({ Authorization: "Bearer customer-session" }),
         })
       );
     });
@@ -70,7 +73,14 @@ describe("seller-medusa-auth-client", () => {
         ok: false,
         text: () => Promise.resolve(JSON.stringify({ message: "Token expired" })),
       });
-      await expect(completeSellerActivation("bad", "pw")).rejects.toThrow("Token expired");
+      await expect(activateSellerWithCode("bad")).rejects.toThrow("Token expired");
+    });
+  });
+
+  describe("getSellerSessionFromCustomer", () => {
+    test("returns null when the account has no storefront", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 404 });
+      await expect(getSellerSessionFromCustomer("customer-session")).resolves.toBeNull();
     });
   });
 

@@ -12,7 +12,7 @@ describe("seller approval email", () => {
     expect(template.emailBody).toContain("secret123")
     expect(template.html).toContain(`href="${activationLink}"`)
     expect(template.html).toContain("Activation code for the Bawi app")
-    expect(template.html).toContain("Use its existing password")
+    expect(template.html).toContain("enter the code to open your storefront")
     expect(template.html).toContain("7 days")
   })
 
@@ -25,7 +25,7 @@ describe("seller approval email", () => {
     })
     expect(template.subject).toContain("2026-10-27T05:27:12.000Z")
     expect(template.emailBody).toContain("new123")
-    expect(template.html).toContain("replaces previous activation links")
+    expect(template.html).toContain("replaces previous activation codes")
   })
 
   it("escapes a seller-provided store name in HTML", () => {

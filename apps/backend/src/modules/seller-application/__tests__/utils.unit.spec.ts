@@ -3,6 +3,8 @@ import {
   generateUniqueSlug,
   generateActivationToken,
   buildSellerActivationLink,
+  formatActivationToken,
+  normalizeActivationToken,
 } from "../utils"
 
 describe("slugify", () => {
@@ -57,12 +59,19 @@ describe("generateUniqueSlug (approval logic)", () => {
 })
 
 describe("generateActivationToken", () => {
-  test("generates a 64-character hex string", () => {
+  test("generates a 12-character human-friendly code", () => {
     const token = generateActivationToken()
-    expect(token).toMatch(/^[0-9a-f]{64}$/)
+    expect(token).toMatch(/^[A-HJ-NP-Z2-9]{12}$/)
+    expect(formatActivationToken(token)).toMatch(/^[A-HJ-NP-Z2-9]{4}(?:-[A-HJ-NP-Z2-9]{4}){2}$/)
+    expect(normalizeActivationToken(formatActivationToken(token).toLowerCase())).toBe(token)
   })
 
   test("generates a different token on each call", () => {
     expect(generateActivationToken()).not.toBe(generateActivationToken())
+  })
+
+  test("keeps existing long activation links valid", () => {
+    const oldToken = "a1b2".repeat(16)
+    expect(normalizeActivationToken(oldToken)).toBe(oldToken)
   })
 })

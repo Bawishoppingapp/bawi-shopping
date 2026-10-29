@@ -236,6 +236,70 @@ describe("Seller application, admin review, and approval", () => {
     expect(sellerUserRows[0].count).toBe(1)
   })
 
+  test("a short emailed code opens the storefront and cannot be reused", async () => {
+    const submitted = await post("/seller-applications", validApplicationPayload())
+    const approval = await post(
+      `/admin/seller-applications/${submitted.data.application.id}/approve`,
+      undefined,
+      adminToken
+    )
+    expect(approval.status).toBe(200)
+    const code = new URL(approval.data.activation_link).searchParams.get("token")!
+    expect(code).toMatch(/^[A-HJ-NP-Z2-9]{12}$/)
+
+    const activation = await post("/seller-activation/complete-code", {
+      code: `${code.slice(0, 4)}-${code.slice(4, 8)}-${code.slice(8)}`,
+    })
+    expect(activation.status).toBe(200)
+    expect(typeof activation.data.token).toBe("string")
+    const storefront = await get("/seller/me", activation.data.token)
+    expect(storefront.status).toBe(200)
+    expect(storefront.data.seller.id).toBe(approval.data.seller.id)
+
+    const reused = await post("/seller-activation/complete-code", { code })
+    expect(reused.status).toBe(400)
+  })
+
+  test("an existing Bawi customer can activate and return to the storefront without another login", async () => {
+    const email = `seller-customer-${suffix}@example.test`
+    const registration = await post("/auth/customer/emailpass/register", {
+      email,
+      password: "correct-horse-battery-c",
+    })
+    expect(registration.status).toBe(200)
+    const key = await get("/seller-test-support/publishable-key")
+    const created = await fetch(`${BASE_URL}/store/customers`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${registration.data.token}`,
+        "x-publishable-api-key": key.data.token,
+      },
+      body: JSON.stringify({ email, first_name: "Jane", last_name: "Doe" }),
+    })
+    expect(created.status).toBe(200)
+    const login = await post("/auth/customer/emailpass", {
+      email,
+      password: "correct-horse-battery-c",
+    })
+    expect(login.status).toBe(200)
+
+    const submitted = await post("/seller-applications", validApplicationPayload({ business_email: email }))
+    const approval = await post(
+      `/admin/seller-applications/${submitted.data.application.id}/approve`,
+      undefined,
+      adminToken
+    )
+    const code = new URL(approval.data.activation_link).searchParams.get("token")!
+    const activation = await post("/seller-activation/complete-code", { code }, login.data.token)
+    expect(activation.status).toBe(200)
+    expect((await get("/seller/me", activation.data.token)).status).toBe(200)
+
+    const restored = await post("/seller-session/from-customer", undefined, login.data.token)
+    expect(restored.status).toBe(200)
+    expect((await get("/seller/me", restored.data.token)).data.seller.id).toBe(approval.data.seller.id)
+  })
+
   test("approving an application creates an audit-log entry attributed to the real admin, never a client-supplied identity", async () => {
     const submitted = await post("/seller-applications", validApplicationPayload())
     const applicationId = submitted.data.application.id

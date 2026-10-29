@@ -1,12 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { SellerAuthError, getCurrentSeller, loginSellerUser, type SellerMe } from "../services/seller-medusa-auth-client";
+import { SellerAuthError, activateSellerWithCode, getCurrentSeller, getSellerSessionFromCustomer, loginSellerUser, type SellerMe } from "../services/seller-medusa-auth-client";
+import { getSessionToken } from "@/features/auth/services/token-storage";
 import { clearSellerSessionToken, getSellerSessionToken, setSellerSessionToken } from "../services/seller-token-storage";
 
 interface SellerAuthContextValue {
   seller: SellerMe | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  activate: (code: string) => Promise<void>;
+  restoreFromCustomer: () => Promise<boolean>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -49,14 +52,35 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
     setSeller(current);
   }, []);
 
+  const activate = useCallback(async (code: string) => {
+    const customerToken = await getSessionToken();
+    const token = await activateSellerWithCode(code, customerToken);
+    const current = await getCurrentSeller(token);
+    if (!current) throw new SellerAuthError("Could not open your storefront. Please try again.");
+    await setSellerSessionToken(token);
+    setSeller(current);
+  }, []);
+
+  const restoreFromCustomer = useCallback(async () => {
+    const customerToken = await getSessionToken();
+    if (!customerToken) return false;
+    const token = await getSellerSessionFromCustomer(customerToken);
+    if (!token) return false;
+    const current = await getCurrentSeller(token);
+    if (!current) return false;
+    await setSellerSessionToken(token);
+    setSeller(current);
+    return true;
+  }, []);
+
   const logout = useCallback(async () => {
     await clearSellerSessionToken();
     setSeller(null);
   }, []);
 
   const value = useMemo(
-    () => ({ seller, isLoading, login, logout, refresh }),
-    [seller, isLoading, login, logout, refresh]
+    () => ({ seller, isLoading, login, activate, restoreFromCustomer, logout, refresh }),
+    [seller, isLoading, login, activate, restoreFromCustomer, logout, refresh]
   );
 
   // Known TS false positive: Context.Provider's exotic component type

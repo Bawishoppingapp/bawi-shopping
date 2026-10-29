@@ -3,6 +3,7 @@ import { Modules } from "@medusajs/framework/utils"
 import { SELLER_MODULE } from "../../../modules/seller"
 import type SellerModuleService from "../../../modules/seller/service"
 import { completeActivationSchema } from "../../../modules/seller-application/schemas"
+import { normalizeActivationToken } from "../../../modules/seller-application/utils"
 
 /** A valid approval link and the email's existing password (when one exists)
  * are both required before granting seller access to an existing identity. */
@@ -23,7 +24,7 @@ export async function POST(
   const authModuleService = req.scope.resolve(Modules.AUTH)
 
   const [sellerUser] = await sellerModuleService.listSellerUsers({
-    activation_token: parsed.data.token,
+    activation_token: normalizeActivationToken(parsed.data.token),
   })
 
   if (!sellerUser) {

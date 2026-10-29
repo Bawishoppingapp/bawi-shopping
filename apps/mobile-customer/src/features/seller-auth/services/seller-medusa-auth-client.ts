@@ -73,11 +73,14 @@ export async function loginSellerUser(email: string, password: string): Promise<
   return data.token;
 }
 
-export async function completeSellerActivation(token: string, password: string): Promise<void> {
-  const response = await requestSellerBackend("/seller-activation/complete", {
+export async function activateSellerWithCode(code: string, customerToken?: string | null): Promise<string> {
+  const response = await requestSellerBackend("/seller-activation/complete-code", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, password }),
+    headers: {
+      "Content-Type": "application/json",
+      ...(customerToken ? { Authorization: `Bearer ${customerToken}` } : {}),
+    },
+    body: JSON.stringify({ code }),
   });
 
   const data = await parseJson(response);
@@ -89,6 +92,23 @@ export async function completeSellerActivation(token: string, password: string):
   if (!response.ok) {
     throw new SellerAuthError(data.message || "Could not activate account");
   }
+  if (typeof data.token !== "string" || !data.token) {
+    throw new SellerServiceUnavailableError();
+  }
+  return data.token;
+}
+
+export async function getSellerSessionFromCustomer(customerToken: string): Promise<string | null> {
+  const response = await requestSellerBackend("/seller-session/from-customer", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${customerToken}` },
+  });
+  if (response.status === 404) return null;
+  const data = await parseJson(response);
+  if (!response.ok || typeof data.token !== "string" || !data.token) {
+    throw new SellerServiceUnavailableError();
+  }
+  return data.token;
 }
 
 export interface SellerMe {

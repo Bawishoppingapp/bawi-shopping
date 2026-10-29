@@ -1,5 +1,5 @@
 import { Button, Input } from "@bawi/mobile-ui";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Stack, router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 
@@ -8,7 +8,6 @@ import { SellerAuthError, useSellerAuth } from "@/features/seller-auth/hooks/use
 import { sellerLoginSchema } from "@/features/seller-auth/schemas/seller-login-schema";
 
 export default function SellLoginScreen() {
-  const { activated } = useLocalSearchParams<{ activated?: string }>();
   const { login } = useSellerAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,13 +56,6 @@ export default function SellLoginScreen() {
           <Text className="text-h1 text-ink-950">Seller log in</Text>
           <Text className="text-body text-ink-500">Log in to manage your storefront.</Text>
         </View>
-        {activated ? (
-          <View className="rounded-md bg-success/10 p-3">
-            <Text className="text-body-sm text-success">
-              Your storefront is ready - log in to get started.
-            </Text>
-          </View>
-        ) : null}
         {formError ? (
           <View className="rounded-md bg-danger/10 p-3">
             <Text className="text-body-sm text-danger">{formError}</Text>

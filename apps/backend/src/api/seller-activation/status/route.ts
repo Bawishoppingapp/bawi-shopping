@@ -2,6 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import { SELLER_MODULE } from "../../../modules/seller"
 import type SellerModuleService from "../../../modules/seller/service"
+import { normalizeActivationToken } from "../../../modules/seller-application/utils"
 
 /** The single-use link itself authorizes this lookup; never expose the email. */
 export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<void> {
@@ -13,7 +14,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse): Promise<voi
   }
 
   const sellers: SellerModuleService = req.scope.resolve(SELLER_MODULE)
-  const [sellerUser] = await sellers.listSellerUsers({ activation_token: token })
+  const [sellerUser] = await sellers.listSellerUsers({ activation_token: normalizeActivationToken(token) })
   if (!sellerUser || sellerUser.auth_identity_id || !sellerUser.activation_token_expires_at || sellerUser.activation_token_expires_at.getTime() < Date.now()) {
     res.status(400).json({ message: "This activation link is invalid, expired, or already used" })
     return
