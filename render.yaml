@@ -19,6 +19,9 @@ services:
     region: oregon
     dockerfilePath: ./apps/backend/Dockerfile
     dockerContext: .
+    # Apply module schema changes before the new API version serves traffic.
+    # This runs in Render's separate pre-deploy instance, not on every boot.
+    preDeployCommand: npx medusa db:migrate
     healthCheckPath: /health
     envVars:
       - key: PORT

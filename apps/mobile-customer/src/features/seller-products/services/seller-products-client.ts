@@ -91,6 +91,9 @@ async function request(path: string, sessionToken: string, init?: RequestInit) {
   });
   const data = await parseJson(response);
   if (!response.ok) {
+    if (response.status >= 500) {
+      throw new ProductsClientError("Could not save your product right now. Please try again in a moment.");
+    }
     throw new ProductsClientError(data.message || "Request failed");
   }
   return data;

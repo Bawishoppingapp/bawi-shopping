@@ -62,9 +62,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # locally (see docs/DEPLOYMENT-LOWCOST.md §3), not guessed. node_modules
 # resolution still works from here since Node walks up to /app/node_
 # modules same as it does from apps/backend directly.
-# Migrations are NOT run automatically on container start (see
-# docs/DEPLOYMENT.md/docs/DATABASE.md §6: migrations run as their own
-# explicit step, staging before production, never implicitly on boot).
+# Migrations are NOT run on container start. Render's pre-deploy command
+# applies them after building and before swapping the running service; other
+# hosting environments must run `npx medusa db:migrate` explicitly.
 # Catalog seeding and repair are explicit one-time deployment operations. The
 # normal production process must never recreate products that an operator has
 # intentionally removed or renamed.
